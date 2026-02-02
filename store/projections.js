@@ -107,11 +107,20 @@ const Projector = {
                 if (db.orders.has(event.aggregateId)) {
                     const order = db.orders.get(event.aggregateId);
                     order.status = 'CONFIRMED';
+                    
                     if (order.type === 'PURCHASE') {
+                        // 1. Update Global Dashboard
                         db.dashboard.totalRevenue += order.orderTotal;
                         db.dashboard.totalOrdersConfirmed++;
                         const itemCount = order.items.reduce((acc, i) => acc + i.qty, 0);
                         db.dashboard.itemsSold += itemCount;
+
+                        // 2. NEW: Update Client Lifetime Value (Total Spent)
+                        if (order.clientId && db.clients.has(order.clientId)) {
+                            const client = db.clients.get(order.clientId);
+                            // Initialize if undefined, then add total
+                            client.totalSpent = (client.totalSpent || 0) + order.orderTotal;
+                        }
                     }
                 }
                 break;
@@ -120,6 +129,7 @@ const Projector = {
 
     getInventoryCatalog: () => Array.from(db.inventory.values()),
     getClientProfile: (clientId) => db.clients.get(clientId) || null,
+    getClients: () => Array.from(db.clients.values()),
     getClientsByCity: (city) => Array.from(db.clients.values()).filter(c => c.city === city),
     getDashboardStats: () => ({ ...db.dashboard }),
     getOrdersByClient: (clientId) => {

@@ -52,7 +52,11 @@ function startServer() {
     
     app.get('/api/clients', (req, res) => {
         if (req.query.city) return res.json(Projector.getClientsByCity(req.query.city));
-        res.json({ message: "Use ?city=X or /api/clients/:id" }); 
+        
+        // Return ALL clients (Admin View)
+        // We use Array.from to convert the Map values to an Array
+        // We slice(0, 100) to prevent sending too much data in this demo
+        res.json(Projector.getClients().slice(0, 100));
     });
 
     app.get('/api/clients/:id', (req, res) => {
@@ -117,6 +121,7 @@ function startServer() {
     // --- START & LOG ROUTES ---
     app.listen(PORT, () => {
         console.log(`\n🚀 Single Page Application running at http://localhost:${PORT}/index.html`);
+        console.log(`\n🚀 Admin Page running at http://localhost:${PORT}/admin.html`);
         console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
         console.log(`\n--- 🔗 AVAILABLE ENDPOINTS ---`);
         
