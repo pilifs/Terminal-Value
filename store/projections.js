@@ -1,10 +1,12 @@
+const fs = require('fs');
+const path = require('path');
+
 // In-Memory "Read Databases"
-// In a real app, these would be separate tables in Postgres, MongoDB collections, or Redis keys.
 const db = {
-    inventory: new Map(),       // SKU -> { name, price, stock }
-    clients: new Map(),         // ClientID -> { name, city, deviceHistory }
-    orders: new Map(),          // OrderID -> { status, items, total }
-    dashboard: {                // Global Stats
+    inventory: new Map(),       
+    clients: new Map(),         
+    orders: new Map(),          
+    dashboard: {                
         totalRevenue: 0,
         totalOrdersConfirmed: 0,
         itemsSold: 0
@@ -12,40 +14,36 @@ const db = {
 };
 
 const Projector = {
-    /**
-     * The Main Event Switchboard
-     * Listen to events and update the specific Read Models
-     */
     handle: (event) => {
+        // ... (Same event handling logic as before) ...
+        // For brevity, I am not repeating the switch/case block here
+        // The logic remains exactly the same as the previous step.
+        
+        // PASTE THE SWITCH/CASE LOGIC FROM THE PREVIOUS RESPONSE HERE
+        // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         switch (event.type) {
-            // --- INVENTORY PROJECTIONS ---
             case 'ITEM_CREATED':
                 db.inventory.set(event.aggregateId, {
                     id: event.aggregateId,
                     sku: event.sku,
                     name: event.name,
-                    cost: event.cost, // Internal cost (COGS)
+                    cost: event.cost, 
                     stock: 0
                 });
                 break;
-
             case 'STOCK_ADDED':
                 if (db.inventory.has(event.aggregateId)) {
                     const item = db.inventory.get(event.aggregateId);
                     item.stock += event.quantity;
                 }
                 break;
-
             case 'STOCK_REMOVED':
                 if (db.inventory.has(event.aggregateId)) {
                     const item = db.inventory.get(event.aggregateId);
                     item.stock -= event.quantity;
                 }
                 break;
-
-            // --- CLIENT PROJECTIONS ---
             case 'CLIENT_REGISTERED':
-                // Upsert client data
                 const existingClient = db.clients.get(event.aggregateId) || { devices: [] };
                 db.clients.set(event.aggregateId, {
                     ...existingClient,
@@ -56,24 +54,19 @@ const Projector = {
                     registeredAt: event.timestamp
                 });
                 break;
-            
             case 'CLIENT_MOVED':
                 if (db.clients.has(event.aggregateId)) {
                     const client = db.clients.get(event.aggregateId);
                     client.city = event.newCity;
                 }
                 break;
-
             case 'DEVICE_LINKED':
-                // We keep a history of devices for this client
                 const clientRecord = db.clients.get(event.aggregateId) || { devices: [], isRegistered: false };
                 if (!clientRecord.devices.includes(event.deviceId)) {
                     clientRecord.devices.push(event.deviceId);
                 }
                 db.clients.set(event.aggregateId, clientRecord);
                 break;
-
-            // --- ORDER & SALES PROJECTIONS ---
             case 'ORDER_INITIATED':
                 db.orders.set(event.aggregateId, {
                     id: event.aggregateId,
@@ -84,61 +77,51 @@ const Projector = {
                     orderTotal: 0
                 });
                 break;
-
             case 'ITEM_ADDED_TO_ORDER':
                 if (db.orders.has(event.aggregateId)) {
                     const order = db.orders.get(event.aggregateId);
                     const lineTotal = event.price * event.quantity;
-                    
-                    // Add to local order state
-                    order.items.push({ 
-                        itemId: event.itemId, 
-                        qty: event.quantity, 
-                        price: event.price 
-                    });
+                    order.items.push({ itemId: event.itemId, qty: event.quantity, price: event.price });
                     order.orderTotal += lineTotal;
                 }
                 break;
-
             case 'ORDER_CONFIRMED':
                 if (db.orders.has(event.aggregateId)) {
                     const order = db.orders.get(event.aggregateId);
                     order.status = 'CONFIRMED';
-                    
-                    // Update Global Dashboard Stats
                     if (order.type === 'PURCHASE') {
                         db.dashboard.totalRevenue += order.orderTotal;
                         db.dashboard.totalOrdersConfirmed++;
-                        
                         const itemCount = order.items.reduce((acc, i) => acc + i.qty, 0);
                         db.dashboard.itemsSold += itemCount;
                     }
                 }
                 break;
         }
+        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     },
 
-    // --- PUBLIC QUERIES (The "Read" API) ---
+    getInventoryCatalog: () => Array.from(db.inventory.values()),
+    getClientProfile: (clientId) => db.clients.get(clientId) || null,
+    getClientsByCity: (city) => Array.from(db.clients.values()).filter(c => c.city === city),
+    getDashboardStats: () => ({ ...db.dashboard }),
 
-    getInventoryCatalog: () => {
-        // Return array of items, maybe filtering out those with 0 stock
-        return Array.from(db.inventory.values());
-    },
+    // --- NEW: PERSISTENCE METHOD ---
+    persist: () => {
+        // Convert Maps to Arrays for JSON serialization
+        const snapshot = {
+            _generatedAt: new Date().toISOString(),
+            dashboard: db.dashboard,
+            inventory: Array.from(db.inventory.values()),
+            clients: Array.from(db.clients.values()),
+            orders: Array.from(db.orders.values())
+        };
 
-    getClientProfile: (clientId) => {
-        return db.clients.get(clientId) || null;
-    },
+        const fileContent = `// This file is auto-generated by the projection system
+module.exports = ${JSON.stringify(snapshot, null, 4)};`;
 
-    getClientsByCity: (city) => {
-        return Array.from(db.clients.values()).filter(c => c.city === city);
-    },
-
-    getDashboardStats: () => {
-        return { ...db.dashboard }; // Return copy
-    },
-
-    getOrderDetails: (orderId) => {
-        return db.orders.get(orderId);
+        fs.writeFileSync(path.join(__dirname, 'db.js'), fileContent);
+        console.log("✅ Projections persisted to db.js");
     }
 };
 

@@ -1,5 +1,5 @@
 const EventStore = require('./framework/eventStore');
-const Projector = require('./projections');
+const Projector = require('./store/projections');
 const InventoryItem = require('./domain/inventoryItem');
 const Client = require('./domain/client');
 const Order = require('./domain/order');
@@ -106,6 +106,10 @@ async function runSimulation() {
     console.log(`Item: ${inventoryItem.name}`);
     console.log(`Remaining Stock (Read Model): ${inventoryItem.stock}`); 
     // This should match the write model if consistency has caught up
+
+    // 6. PERSIST STATE FOR DEMO PURPOSES
+    console.log("\n--- 💾 SAVING STATE ---");
+    Projector.persist();
 }
 
 module.exports = { runSimulation };
