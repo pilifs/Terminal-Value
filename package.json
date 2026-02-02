@@ -9,6 +9,8 @@
   "author": "Filip Stankovic",
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "uuid": "13.0.0"
   }
 }
