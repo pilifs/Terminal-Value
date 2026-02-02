@@ -1,7 +1,7 @@
 // main.js
 const EventEmitter = require('events');
-const BankAccount = require('./aggregate');
-const EventStore = require('./eventStore');
+const BankAccount = require('./domain/bankAccount');
+const EventStore = require('./framework/eventStore');
 const Projector = require('./projections');
 
 // 1. Infrastructure: The Event Bus (Simulating Kafka/RabbitMQ)
@@ -56,7 +56,6 @@ async function handleTransactionCommand(command) {
 }
 
 // --- SIMULATION ---
-
 async function runSimulation() {
     console.log("--- Starting Distributed CQRS System ---");
 

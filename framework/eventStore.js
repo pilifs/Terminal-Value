@@ -1,4 +1,3 @@
-// eventStore.js
 class EventStore {
     constructor() {
         // In-memory storage for demo (Replace with Postgres/Mongo)
