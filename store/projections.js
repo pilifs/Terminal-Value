@@ -122,6 +122,9 @@ const Projector = {
     getClientProfile: (clientId) => db.clients.get(clientId) || null,
     getClientsByCity: (city) => Array.from(db.clients.values()).filter(c => c.city === city),
     getDashboardStats: () => ({ ...db.dashboard }),
+    getOrdersByClient: (clientId) => {
+        return Array.from(db.orders.values()).filter(o => o.clientId === clientId);
+    },
 
     // --- PERSISTENCE METHOD ---
     persist: () => {

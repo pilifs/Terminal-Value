@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpine Ski Shop</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #f4f7f6; color: #333; }
+        header { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        header nav a { color: #ecf0f1; text-decoration: none; margin-left: 20px; font-weight: bold; cursor: pointer; }
+        header nav a:hover { text-decoration: underline; }
+        
+        .container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+        .page { display: none; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        
+        /* Product Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
+        .card h3 { margin: 0 0 10px 0; color: #2c3e50; }
+        .price { font-size: 1.2rem; color: #e74c3c; font-weight: bold; }
+        .stock { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 15px; }
+        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; }
+        button:hover { background: #2980b9; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #ecf0f1; }
+        .status-confirmed { color: green; font-weight: bold; }
+
+        /* Client Info Bar */
+        .client-info { background: #fff; padding: 10px 2rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; display: flex; gap: 20px; color: #555; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>🎿 <strong>Alpine Ski Shop</strong></div>
+    <nav>
+        <a onclick="router('home')">Shop</a>
+        <a onclick="router('history')">My Orders</a>
+    </nav>
+</header>
+
+<div class="client-info">
+    <span id="displayClient">Client: ...</span>
+    <span id="displayDevice">Device: ...</span>
+    <span id="displayLocation">Location: ...</span>
+</div>
+
+<div class="container">
+    
+    <div id="home" class="page active">
+        <h2>Featured Skis</h2>
+        <div id="productGrid" class="grid">Loading inventory...</div>
+    </div>
+
+    <div id="order" class="page">
+        <h2>Complete Your Order</h2>
+        <div class="card" style="max-width: 500px; margin: 0 auto; text-align: left;">
+            <h3 id="orderItemName">Ski Name</h3>
+            <p>SKU: <span id="orderItemSku"></span></p>
+            <p>Price: <span id="orderItemPrice" class="price"></span></p>
+            <hr>
+            <label>Quantity:</label>
+            <select id="orderQty" style="width: 100%; padding: 8px; margin: 10px 0;">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+            </select>
+            <button id="btnConfirm" onclick="submitOrder()">Confirm Purchase ($<span id="orderTotal"></span>)</button>
+            <button onclick="router('home')" style="background: #95a5a6; margin-top: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <div id="history" class="page">
+        <h2>Purchase History</h2>
+        <table id="historyTable">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const EventStore = require('../framework/eventStore');
 const Projector = require('../store/projections');
@@ -42,6 +43,9 @@ function startServer() {
     app.use(bodyParser.json());
     const PORT = 3000;
 
+    // --- SERVE STATIC FRONTEND FILES ---
+    app.use(express.static(path.join(__dirname, '../public')));
+
     // --- READ ROUTES (QUERIES) ---
     app.get('/api/inventory', (req, res) => res.json(Projector.getInventoryCatalog()));
     app.get('/api/dashboard', (req, res) => res.json(Projector.getDashboardStats()));
@@ -61,6 +65,13 @@ function startServer() {
         const device = Projector.getDeviceDetails(req.params.id);
         if (!device) return res.status(404).json({ error: "Device not found" });
         res.json(device);
+    });
+
+    app.get('/api/orders', (req, res) => {
+        if (req.query.clientId) {
+            return res.json(Projector.getOrdersByClient(req.query.clientId));
+        }
+        res.json({ error: "Please provide ?clientId=" });
     });
 
     app.get('/api/orders/:id', (req, res) => {
@@ -105,6 +116,7 @@ function startServer() {
 
     // --- START & LOG ROUTES ---
     app.listen(PORT, () => {
+        console.log(`\n🚀 Single Page Application running at http://localhost:${PORT}/index.html`);
         console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
         console.log(`\n--- 🔗 AVAILABLE ENDPOINTS ---`);
         
