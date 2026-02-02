@@ -1,45 +1,33 @@
-// data/mockEventGenerator.js
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('uuid'); // If you don't have uuid, a helper is included at bottom
 
 const CITIES = ['Vancouver', 'Whistler', 'Denver', 'Salt Lake City', 'Calgary', 'Burlington', 'Banff', 'Aspen'];
 const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge'];
 const DEVICES = ['iPhone 13', 'Pixel 6', 'MacBook Pro', 'iPad Air', 'Windows Desktop'];
-// Standard Industry Viewport Widths
-const VIEWPORTS = [
-    360,  // Android Compact
-    390,  // iPhone 12/13/14
-    414,  // iPhone Pro Max
-    768,  // iPad Mini / Tablet Portrait
-    1024, // iPad Pro / Laptop Small
-    1280, // 720p Laptop
-    1366, // Common Windows Laptop
-    1440, // MacBook Pro / QHD
-    1920, // 1080p Desktop Monitor
-    2560  // 1440p / 4K Scaled
-];
+
+const VIEWPORTS = [360, 390, 414, 768, 1024, 1280, 1366, 1440, 1920, 2560];
+
 const SKI_CATEGORIES = [
-    { name: 'All Mountain Explorer', cost: 400, sku: 'SKU-AM-001' },
-    { name: 'World Cup Racer', cost: 850, sku: 'SKU-RC-002' },
-    { name: 'Backcountry Tour', cost: 600, sku: 'SKU-TR-003' },
-    { name: 'Piste Carver', cost: 550, sku: 'SKU-CV-004' },
-    { name: 'Park Freestyle', cost: 350, sku: 'SKU-FS-005' },
-    { name: 'Deep Powder', cost: 700, sku: 'SKU-PW-006' },
-    { name: 'Big Mountain Pro', cost: 750, sku: 'SKU-BM-007' },
-    { name: 'Nordic Cross', cost: 250, sku: 'SKU-XC-008' }
+    { name: 'All Mountain Explorer', cost: 400, sku: 'SKU-AM-001', price: 650 },
+    { name: 'World Cup Racer', cost: 850, sku: 'SKU-RC-002', price: 1200 },
+    { name: 'Backcountry Tour', cost: 600, sku: 'SKU-TR-003', price: 890 },
+    { name: 'Piste Carver', cost: 550, sku: 'SKU-CV-004', price: 799 },
+    { name: 'Park Freestyle', cost: 350, sku: 'SKU-FS-005', price: 499 },
+    { name: 'Deep Powder', cost: 700, sku: 'SKU-PW-006', price: 950 },
+    { name: 'Big Mountain Pro', cost: 750, sku: 'SKU-BM-007', price: 1050 },
+    { name: 'Nordic Cross', cost: 250, sku: 'SKU-XC-008', price: 399 }
 ];
 
 function generateEvents() {
     const events = [];
-    let timestamp = Date.now() - 1000000; // Start in the past
+    let timestamp = Date.now() - 10000000; // Start further back
 
-    // --- 1. INITIALIZE INVENTORY (8 Skis) ---
-    const inventoryIds = {}; // Map Name -> UUID
+    // --- 1. INITIALIZE INVENTORY ---
+    const inventoryMap = {}; // Helper to look up ID by Index
     
-    SKI_CATEGORIES.forEach(ski => {
+    SKI_CATEGORIES.forEach((ski, index) => {
         const id = `ITEM-${ski.sku}`;
-        inventoryIds[ski.name] = id;
-
-        // Create Item
+        inventoryMap[index] = id;
+        
         events.push({
             type: 'ITEM_CREATED',
             aggregateId: id,
@@ -49,44 +37,35 @@ function generateEvents() {
             timestamp: timestamp++
         });
 
-        // Add Initial Stock (Random amount between 10 and 50)
+        // Add hefty stock initially to support the sales
         events.push({
             type: 'STOCK_ADDED',
             aggregateId: id,
-            quantity: Math.floor(Math.random() * 40) + 10,
+            quantity: 100, 
             timestamp: timestamp++,
-            version: 2 // Manually setting version since we are bypassing the store logic here
+            version: 2
         });
     });
 
-    // --- 2. INITIALIZE CLIENTS (50 Clients) ---
-    const clientIds = [];
+    // --- 2. INITIALIZE CLIENTS ---
+    const clients = [];
 
     for (let i = 1; i <= 50; i++) {
         const clientId = `CLIENT-${i.toString().padStart(3, '0')}`;
-        clientIds.push(clientId);
         const deviceId = `DEV-${i.toString().padStart(3, '0')}`;
-        
-        // Random Demographics
-        const age = Math.floor(Math.random() * 40) + 18; // 18 to 58
-        const city = CITIES[Math.floor(Math.random() * CITIES.length)];
-        const isRegistered = i % 2 === 0; // Half registered
-        
-        // A. Device Detected (ClientDevice Aggregate)
+        const isRegistered = i % 2 === 0;
 
-        // Pick a random realistic viewport -- not linked to device for simplicity
-        const randomViewport = VIEWPORTS[Math.floor(Math.random() * VIEWPORTS.length)];
+        clients.push({ id: clientId, isRegistered });
 
         events.push({
             type: 'DEVICE_DETECTED',
             aggregateId: deviceId,
             browser: BROWSERS[Math.floor(Math.random() * BROWSERS.length)],
             deviceName: DEVICES[Math.floor(Math.random() * DEVICES.length)],
-            viewportWidth: randomViewport,
+            viewportWidth: VIEWPORTS[Math.floor(Math.random() * VIEWPORTS.length)],
             timestamp: timestamp++
         });
 
-        // B. Link Device to Client (Client Aggregate)
         events.push({
             type: 'DEVICE_LINKED',
             aggregateId: clientId,
@@ -94,17 +73,88 @@ function generateEvents() {
             timestamp: timestamp++
         });
 
-        // C. Register Client (if applicable)
         if (isRegistered) {
             events.push({
                 type: 'CLIENT_REGISTERED',
                 aggregateId: clientId,
-                age: age,
-                city: city,
+                age: Math.floor(Math.random() * 40) + 18,
+                city: CITIES[Math.floor(Math.random() * CITIES.length)],
                 timestamp: timestamp++
             });
         }
     }
+
+    // --- 3. GENERATE SALES HISTORY ---
+    
+    // Helper to create a purchase sequence
+    const createPurchase = (clientId) => {
+        const orderId = `ORDER-${Math.floor(Math.random() * 10000000)}`;
+        
+        // 1. Pick a random Ski
+        const itemIdx = Math.floor(Math.random() * SKI_CATEGORIES.length);
+        const item = SKI_CATEGORIES[itemIdx];
+        const itemId = inventoryMap[itemIdx];
+        const qty = 1;
+
+        // Event A: Start Order
+        events.push({
+            type: 'ORDER_INITIATED',
+            aggregateId: orderId,
+            orderType: 'PURCHASE',
+            clientId: clientId,
+            timestamp: timestamp++
+        });
+
+        // Event B: Add Item
+        events.push({
+            type: 'ITEM_ADDED_TO_ORDER',
+            aggregateId: orderId,
+            itemId: itemId,
+            quantity: qty,
+            price: item.price,
+            timestamp: timestamp++
+        });
+
+        // Event C: Confirm Order
+        events.push({
+            type: 'ORDER_CONFIRMED',
+            aggregateId: orderId,
+            timestamp: timestamp++
+        });
+
+        // Event D: Side Effect (Reduce Stock)
+        // Note: In real event sourcing, this version number needs to be accurate.
+        // For this generator, we assume no race conditions.
+        events.push({
+            type: 'STOCK_REMOVED',
+            aggregateId: itemId,
+            quantity: qty,
+            timestamp: timestamp++
+        });
+    };
+
+    // A. High Value Clients (First 10 Registered Clients)
+    const registeredClients = clients.filter(c => c.isRegistered);
+    const highValueClients = registeredClients.slice(0, 10);
+    
+    highValueClients.forEach(client => {
+        // Each makes 3 to 7 purchases
+        const purchaseCount = Math.floor(Math.random() * 5) + 3;
+        for (let k = 0; k < purchaseCount; k++) {
+            createPurchase(client.id);
+            timestamp += 10000; // Time gap between purchases
+        }
+    });
+
+    // B. Casual Shoppers (Next 10 Clients, mixed reg/non-reg)
+    // We pick clients from index 10 to 20
+    const casualShoppers = clients.slice(10, 20);
+    casualShoppers.forEach(client => {
+        createPurchase(client.id);
+    });
+
+    // C. Window Shoppers (Everyone else)
+    // No events generated for them.
 
     return events;
 }

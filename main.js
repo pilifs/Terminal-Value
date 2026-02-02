@@ -54,6 +54,7 @@ async function runSimulation() {
 
     // 4. PERFORM A NEW TRANSACTION
     // Client 50 wants to buy the 'World Cup Racer' skis.
+    // This will fail due to ID collision since adding mock sales generation
     console.log("--- Processing New Order ---");
 
     try {
