@@ -1,0 +1,11 @@
+{
+  "name": "terminal-value",
+  "version": "1.0.0",
+  "description": "System architecture that binds LLM directly to user views to maximize business value",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Filip Stankovic",
+  "license": "MIT"
+}
