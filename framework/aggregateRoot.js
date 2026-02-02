@@ -21,6 +21,9 @@ class AggregateRoot {
      * @param {Boolean} isNew - True if this is a new command, False if replaying history
      */
     applyChange(event, isNew = true) {
+        // Log to console for demo purposes with all properties of event
+        console.log(`[Event Applied] Event:`, event);
+
         // 1. Delegate state mutation to the concrete child class
         this.apply(event);
 
