@@ -131,6 +131,7 @@ const Projector = {
     getClientProfile: (clientId) => db.clients.get(clientId) || null,
     getClients: () => Array.from(db.clients.values()),
     getClientsByCity: (city) => Array.from(db.clients.values()).filter(c => c.city === city),
+    getDeviceDetails: (deviceId) => { return db.devices.get(deviceId) || null;},
     getDashboardStats: () => ({ ...db.dashboard }),
     getOrdersByClient: (clientId) => {
         return Array.from(db.orders.values()).filter(o => o.clientId === clientId);

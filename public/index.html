@@ -21,6 +21,43 @@
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #ecf0f1; }
         .status-confirmed { color: green; font-weight: bold; }
+
+        /* HOVER TOOLTIP STYLES */
+        .client-info { 
+            background: #fff; padding: 10px 2rem; border-bottom: 1px solid #ddd; 
+            font-size: 0.9rem; display: flex; gap: 20px; color: #555; position: relative;
+        }
+        
+        .info-hover {
+            cursor: help;
+            border-bottom: 1px dotted #aaa;
+            position: relative;
+        }
+        
+        .info-hover:hover {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        /* The Floating Box */
+        #detailTooltip {
+            position: absolute;
+            top: 45px; /* Push below the header bar */
+            left: 20px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 250px;
+            white-space: pre-wrap; /* Respect new lines */
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+            display: none; /* Hidden by default */
+        }
+        
+        #detailTooltip.visible { display: block; animation: fadeIn 0.2s; }
     </style>
 </head>
 <body>
@@ -34,9 +71,11 @@
 </header>
 
 <div class="client-info">
-    <span id="displayClient">Client: ...</span>
-    <span id="displayDevice">Device: ...</span>
-    <span id="displayLocation">Location: ...</span>
+    <span id="displayClient" class="info-hover">Client: ...</span>
+    <span id="displayDevice" class="info-hover">Device: ...</span>
+    <span id="displayLocation" class="info-hover">Location: ...</span>
+    
+    <div id="detailTooltip"></div>
 </div>
 
 <div class="container">
