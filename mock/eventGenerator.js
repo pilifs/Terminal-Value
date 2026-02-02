@@ -4,6 +4,19 @@ const { v4: uuidv4 } = require('uuid');
 const CITIES = ['Vancouver', 'Whistler', 'Denver', 'Salt Lake City', 'Calgary', 'Burlington', 'Banff', 'Aspen'];
 const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge'];
 const DEVICES = ['iPhone 13', 'Pixel 6', 'MacBook Pro', 'iPad Air', 'Windows Desktop'];
+// Standard Industry Viewport Widths
+const VIEWPORTS = [
+    360,  // Android Compact
+    390,  // iPhone 12/13/14
+    414,  // iPhone Pro Max
+    768,  // iPad Mini / Tablet Portrait
+    1024, // iPad Pro / Laptop Small
+    1280, // 720p Laptop
+    1366, // Common Windows Laptop
+    1440, // MacBook Pro / QHD
+    1920, // 1080p Desktop Monitor
+    2560  // 1440p / 4K Scaled
+];
 const SKI_CATEGORIES = [
     { name: 'All Mountain Explorer', cost: 400, sku: 'SKU-AM-001' },
     { name: 'World Cup Racer', cost: 850, sku: 'SKU-RC-002' },
@@ -58,14 +71,18 @@ function generateEvents() {
         const age = Math.floor(Math.random() * 40) + 18; // 18 to 58
         const city = CITIES[Math.floor(Math.random() * CITIES.length)];
         const isRegistered = i % 2 === 0; // Half registered
-
+        
         // A. Device Detected (ClientDevice Aggregate)
+
+        // Pick a random realistic viewport -- not linked to device for simplicity
+        const randomViewport = VIEWPORTS[Math.floor(Math.random() * VIEWPORTS.length)];
+
         events.push({
             type: 'DEVICE_DETECTED',
             aggregateId: deviceId,
             browser: BROWSERS[Math.floor(Math.random() * BROWSERS.length)],
             deviceName: DEVICES[Math.floor(Math.random() * DEVICES.length)],
-            viewportWidth: Math.random() > 0.5 ? 1920 : 390,
+            viewportWidth: randomViewport,
             timestamp: timestamp++
         });
 
