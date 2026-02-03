@@ -1,118 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gemini Batch Manager</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        
-        /* Updated Input Group Styling */
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
-        
-        /* New Textarea Styles */
-        textarea { 
-            width: 100%; 
-            min-height: 120px; /* Makes it taller */
-            padding: 12px; 
-            font-size: 16px; 
-            font-family: inherit;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: vertical; /* Allows user to drag resizing vertically */
-            box-sizing: border-box; /* Ensures padding doesn't break width */
-        }
+      body {
+        font-family: sans-serif;
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
 
-        button { align-self: flex-start; padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-        button:hover { background: #0056b3; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f4f4f4; }
-        .status-SUCCEEDED { color: green; font-weight: bold; }
-        .status-FAILED { color: red; font-weight: bold; }
-        .status-PENDING { color: orange; }
-        .status-RUNNING { color: blue; }
+      /* Updated Input Group Styling */
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 2rem;
+      }
+
+      /* New Textarea Styles */
+      textarea {
+        width: 100%;
+        min-height: 120px; /* Makes it taller */
+        padding: 12px;
+        font-size: 16px;
+        font-family: inherit;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical; /* Allows user to drag resizing vertically */
+        box-sizing: border-box; /* Ensures padding doesn't break width */
+      }
+
+      button {
+        align-self: flex-start;
+        padding: 10px 20px;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background-color: #f4f4f4;
+      }
+      .status-SUCCEEDED {
+        color: green;
+        font-weight: bold;
+      }
+      .status-FAILED {
+        color: red;
+        font-weight: bold;
+      }
+      .status-PENDING {
+        color: orange;
+      }
+      .status-RUNNING {
+        color: blue;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Gemini Batch Manager</h1>
 
     <div class="input-group">
-        <textarea id="promptInput" placeholder="Enter your prompt here...&#10;(e.g., 'Summarize the history of AI in 3 paragraphs')"></textarea>
-        <button onclick="createJob()">Create Batch Job</button>
+      <textarea
+        id="promptInput"
+        placeholder="Enter your prompt here...&#10;(e.g., 'Summarize the history of AI in 3 paragraphs')"
+      ></textarea>
+      <button onclick="createJob()">Create Batch Job</button>
     </div>
 
-    <button onclick="fetchJobs()" style="background: #6c757d; font-size: 0.9em;">🔄 Refresh List</button>
+    <button onclick="fetchJobs()" style="background: #6c757d; font-size: 0.9em">
+      🔄 Refresh List
+    </button>
 
     <table>
-        <thead>
-            <tr>
-                <th>Status</th>
-                <th>Job ID</th>
-                <th>Created At</th>
-                <th>Model</th>
-            </tr>
-        </thead>
-        <tbody id="jobsTableBody">
-            </tbody>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Job ID</th>
+          <th>Created At</th>
+          <th>Model</th>
+        </tr>
+      </thead>
+      <tbody id="jobsTableBody"></tbody>
     </table>
 
     <script>
-        async function fetchJobs() {
-            const tbody = document.getElementById('jobsTableBody');
-            tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-            
-            try {
-                const res = await fetch('/api/jobs');
-                const jobs = await res.json();
-                
-                tbody.innerHTML = jobs.map(job => `
+      async function fetchJobs() {
+        const tbody = document.getElementById('jobsTableBody');
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
+        try {
+          const res = await fetch('/api/jobs');
+          const jobs = await res.json();
+
+          tbody.innerHTML = jobs
+            .map(
+              (job) => `
                     <tr>
                         <td class="status-${job.status}">${job.status}</td>
                         <td>${job.id}</td>
                         <td>${job.created}</td>
                         <td>${job.model}</td>
                     </tr>
-                `).join('');
-            } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="4" style="color:red">Error loading jobs</td></tr>`;
-            }
+                `
+            )
+            .join('');
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="4" style="color:red">Error loading jobs</td></tr>`;
         }
+      }
 
-        async function createJob() {
-            const input = document.getElementById('promptInput');
-            const prompt = input.value.trim();
-            if (!prompt) return alert("Please enter a prompt");
+      async function createJob() {
+        const input = document.getElementById('promptInput');
+        const prompt = input.value.trim();
+        if (!prompt) return alert('Please enter a prompt');
 
-            const btn = document.querySelector('button[onclick="createJob()"]');
-            btn.disabled = true;
-            btn.innerText = "Creating...";
+        const btn = document.querySelector('button[onclick="createJob()"]');
+        btn.disabled = true;
+        btn.innerText = 'Creating...';
 
-            try {
-                const res = await fetch('/api/jobs', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
-                });
-                
-                if (res.ok) {
-                    input.value = "";
-                    fetchJobs(); // Refresh table immediately
-                } else {
-                    const err = await res.json();
-                    alert("Error: " + err.error);
-                }
-            } catch (error) {
-                alert("Failed to create job");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Create Batch Job";
-            }
+        try {
+          const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt }),
+          });
+
+          if (res.ok) {
+            input.value = '';
+            fetchJobs(); // Refresh table immediately
+          } else {
+            const err = await res.json();
+            alert('Error: ' + err.error);
+          }
+        } catch (error) {
+          alert('Failed to create job');
+        } finally {
+          btn.disabled = false;
+          btn.innerText = 'Create Batch Job';
         }
+      }
 
-        // Load on start
-        fetchJobs();
+      // Load on start
+      fetchJobs();
     </script>
-</body>
+  </body>
 </html>
