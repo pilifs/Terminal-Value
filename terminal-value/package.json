@@ -5,10 +5,7 @@
   "type": "module",
   "main": "terminalValue.js",
   "scripts": {
-    "start": "node terminalValue.js",
-    "get-job-status": "node getJobStatus.js",
-    "check-job-status": "node checkJobStatus.js",
-    "list-completed-jobs": "node listCompletedJobs.js"
+    "start": "node server.js"
   },
   "engines": {
     "node": "24.13.0"

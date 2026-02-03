@@ -9,28 +9,49 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
- * Creates a batch job and returns the job metadata immediately.
- * Does NOT wait for completion (async).
+ * Helper to fetch ALL pages from the API
+ */
+async function fetchAllPages(params) {
+  let allItems = [];
+  let pageToken = undefined;
+
+  do {
+    const currentParams = pageToken ? { ...params, pageToken } : params;
+    const response = await genAI.batches.list(currentParams);
+
+    const items = response.pageInternal?.length > 0 
+      ? response.pageInternal 
+      : (response.batches || []);
+    
+    allItems = allItems.concat(items);
+    pageToken = response.nextPageToken;
+
+  } while (pageToken);
+
+  return allItems;
+}
+
+/**
+ * Creates a batch job with a SINGLE prompt request.
+ * Newlines in the input are preserved as part of the text, not split into new requests.
  */
 export async function createBatchJob(promptText) {
   const fileName = `request-${Date.now()}.jsonl`;
   const modelName = "models/gemini-3-pro-preview";
 
   try {
-    // 1. Prepare Data
+    // Single Request Logic: Wrap the entire text (including newlines) into one object
     const batchData = [{
       request: { contents: [{ parts: [{ text: promptText }] }] }
     }];
     
     fs.writeFileSync(fileName, batchData.map(d => JSON.stringify(d)).join("\n"));
 
-    // 2. Upload
     const uploadResult = await genAI.files.upload({
       file: fileName,
       config: { mimeType: "text/plain" }
     });
 
-    // 3. Create Job
     const batchJob = await genAI.batches.create({
       model: modelName,
       src: uploadResult.name,
@@ -48,22 +69,23 @@ export async function createBatchJob(promptText) {
 }
 
 /**
- * Lists all jobs (Active & History)
+ * Lists ALL jobs (Active & History) by iterating through pagination.
  */
 export async function getAllJobs() {
   try {
-    const [activeRes, historyRes] = await Promise.all([
-      genAI.batches.list({
-        pageSize: 100,
-        filter: 'state="JOB_STATE_PENDING" OR state="JOB_STATE_RUNNING"'
-      }),
-      genAI.batches.list({ pageSize: 50 })
-    ]);
+    const activeJobsPromise = fetchAllPages({
+      pageSize: 100,
+      filter: 'state="JOB_STATE_PENDING" OR state="JOB_STATE_RUNNING"'
+    });
 
-    const extract = (res) => res.pageInternal?.length > 0 ? res.pageInternal : (res.batches || []);
-    
+    const historyJobsPromise = fetchAllPages({
+      pageSize: 100 
+    });
+
+    const [activeJobs, historyJobs] = await Promise.all([activeJobsPromise, historyJobsPromise]);
+
     const jobMap = new Map();
-    [...extract(activeRes), ...extract(historyRes)].forEach(j => jobMap.set(j.name, j));
+    [...activeJobs, ...historyJobs].forEach(j => jobMap.set(j.name, j));
     
     const allJobs = Array.from(jobMap.values()).sort((a, b) => 
       new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
