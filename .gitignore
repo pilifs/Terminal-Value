@@ -2,3 +2,4 @@ node_modules/
 db.js
 .vscode/
 .env
+requests.jsonl
