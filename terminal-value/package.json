@@ -1,0 +1,22 @@
+{
+  "name": "terminal-value",
+  "version": "1.0.0",
+  "description": "CLI examples for interacting with Google Gemini batch/file APIs",
+  "type": "module",
+  "main": "terminalValue.js",
+  "scripts": {
+    "start": "node terminalValue.js",
+    "get-job-status": "node getJobStatus.js",
+    "check-job-status": "node checkJobStatus.js",
+    "list-completed-jobs": "node listCompletedJobs.js"
+  },
+  "engines": {
+    "node": "24.13.0"
+  },
+  "author": "Filip Stankovic",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "1.39.0",
+    "dotenv": "17.2.3"
+  }
+}
