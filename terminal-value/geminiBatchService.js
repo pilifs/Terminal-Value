@@ -10,37 +10,41 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
  * Helper to fetch ALL pages from the API
+ * Iterates through nextPageToken to retrieve the full history.
  */
-async function fetchAllPages(params) {
-  let allItems = [];
-  let pageToken = undefined;
+async function fetchAllPages() {
+    let allItems = [];
 
-  do {
-    const currentParams = pageToken ? { ...params, pageToken } : params;
-    const response = await genAI.batches.list(currentParams);
+    const params = {};
 
+    params.config = {
+        pageSize: 50
+    }
+
+    // 2. Make the API request
+    // Note: We pass currentParams directly (no 'config' wrapper) to avoid fetch errors
+    const response = await genAI.batches.list(params);
+
+    // 3. Extract items from SDK's specific response structure
     const items = response.pageInternal?.length > 0 
-      ? response.pageInternal 
-      : (response.batches || []);
+    ? response.pageInternal 
+    : (response.batches || []);
     
     allItems = allItems.concat(items);
-    pageToken = response.nextPageToken;
 
-  } while (pageToken);
-
-  return allItems;
+    return allItems;
 }
 
 /**
  * Creates a batch job with a SINGLE prompt request.
- * Newlines in the input are preserved as part of the text, not split into new requests.
+ * Newlines in the input are preserved as part of the text.
  */
 export async function createBatchJob(promptText) {
   const fileName = `request-${Date.now()}.jsonl`;
   const modelName = "models/gemini-3-pro-preview";
 
   try {
-    // Single Request Logic: Wrap the entire text (including newlines) into one object
+    // Single Request Logic: Wrap the entire text into one request object
     const batchData = [{
       request: { contents: [{ parts: [{ text: promptText }] }] }
     }];
@@ -69,29 +73,23 @@ export async function createBatchJob(promptText) {
 }
 
 /**
- * Lists ALL jobs (Active & History) by iterating through pagination.
+ * Lists ALL jobs by fetching the full history.
  */
 export async function getAllJobs() {
   try {
-    const activeJobsPromise = fetchAllPages({
-      pageSize: 100,
-      filter: 'state="JOB_STATE_PENDING" OR state="JOB_STATE_RUNNING"'
-    });
+    // Fetch everything in one go (Server-side filtering is not supported)
+    const allJobs = await fetchAllPages();
 
-    const historyJobsPromise = fetchAllPages({
-      pageSize: 100 
-    });
-
-    const [activeJobs, historyJobs] = await Promise.all([activeJobsPromise, historyJobsPromise]);
-
+    // Sort by creation time (Newest First)
+    // We use a Map to deduplicate just in case, though the linear fetch should be unique
     const jobMap = new Map();
-    [...activeJobs, ...historyJobs].forEach(j => jobMap.set(j.name, j));
+    allJobs.forEach(j => jobMap.set(j.name, j));
     
-    const allJobs = Array.from(jobMap.values()).sort((a, b) => 
+    const sortedJobs = Array.from(jobMap.values()).sort((a, b) => 
       new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
     );
 
-    return allJobs.map(job => ({
+    return sortedJobs.map(job => ({
       id: job.name.split("/").pop(),
       fullId: job.name,
       status: job.state.replace("JOB_STATE_", ""),
