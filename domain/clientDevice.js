@@ -1,4 +1,4 @@
-const AggregateRoot = require('.,/framework/aggregateRoot');
+const AggregateRoot = require('../framework/aggregateRoot');
 
 class ClientDevice extends AggregateRoot {
     constructor(id, history) {
