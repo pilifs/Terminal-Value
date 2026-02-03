@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Batch Manager</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 2rem; }
+        input { flex: 1; padding: 10px; font-size: 16px; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f4f4f4; }
+        .status-SUCCEEDED { color: green; font-weight: bold; }
+        .status-FAILED { color: red; font-weight: bold; }
+        .status-PENDING { color: orange; }
+        .status-RUNNING { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Gemini Batch Manager</h1>
+
+    <div class="input-group">
+        <input type="text" id="promptInput" placeholder="Enter your prompt here (e.g., 'Tell me a joke about Node.js')">
+        <button onclick="createJob()">Create Batch Job</button>
+    </div>
+
+    <button onclick="fetchJobs()" style="background: #6c757d; font-size: 0.9em;">🔄 Refresh List</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Job ID</th>
+                <th>Created At</th>
+                <th>Model</th>
+            </tr>
+        </thead>
+        <tbody id="jobsTableBody">
+            </tbody>
+    </table>
+
+    <script>
+        async function fetchJobs() {
+            const tbody = document.getElementById('jobsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+            
+            try {
+                const res = await fetch('/api/jobs');
+                const jobs = await res.json();
+                
+                tbody.innerHTML = jobs.map(job => `
+                    <tr>
+                        <td class="status-${job.status}">${job.status}</td>
+                        <td>${job.id}</td>
+                        <td>${job.created}</td>
+                        <td>${job.model}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red">Error loading jobs</td></tr>`;
+            }
+        }
+
+        async function createJob() {
+            const input = document.getElementById('promptInput');
+            const prompt = input.value.trim();
+            if (!prompt) return alert("Please enter a prompt");
+
+            const btn = document.querySelector('button[onclick="createJob()"]');
+            btn.disabled = true;
+            btn.innerText = "Creating...";
+
+            try {
+                const res = await fetch('/api/jobs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                
+                if (res.ok) {
+                    input.value = "";
+                    fetchJobs(); // Refresh table immediately
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.error);
+                }
+            } catch (error) {
+                alert("Failed to create job");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Create Batch Job";
+            }
+        }
+
+        // Load on start
+        fetchJobs();
+    </script>
+</body>
+</html>
