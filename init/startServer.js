@@ -3,38 +3,12 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 
-const EventStore = require('../framework/eventStore');
 const Projector = require('../store/projections');
+const CommandDispatcher = require('../framework/commandDispatcher');
+
 const InventoryItem = require('../domain/inventoryItem');
 const Client = require('../domain/client');
 const Order = require('../domain/order');
-
-// --- HELPER: COMMAND CONTROLLER ---
-async function processCommand(AggregateClass, aggregateId, actionCallback) {
-    let retries = 3;
-    while (retries > 0) {
-        try {
-            const history = await EventStore.loadEvents(aggregateId);
-            const aggregate = new AggregateClass(aggregateId, history);
-            const expectedVersion = aggregate.version;
-
-            const event = actionCallback(aggregate);
-
-            await EventStore.saveEvents(aggregateId, [event], expectedVersion);
-            Projector.handle(event);
-
-            return { success: true, id: aggregateId, event };
-
-        } catch (err) {
-            if (err.message.includes('Concurrency Error')) {
-                retries--;
-            } else {
-                throw err;
-            }
-        }
-    }
-    throw new Error("Transaction failed due to high contention.");
-}
 
 // --- SERVER SETUP ---
 function startServer() {
@@ -89,13 +63,13 @@ function startServer() {
         const { clientId, items } = req.body; 
         const orderId = `ORDER-${Date.now()}`;
         try {
-            await processCommand(Order, orderId, (order) => order.initiatePurchase(clientId));
+            await CommandDispatcher.dispatch(Order, orderId, (order) => order.initiatePurchase(clientId));
             for (const item of items) {
-                await processCommand(Order, orderId, (order) => order.addItem(item.skuId, item.quantity, item.price));
+                await CommandDispatcher.dispatch(Order, orderId, (order) => order.addItem(item.skuId, item.quantity, item.price));
             }
-            await processCommand(Order, orderId, (order) => order.confirm());
+            await CommandDispatcher.dispatch(Order, orderId, (order) => order.confirm());
             for (const item of items) {
-                await processCommand(InventoryItem, item.skuId, (inv) => inv.removeStock(item.quantity));
+                await CommandDispatcher.dispatch(InventoryItem, item.skuId, (inv) => inv.removeStock(item.quantity));
             }
             res.status(201).json({ success: true, orderId });
         } catch (e) {
@@ -106,7 +80,7 @@ function startServer() {
     app.post('/api/clients/:id/register', async (req, res) => {
         const { age, city } = req.body;
         try {
-            const result = await processCommand(Client, req.params.id, (client) => client.register(age, city));
+            const result = await CommandDispatcher.dispatch(Client, req.params.id, (client) => client.register(age, city));
             res.json(result);
         } catch (e) {
             res.status(400).json({ error: e.message });
