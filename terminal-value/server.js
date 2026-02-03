@@ -1,5 +1,5 @@
 import express from 'express';
-import { createBatchJob, getAllJobs } from './geminiBatchService.js';
+import { createBatchJob, getAllJobs, getJobResults } from './geminiBatchService.js';
 
 const app = express();
 const PORT = 3001;
@@ -33,4 +33,16 @@ app.post('/api/jobs', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
+});
+
+// GET: Fetch results for a specific file
+app.get('/api/jobs/results/:fileId', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    // We expect fileId to be just the ID, so we prepend 'files/'
+    const results = await getJobResults(`files/${fileId}`);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });

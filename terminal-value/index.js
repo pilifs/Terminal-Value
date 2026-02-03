@@ -1,24 +1,35 @@
-import { createAndRunBatch, listJobDashboard } from './geminiBatchService.js';
+import { getAllJobs, getJobResults, createBatchJob, inspectJob, recoverBatchResult } from './geminiBatchService.js';
 
 const command = process.argv[2];
+const input = process.argv[3];
 
 async function main() {
   switch (command) {
-    case 'create':
-      await createAndRunBatch([
-        'Explain Node.js streams in 1 sentence.',
-        'What is the capital of Canada?',
-      ]);
+    case 'prompt':
+      const job = await createBatchJob(input);
+      console.log(job);
       break;
-
+    
     case 'list':
-      await listJobDashboard();
+      const list = await getAllJobs();
+      console.log(list);
+      break;
+    
+    case 'details':
+      const details = await getJobResults(`files/batch-${input}`);
+      console.log(details.json(details));
       break;
 
-    default:
-      console.log('Usage:');
-      console.log('  node index.js create  -> Run a new batch job');
-      console.log('  node index.js list    -> Show job dashboard');
+    case 'recover':
+      const recover = await recoverBatchResult(`files/batch-${input}`);
+      console.log(details.json(recover));
+      break;
+
+    case 'inspect':
+      const inspect = await inspectJob(input);
+      console.log(JSON.stringify(inspect, null, 2));
+      console.log(inspect);
+      break;
   }
 }
 

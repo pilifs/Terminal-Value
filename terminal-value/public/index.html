@@ -12,7 +12,6 @@
         padding: 0 1rem;
       }
 
-      /* Updated Input Group Styling */
       .input-group {
         display: flex;
         flex-direction: column;
@@ -20,17 +19,16 @@
         margin-bottom: 2rem;
       }
 
-      /* New Textarea Styles */
       textarea {
         width: 100%;
-        min-height: 120px; /* Makes it taller */
+        min-height: 120px;
         padding: 12px;
         font-size: 16px;
         font-family: inherit;
         border: 1px solid #ccc;
         border-radius: 4px;
-        resize: vertical; /* Allows user to drag resizing vertically */
-        box-sizing: border-box; /* Ensures padding doesn't break width */
+        resize: vertical;
+        box-sizing: border-box;
       }
 
       button {
@@ -74,6 +72,15 @@
       .status-RUNNING {
         color: blue;
       }
+      
+      /* Result Link Styling */
+      td a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      td a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -103,65 +110,6 @@
       <tbody id="jobsTableBody"></tbody>
     </table>
 
-    <script>
-      async function fetchJobs() {
-        const tbody = document.getElementById('jobsTableBody');
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-
-        try {
-          const res = await fetch('/api/jobs');
-          const jobs = await res.json();
-
-          tbody.innerHTML = jobs
-            .map(
-              (job) => `
-                    <tr>
-                        <td class="status-${job.status}">${job.status}</td>
-                        <td>${job.id}</td>
-                        <td>${job.created}</td>
-                        <td>${job.model}</td>
-                    </tr>
-                `
-            )
-            .join('');
-        } catch (err) {
-          tbody.innerHTML = `<tr><td colspan="4" style="color:red">Error loading jobs</td></tr>`;
-        }
-      }
-
-      async function createJob() {
-        const input = document.getElementById('promptInput');
-        const prompt = input.value.trim();
-        if (!prompt) return alert('Please enter a prompt');
-
-        const btn = document.querySelector('button[onclick="createJob()"]');
-        btn.disabled = true;
-        btn.innerText = 'Creating...';
-
-        try {
-          const res = await fetch('/api/jobs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt }),
-          });
-
-          if (res.ok) {
-            input.value = '';
-            fetchJobs(); // Refresh table immediately
-          } else {
-            const err = await res.json();
-            alert('Error: ' + err.error);
-          }
-        } catch (error) {
-          alert('Failed to create job');
-        } finally {
-          btn.disabled = false;
-          btn.innerText = 'Create Batch Job';
-        }
-      }
-
-      // Load on start
-      fetchJobs();
-    </script>
+    <script src="app.js"></script>
   </body>
 </html>
