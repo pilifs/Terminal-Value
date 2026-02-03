@@ -1,9 +1,11 @@
-// aggregateRoot.js
 class AggregateRoot {
-    constructor(id, history = []) {
+    constructor(id, history = [], initialState = {}) {
         this.id = id;
         this.version = 0;
         
+        // Apply default state provided by the subclass
+        Object.assign(this, initialState);
+
         // Automated Rehydration
         this.rehydrate(history);
     }
