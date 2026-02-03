@@ -1,110 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Alpine Ski Shop</title>
     <style>
-        /* Global & Shell Styles */
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #f4f7f6; color: #333; }
-        header { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        header nav a { color: #ecf0f1; text-decoration: none; margin-left: 20px; font-weight: bold; cursor: pointer; }
-        header nav a:hover { text-decoration: underline; }
-        .container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
-        .client-info { background: #fff; padding: 10px 2rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; display: flex; gap: 20px; color: #555; }
-        
-        /* Utility for hiding/showing pages */
-        .hidden { display: none !important; }
-        
-        /* Styles for the non-web-component History page */
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #ecf0f1; }
-        .status-confirmed { color: green; font-weight: bold; }
+      /* Global & Shell Styles */
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f7f6;
+        color: #333;
+      }
+      header {
+        background: #2c3e50;
+        color: white;
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header nav a {
+        color: #ecf0f1;
+        text-decoration: none;
+        margin-left: 20px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      header nav a:hover {
+        text-decoration: underline;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      .client-info {
+        background: #fff;
+        padding: 10px 2rem;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.9rem;
+        display: flex;
+        gap: 20px;
+        color: #555;
+      }
 
-        /* HOVER TOOLTIP STYLES */
-        .client-info { 
-            background: #fff; padding: 10px 2rem; border-bottom: 1px solid #ddd; 
-            font-size: 0.9rem; display: flex; gap: 20px; color: #555; position: relative;
-        }
-        
-        .info-hover {
-            cursor: help;
-            border-bottom: 1px dotted #aaa;
-            position: relative;
-        }
-        
-        .info-hover:hover {
-            color: #2c3e50;
-            font-weight: bold;
-        }
+      /* Utility for hiding/showing pages */
+      .hidden {
+        display: none !important;
+      }
 
-        /* The Floating Box */
-        #detailTooltip {
-            position: absolute;
-            top: 45px; /* Push below the header bar */
-            left: 20px;
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 1000;
-            min-width: 250px;
-            white-space: pre-wrap; /* Respect new lines */
-            font-family: 'Consolas', monospace;
-            font-size: 0.8rem;
-            display: none; /* Hidden by default */
-        }
-        
-        #detailTooltip.visible { display: block; animation: fadeIn 0.2s; }
+      /* Styles for the non-web-component History page */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      th {
+        background: #ecf0f1;
+      }
+      .status-confirmed {
+        color: green;
+        font-weight: bold;
+      }
+
+      /* HOVER TOOLTIP STYLES */
+      .client-info {
+        background: #fff;
+        padding: 10px 2rem;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.9rem;
+        display: flex;
+        gap: 20px;
+        color: #555;
+        position: relative;
+      }
+
+      .info-hover {
+        cursor: help;
+        border-bottom: 1px dotted #aaa;
+        position: relative;
+      }
+
+      .info-hover:hover {
+        color: #2c3e50;
+        font-weight: bold;
+      }
+
+      /* The Floating Box */
+      #detailTooltip {
+        position: absolute;
+        top: 45px; /* Push below the header bar */
+        left: 20px;
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        min-width: 250px;
+        white-space: pre-wrap; /* Respect new lines */
+        font-family: 'Consolas', monospace;
+        font-size: 0.8rem;
+        display: none; /* Hidden by default */
+      }
+
+      #detailTooltip.visible {
+        display: block;
+        animation: fadeIn 0.2s;
+      }
     </style>
-</head>
-<body>
-
-<header>
-    <div>🎿 <strong>Alpine Ski Shop</strong></div>
-    <nav>
+  </head>
+  <body>
+    <header>
+      <div>🎿 <strong>Alpine Ski Shop</strong></div>
+      <nav>
         <a onclick="router('home')">Shop</a>
         <a onclick="router('history')">My Orders</a>
-    </nav>
-</header>
+      </nav>
+    </header>
 
-<div class="client-info">
-    <span id="displayClient" class="info-hover">Client: ...</span>
-    <span id="displayDevice" class="info-hover">Device: ...</span>
-    <span id="displayLocation" class="info-hover">Location: ...</span>
-    
-    <div id="detailTooltip"></div>
-</div>
+    <div class="client-info">
+      <span id="displayClient" class="info-hover">Client: ...</span>
+      <span id="displayDevice" class="info-hover">Device: ...</span>
+      <span id="displayLocation" class="info-hover">Location: ...</span>
 
-<div class="container">
-    
-    <home-page id="homePage"></home-page>
-
-    <order-page id="orderPage" class="hidden"></order-page>
-
-    <div id="historyPage" class="hidden">
-        <h2>Purchase History</h2>
-        <table id="historyTable">
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="historyBody"></tbody>
-        </table>
+      <div id="detailTooltip"></div>
     </div>
 
-</div>
+    <div class="container">
+      <home-page id="homePage"></home-page>
 
-<script type="module" src="components/HomePage.js"></script>
-<script type="module" src="components/OrderPage.js"></script>
-<script src="app.js"></script>
+      <order-page id="orderPage" class="hidden"></order-page>
 
-</body>
+      <div id="historyPage" class="hidden">
+        <h2>Purchase History</h2>
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script type="module" src="components/HomePage.js"></script>
+    <script type="module" src="components/OrderPage.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>

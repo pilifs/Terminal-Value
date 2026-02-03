@@ -1,107 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ski Shop Admin</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: #ecf0f1; padding: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; background: #34495e; padding: 20px; border-radius: 8px; }
-        h1 { border-bottom: 1px solid #7f8c8d; padding-bottom: 10px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #ecf0f1; color: #2c3e50; border-radius: 4px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #bdc3c7; }
-        th { background: #e67e22; color: white; cursor: pointer; }
-        tr:hover { background: #dcdde1; }
-        
-        .registered { color: #27ae60; font-weight: bold; }
-        .guest { color: #7f8c8d; font-style: italic; }
-        .money { font-family: 'Consolas', monospace; font-weight: bold; color: #2c3e50; }
-        
-        .stats-bar { display: flex; gap: 20px; margin-bottom: 20px; }
-        .stat-box { background: #2980b9; padding: 15px; border-radius: 4px; flex: 1; text-align: center; }
-        .stat-val { font-size: 2rem; font-weight: bold; }
-        
-        a.impersonate-btn { 
-            text-decoration: none; 
-            background: #2980b9; 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 0.8rem; 
-        }
-        a.impersonate-btn:hover { background: #3498db; }
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #34495e;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      h1 {
+        border-bottom: 1px solid #7f8c8d;
+        padding-bottom: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: #ecf0f1;
+        color: #2c3e50;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #bdc3c7;
+      }
+      th {
+        background: #e67e22;
+        color: white;
+        cursor: pointer;
+      }
+      tr:hover {
+        background: #dcdde1;
+      }
+
+      .registered {
+        color: #27ae60;
+        font-weight: bold;
+      }
+      .guest {
+        color: #7f8c8d;
+        font-style: italic;
+      }
+      .money {
+        font-family: 'Consolas', monospace;
+        font-weight: bold;
+        color: #2c3e50;
+      }
+
+      .stats-bar {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .stat-box {
+        background: #2980b9;
+        padding: 15px;
+        border-radius: 4px;
+        flex: 1;
+        text-align: center;
+      }
+      .stat-val {
+        font-size: 2rem;
+        font-weight: bold;
+      }
+
+      a.impersonate-btn {
+        text-decoration: none;
+        background: #2980b9;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+      }
+      a.impersonate-btn:hover {
+        background: #3498db;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div class="container">
+      <h1>⛷️ Ski Shop Admin Panel</h1>
 
-<div class="container">
-    <h1>⛷️ Ski Shop Admin Panel</h1>
-    
-    <div class="stats-bar">
+      <div class="stats-bar">
         <div class="stat-box">
-            <div>Total Clients</div>
-            <div id="totalClients" class="stat-val">-</div>
+          <div>Total Clients</div>
+          <div id="totalClients" class="stat-val">-</div>
         </div>
         <div class="stat-box">
-            <div>Registered Members</div>
-            <div id="totalRegistered" class="stat-val">-</div>
+          <div>Registered Members</div>
+          <div id="totalRegistered" class="stat-val">-</div>
         </div>
-        <div class="stat-box" style="background: #27ae60;">
-            <div>Total Revenue</div>
-            <div id="totalRevenue" class="stat-val">-</div>
+        <div class="stat-box" style="background: #27ae60">
+          <div>Total Revenue</div>
+          <div id="totalRevenue" class="stat-val">-</div>
         </div>
-    </div>
+      </div>
 
-    <h3>Client Database (Top Spenders)</h3>
-    <table>
+      <h3>Client Database (Top Spenders)</h3>
+      <table>
         <thead>
-            <tr>
-                <th width="150">ID</th>
-                <th>Status</th>
-                <th>City</th>
-                <th>Age</th>
-                <th>Purchases</th> <th>Action</th>
-            </tr>
+          <tr>
+            <th width="150">ID</th>
+            <th>Status</th>
+            <th>City</th>
+            <th>Age</th>
+            <th>Purchases</th>
+            <th>Action</th>
+          </tr>
         </thead>
         <tbody id="clientTable">
-            <tr><td colspan="6">Loading data...</td></tr>
+          <tr>
+            <td colspan="6">Loading data...</td>
+          </tr>
         </tbody>
-    </table>
-</div>
+      </table>
+    </div>
 
-<script>
-    async function init() {
+    <script>
+      async function init() {
         // 1. Fetch Dashboard Stats
         const statsRes = await fetch('/api/dashboard');
         const stats = await statsRes.json();
-        document.getElementById('totalRevenue').textContent = formatMoney(stats.totalRevenue);
+        document.getElementById('totalRevenue').textContent = formatMoney(
+          stats.totalRevenue
+        );
 
         // 2. Fetch Clients
         const res = await fetch('/api/clients');
         let clients = await res.json();
-        
+
         // 3. Update Client Stats
         document.getElementById('totalClients').textContent = clients.length;
-        const registeredCount = clients.filter(c => c.isRegistered).length;
-        document.getElementById('totalRegistered').textContent = registeredCount;
+        const registeredCount = clients.filter((c) => c.isRegistered).length;
+        document.getElementById('totalRegistered').textContent =
+          registeredCount;
 
         // 4. SORT: Highest Spenders First (Descending)
         clients.sort((a, b) => {
-            const spentA = a.totalSpent || 0;
-            const spentB = b.totalSpent || 0;
-            return spentB - spentA; // Descending
+          const spentA = a.totalSpent || 0;
+          const spentB = b.totalSpent || 0;
+          return spentB - spentA; // Descending
         });
 
         // 5. Render Table
         const tbody = document.getElementById('clientTable');
-        
-        tbody.innerHTML = clients.map(c => {
+
+        tbody.innerHTML = clients
+          .map((c) => {
             const totalSpent = c.totalSpent || 0;
-            
+
             // Logic: Only show link if ID is valid
-            const actionButton = (c.id && c.id !== 'undefined') 
-                ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>` 
+            const actionButton =
+              c.id && c.id !== 'undefined'
+                ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
                 : `<span style="color:#ccc">N/A</span>`;
 
             return `
@@ -116,18 +181,21 @@
                     <td>${actionButton}</td>
                 </tr>
             `;
-        }).join('');
-    }
+          })
+          .join('');
+      }
 
-    function formatMoney(amount) {
-        return '$' + (amount || 0).toLocaleString(undefined, {
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2
-        });
-    }
+      function formatMoney(amount) {
+        return (
+          '$' +
+          (amount || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
+      }
 
-    init();
-</script>
-
-</body>
+      init();
+    </script>
+  </body>
 </html>
