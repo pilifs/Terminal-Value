@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { Events } = require('../domain/constants/eventConstants');
 
 // In-Memory "Read Databases"
 const db = {
@@ -18,7 +19,7 @@ const Projector = {
     handle: (event) => {
         switch (event.type) {
             // --- DEVICE PROJECTIONS ---
-            case 'DEVICE_DETECTED':
+            case Events.Device.DETECTED:
                 db.devices.set(event.aggregateId, {
                     id: event.aggregateId,
                     browser: event.browser,
@@ -36,7 +37,7 @@ const Projector = {
                 break;
 
             // --- INVENTORY PROJECTIONS ---
-            case 'ITEM_CREATED':
+            case Events.InventoryItem.CREATED:
                 db.inventory.set(event.aggregateId, {
                     id: event.aggregateId,
                     sku: event.sku,
@@ -45,13 +46,13 @@ const Projector = {
                     stock: 0
                 });
                 break;
-            case 'STOCK_ADDED':
+            case Events.InventoryItem.STOCK_ADDED:
                 if (db.inventory.has(event.aggregateId)) {
                     const item = db.inventory.get(event.aggregateId);
                     item.stock += event.quantity;
                 }
                 break;
-            case 'STOCK_REMOVED':
+            case Events.InventoryItem.STOCK_REMOVED:
                 if (db.inventory.has(event.aggregateId)) {
                     const item = db.inventory.get(event.aggregateId);
                     item.stock -= event.quantity;
@@ -59,7 +60,7 @@ const Projector = {
                 break;
             
             // --- CLIENT PROJECTIONS ---
-            case 'CLIENT_REGISTERED':
+            case Events.Client.REGISTERED:
                 const existingClient = db.clients.get(event.aggregateId) || { devices: [] };
                 db.clients.set(event.aggregateId, {
                     ...existingClient,
@@ -70,13 +71,13 @@ const Projector = {
                     registeredAt: event.timestamp
                 });
                 break;
-            case 'CLIENT_MOVED':
+            case Events.Client.MOVED:
                 if (db.clients.has(event.aggregateId)) {
                     const client = db.clients.get(event.aggregateId);
                     client.city = event.newCity;
                 }
                 break;
-            case 'DEVICE_LINKED':
+            case Events.Client.DEVICE_LINKED:
                 const clientRecord = db.clients.get(event.aggregateId) || { devices: [], isRegistered: false };
                 if (!clientRecord.devices.includes(event.deviceId)) {
                     clientRecord.devices.push(event.deviceId);
@@ -85,7 +86,7 @@ const Projector = {
                 break;
             
             // --- ORDER PROJECTIONS ---
-            case 'ORDER_INITIATED':
+            case Events.Order.INITIATED:
                 db.orders.set(event.aggregateId, {
                     id: event.aggregateId,
                     type: event.orderType,
@@ -95,7 +96,7 @@ const Projector = {
                     orderTotal: 0
                 });
                 break;
-            case 'ITEM_ADDED_TO_ORDER':
+            case Events.Order.ITEM_ADDED:
                 if (db.orders.has(event.aggregateId)) {
                     const order = db.orders.get(event.aggregateId);
                     const lineTotal = event.price * event.quantity;
@@ -103,7 +104,7 @@ const Projector = {
                     order.orderTotal += lineTotal;
                 }
                 break;
-            case 'ORDER_CONFIRMED':
+            case Events.Order.CONFIRMED:
                 if (db.orders.has(event.aggregateId)) {
                     const order = db.orders.get(event.aggregateId);
                     order.status = 'CONFIRMED';

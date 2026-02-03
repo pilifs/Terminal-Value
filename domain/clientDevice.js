@@ -1,4 +1,5 @@
 const AggregateRoot = require('../framework/aggregateRoot');
+const { Events } = require('./constants/eventConstants');
 
 class ClientDevice extends AggregateRoot {
     constructor(id, history) {
@@ -13,7 +14,7 @@ class ClientDevice extends AggregateRoot {
 
     apply(event) {
         switch (event.type) {
-            case 'DEVICE_DETECTED':
+            case Events.Device.DETECTED:
                 this.browser = event.browser;
                 this.viewportWidth = event.viewportWidth;
                 this.deviceName = event.deviceName;
@@ -27,7 +28,7 @@ class ClientDevice extends AggregateRoot {
 
     initialize(browser, width, name) {
         return {
-            type: 'DEVICE_DETECTED',
+            type: Events.Device.DETECTED,
             aggregateId: this.id,
             browser,
             viewportWidth: width,

@@ -1,4 +1,5 @@
 const AggregateRoot = require('../framework/aggregateRoot');
+const { Events } = require('./constants/eventConstants');
 
 class Order extends AggregateRoot {
     constructor(id, history) {
@@ -14,12 +15,12 @@ class Order extends AggregateRoot {
 
     apply(event) {
         switch (event.type) {
-            case 'ORDER_INITIATED':
+            case Events.Order.INITIATED:
                 this.orderType = event.orderType;
                 this.clientId = event.clientId || null;
                 this.status = 'DRAFT';
                 break;
-            case 'ITEM_ADDED_TO_ORDER':
+            case Events.Order.ITEM_ADDED:
                 this.items.push({ 
                     itemId: event.itemId, 
                     quantity: event.quantity, 
@@ -27,7 +28,7 @@ class Order extends AggregateRoot {
                 });
                 this.totalAmount += (event.price * event.quantity);
                 break;
-            case 'ORDER_CONFIRMED':
+            case Events.Order.CONFIRMED:
                 this.status = 'CONFIRMED';
                 break;
         }
@@ -39,7 +40,7 @@ class Order extends AggregateRoot {
              throw new Error("Order already exists");
         }
         return {
-            type: 'ORDER_INITIATED',
+            type: Events.Order.INITIATED,
             aggregateId: this.id,
             orderType: 'PURCHASE',
             clientId,
@@ -53,7 +54,7 @@ class Order extends AggregateRoot {
              throw new Error("Order already exists");
         }
         return {
-            type: 'ORDER_INITIATED',
+            type: Events.Order.INITIATED,
             aggregateId: this.id,
             orderType: 'RESTOCK',
             clientId: null,
@@ -64,7 +65,7 @@ class Order extends AggregateRoot {
     addItem(itemId, quantity, price) {
         if (this.status !== 'DRAFT') throw new Error("Cannot add items to a confirmed order");
         return {
-            type: 'ITEM_ADDED_TO_ORDER',
+            type: Events.Order.ITEM_ADDED,
             aggregateId: this.id,
             itemId,
             quantity,
@@ -76,7 +77,7 @@ class Order extends AggregateRoot {
     confirm() {
         if (this.items.length === 0) throw new Error("Cannot confirm empty order");
         return {
-            type: 'ORDER_CONFIRMED',
+            type: Events.Order.CONFIRMED,
             aggregateId: this.id,
             timestamp: Date.now()
         };

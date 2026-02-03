@@ -1,4 +1,5 @@
 const AggregateRoot = require('../framework/aggregateRoot');
+const { Events } = require('./constants/eventConstants');
 
 class InventoryItem extends AggregateRoot {
     constructor(id, history) {
@@ -14,19 +15,19 @@ class InventoryItem extends AggregateRoot {
 
     apply(event) {
         switch (event.type) {
-            case 'ITEM_CREATED':
+            case Events.InventoryItem.CREATED:
                 this.sku = event.sku;
                 this.name = event.name;
                 this.costOfGoodsSold = event.cost;
                 this.isActive = true;
                 break;
-            case 'STOCK_ADDED':
+            case Events.InventoryItem.STOCK_ADDED:
                 this.stockCount += event.quantity;
                 break;
-            case 'STOCK_REMOVED':
+            case Events.InventoryItem.STOCK_REMOVED:
                 this.stockCount -= event.quantity;
                 break;
-            case 'COGS_UPDATED':
+            case Events.InventoryItem.COGS_UPDATED:
                 this.costOfGoodsSold = event.newCost;
                 break;
         }
@@ -35,7 +36,7 @@ class InventoryItem extends AggregateRoot {
     create(sku, name, cost) {
         if (this.isActive) throw new Error("Item already exists");
         return {
-            type: 'ITEM_CREATED',
+            type: Events.InventoryItem.CREATED,
             aggregateId: this.id,
             sku,
             name,
@@ -47,7 +48,7 @@ class InventoryItem extends AggregateRoot {
     addStock(quantity) {
         if (quantity <= 0) throw new Error("Quantity must be positive");
         return {
-            type: 'STOCK_ADDED',
+            type: Events.InventoryItem.STOCK_ADDED,
             aggregateId: this.id,
             quantity,
             timestamp: Date.now()
@@ -58,7 +59,7 @@ class InventoryItem extends AggregateRoot {
         if (quantity <= 0) throw new Error("Quantity must be positive");
         if (this.stockCount < quantity) throw new Error("Insufficient stock");
         return {
-            type: 'STOCK_REMOVED',
+            type: Events.InventoryItem.STOCK_REMOVED,
             aggregateId: this.id,
             quantity,
             timestamp: Date.now()

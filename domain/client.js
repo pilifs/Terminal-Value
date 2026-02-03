@@ -1,4 +1,5 @@
 const AggregateRoot = require('../framework/aggregateRoot');
+const { Events } = require('./constants/eventConstants');
 
 class Client extends AggregateRoot {
     constructor(id, history) {
@@ -13,15 +14,15 @@ class Client extends AggregateRoot {
 
     apply(event) {
         switch (event.type) {
-            case 'CLIENT_REGISTERED':
+            case Events.Client.REGISTERED:
                 this.isRegistered = true;
                 this.age = event.age;
                 this.city = event.city;
                 break;
-            case 'CLIENT_MOVED':
+            case Events.Client.MOVED:
                 this.city = event.newCity;
                 break;
-            case 'DEVICE_LINKED':
+            case Events.Client.DEVICE_LINKED:
                 this.deviceId = event.deviceId;
                 break;
         }
@@ -30,7 +31,7 @@ class Client extends AggregateRoot {
     register(age, city) {
         if (this.isRegistered) throw new Error("Client already registered");
         return {
-            type: 'CLIENT_REGISTERED',
+            type: Events.Client.REGISTERED,
             aggregateId: this.id,
             age,
             city,
@@ -40,7 +41,7 @@ class Client extends AggregateRoot {
 
     moveToNewCity(newCity) {
         return {
-            type: 'CLIENT_MOVED',
+            type: Events.Client.MOVED,
             aggregateId: this.id,
             newCity,
             timestamp: Date.now()
@@ -50,7 +51,7 @@ class Client extends AggregateRoot {
     linkDevice(deviceId) {
         // We only store the ID, not the object, to keep aggregates decoupled
         return {
-            type: 'DEVICE_LINKED',
+            type: Events.Client.DEVICE_LINKED,
             aggregateId: this.id,
             deviceId,
             timestamp: Date.now()

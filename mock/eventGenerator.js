@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid'); // If you don't have uuid, a helper is included at bottom
+const { Events } = require('../domain/constants/eventConstants');
 
 const CITIES = ['Vancouver', 'Whistler', 'Denver', 'Salt Lake City', 'Calgary', 'Burlington', 'Banff', 'Aspen'];
 const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge'];
@@ -29,7 +30,7 @@ function generateEvents() {
         inventoryMap[index] = id;
         
         events.push({
-            type: 'ITEM_CREATED',
+            type: Events.InventoryItem.CREATED,
             aggregateId: id,
             sku: ski.sku,
             name: ski.name,
@@ -39,7 +40,7 @@ function generateEvents() {
 
         // Add hefty stock initially to support the sales
         events.push({
-            type: 'STOCK_ADDED',
+            type: Events.InventoryItem.STOCK_ADDED,
             aggregateId: id,
             quantity: 100, 
             timestamp: timestamp++,
@@ -58,7 +59,7 @@ function generateEvents() {
         clients.push({ id: clientId, isRegistered });
 
         events.push({
-            type: 'DEVICE_DETECTED',
+            type: Events.Device.DETECTED,
             aggregateId: deviceId,
             browser: BROWSERS[Math.floor(Math.random() * BROWSERS.length)],
             deviceName: DEVICES[Math.floor(Math.random() * DEVICES.length)],
@@ -67,7 +68,7 @@ function generateEvents() {
         });
 
         events.push({
-            type: 'DEVICE_LINKED',
+            type: Events.Client.DEVICE_LINKED,
             aggregateId: clientId,
             deviceId: deviceId,
             timestamp: timestamp++
@@ -75,7 +76,7 @@ function generateEvents() {
 
         if (isRegistered) {
             events.push({
-                type: 'CLIENT_REGISTERED',
+                type: Events.Client.REGISTERED,
                 aggregateId: clientId,
                 age: Math.floor(Math.random() * 40) + 18,
                 city: CITIES[Math.floor(Math.random() * CITIES.length)],
@@ -98,7 +99,7 @@ function generateEvents() {
 
         // Event A: Start Order
         events.push({
-            type: 'ORDER_INITIATED',
+            type: Events.Order.INITIATED,
             aggregateId: orderId,
             orderType: 'PURCHASE',
             clientId: clientId,
@@ -107,7 +108,7 @@ function generateEvents() {
 
         // Event B: Add Item
         events.push({
-            type: 'ITEM_ADDED_TO_ORDER',
+            type: Events.Order.ITEM_ADDED,
             aggregateId: orderId,
             itemId: itemId,
             quantity: qty,
@@ -117,7 +118,7 @@ function generateEvents() {
 
         // Event C: Confirm Order
         events.push({
-            type: 'ORDER_CONFIRMED',
+            type: Events.Order.CONFIRMED,
             aggregateId: orderId,
             timestamp: timestamp++
         });
@@ -126,7 +127,7 @@ function generateEvents() {
         // Note: In real event sourcing, this version number needs to be accurate.
         // For this generator, we assume no race conditions.
         events.push({
-            type: 'STOCK_REMOVED',
+            type: Events.InventoryItem.STOCK_REMOVED,
             aggregateId: itemId,
             quantity: qty,
             timestamp: timestamp++
