@@ -1,26 +1,32 @@
 class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-    connectedCallback() {
-        this.render();
-        this.loadInventory();
-    }
+  connectedCallback() {
+    this.render();
+    this.loadInventory();
+  }
 
-    async loadInventory() {
-        const grid = this.shadowRoot.getElementById('productGrid');
-        grid.innerHTML = 'Loading inventory...';
+  async loadInventory() {
+    const grid = this.shadowRoot.getElementById('productGrid');
+    grid.innerHTML = 'Loading inventory...';
 
-        try {
-            const res = await fetch('/api/inventory');
-            const inventory = await res.json();
-            
-            grid.innerHTML = inventory.map(item => `
+    try {
+      const res = await fetch('/api/inventory');
+      const inventory = await res.json();
+
+      grid.innerHTML = inventory
+        .map(
+          (item) => `
                 <div class="card">
                     <h3>${item.name}</h3>
-                    <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+                    <p class="stock">${
+                      item.stock > 0
+                        ? 'In Stock: ' + item.stock
+                        : 'Out of Stock'
+                    }</p>
                     <p class="price">$${item.cost * 1.5}</p>
                     <button 
                         class="buy-btn" 
@@ -29,30 +35,33 @@ class HomePage extends HTMLElement {
                         ${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
                     </button>
                 </div>
-            `).join('');
+            `
+        )
+        .join('');
 
-            // Add Event Listeners to Buttons
-            this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const itemId = e.target.dataset.id;
-                    const item = inventory.find(i => i.id === itemId);
-                    
-                    // Dispatch event to parent (app.js)
-                    this.dispatchEvent(new CustomEvent('navigate-order', {
-                        detail: { item: item },
-                        bubbles: true,
-                        composed: true
-                    }));
-                });
-            });
+      // Add Event Listeners to Buttons
+      this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const itemId = e.target.dataset.id;
+          const item = inventory.find((i) => i.id === itemId);
 
-        } catch (e) {
-            grid.innerHTML = '<p>Error loading inventory.</p>';
-        }
+          // Dispatch event to parent (app.js)
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: item },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+      });
+    } catch (e) {
+      grid.innerHTML = '<p>Error loading inventory.</p>';
     }
+  }
 
-    render() {
-        this.shadowRoot.innerHTML = `
+  render() {
+    this.shadowRoot.innerHTML = `
         <style>
             :host { display: block; animation: fadeIn 0.3s; }
             .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
@@ -69,7 +78,7 @@ class HomePage extends HTMLElement {
         <h2>Featured Skis</h2>
         <div id="productGrid" class="grid"></div>
         `;
-    }
+  }
 }
 
 customElements.define('home-page', HomePage);

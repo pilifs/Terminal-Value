@@ -5,13 +5,18 @@
   "type": "module",
   "main": "terminalValue.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
+    "format:check": "prettier --check \"**/*.{js,json,md,html,css}\""
   },
   "engines": {
     "node": "24.13.0"
   },
   "author": "Filip Stankovic",
   "license": "MIT",
+  "devDependencies": {
+    "prettier": "^2.8.8"
+  },
   "dependencies": {
     "@google/genai": "1.39.0",
     "dotenv": "17.2.3",

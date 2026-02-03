@@ -1,10 +1,9 @@
 const Main = require('./main');
 
 Main.runSimulation().then(() => {
-    // Simulation complete
-    console.log("Simulation finished.");
+  // Simulation complete
+  console.log('Simulation finished.');
 
-    // Start server
-    Main.startServer();
-  }
-);
+  // Start server
+  Main.startServer();
+});

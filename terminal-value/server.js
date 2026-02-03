@@ -1,15 +1,15 @@
-import express from "express";
-import { createBatchJob, getAllJobs } from "./geminiBatchService.js";
+import express from 'express';
+import { createBatchJob, getAllJobs } from './geminiBatchService.js';
 
 const app = express();
 const PORT = 3001;
 
 // Middleware to parse JSON and serve static files
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static('public'));
 
 // GET: List all jobs
-app.get("/api/jobs", async (req, res) => {
+app.get('/api/jobs', async (req, res) => {
   try {
     const jobs = await getAllJobs();
     res.json(jobs);
@@ -19,10 +19,10 @@ app.get("/api/jobs", async (req, res) => {
 });
 
 // POST: Create a new job
-app.post("/api/jobs", async (req, res) => {
+app.post('/api/jobs', async (req, res) => {
   try {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+    if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
     const job = await createBatchJob(prompt);
     res.json(job);

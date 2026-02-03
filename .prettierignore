@@ -1,0 +1,12 @@
+# Ignore artifacts
+node_modules
+**/node_modules
+dist
+build
+coverage
+.vscode
+\.git
+*.min.js
+package-lock.json
+yarn.lock
+**/public/*.js
