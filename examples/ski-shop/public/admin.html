@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fil's Alpine Ski Shop Admin</title>
+    <title>Ski Shop Admin</title>
     <style>
+      /* Existing Styles ... */
       body {
         font-family: 'Segoe UI', sans-serif;
         background: #2c3e50;
@@ -22,7 +23,6 @@
         border-bottom: 1px solid #7f8c8d;
         padding-bottom: 10px;
       }
-
       table {
         width: 100%;
         border-collapse: collapse;
@@ -46,7 +46,6 @@
       tr:hover {
         background: #dcdde1;
       }
-
       .registered {
         color: #27ae60;
         font-weight: bold;
@@ -60,7 +59,6 @@
         font-weight: bold;
         color: #2c3e50;
       }
-
       .stats-bar {
         display: flex;
         gap: 20px;
@@ -77,7 +75,6 @@
         font-size: 2rem;
         font-weight: bold;
       }
-
       a.impersonate-btn {
         text-decoration: none;
         background: #2980b9;
@@ -89,8 +86,6 @@
       a.impersonate-btn:hover {
         background: #3498db;
       }
-
-      /* NOTE BUTTON STYLES */
       .notes-btn {
         background: #8e44ad;
         color: white;
@@ -104,9 +99,11 @@
         background: #9b59b6;
       }
 
-      /* CUSTOM UX BADGES */
-      .ux-badge {
-        display: inline-block;
+      /* UX Badge Styles */
+      .ux-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
         font-size: 0.75rem;
         padding: 2px 6px;
         border-radius: 4px;
@@ -123,10 +120,13 @@
         color: #ccc;
         font-style: italic;
       }
+      .ux-btn:hover {
+        opacity: 0.8;
+      }
 
-      /* MODAL STYLES */
+      /* Modal Styles */
       .modal {
-        display: none; /* Hidden by default */
+        display: none;
         position: fixed;
         z-index: 1000;
         left: 0;
@@ -160,11 +160,8 @@
         cursor: pointer;
         line-height: 20px;
       }
-      .close-btn:hover,
-      .close-btn:focus {
+      .close-btn:hover {
         color: black;
-        text-decoration: none;
-        cursor: pointer;
       }
       #modalTitle {
         margin-top: 0;
@@ -172,13 +169,32 @@
         padding-bottom: 10px;
         margin-bottom: 15px;
       }
-      ul.note-list {
-        padding-left: 20px;
-        margin-bottom: 0;
+      ul.version-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
       }
-      ul.note-list li {
-        margin-bottom: 8px;
-        line-height: 1.4;
+      ul.version-list li {
+        margin-bottom: 10px;
+      }
+      ul.version-list a {
+        display: block;
+        padding: 8px 12px;
+        background: #ecf0f1;
+        color: #2c3e50;
+        text-decoration: none;
+        border-radius: 4px;
+        border-left: 5px solid #bdc3c7;
+        transition: 0.2s;
+      }
+      ul.version-list a:hover {
+        background: #dfe6e9;
+        border-left-color: #2980b9;
+      }
+      .version-tag {
+        font-family: monospace;
+        font-weight: bold;
+        color: #e67e22;
       }
 
       @keyframes fadeIn {
@@ -194,7 +210,6 @@
   <body>
     <div class="container">
       <h1>⛷️ Ski Shop Admin Panel</h1>
-
       <div class="stats-bar">
         <div class="stat-box">
           <div>Total Clients</div>
@@ -234,81 +249,91 @@
 
     <div id="noteModal" class="modal">
       <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">&times;</span>
-        <h3 id="modalTitle">Notes for Client</h3>
-        <ul id="noteList" class="note-list"></ul>
+        <span class="close-btn" onclick="closeModal('noteModal')">&times;</span>
+        <h3 id="noteModalTitle">Notes</h3>
+        <ul id="noteList" style="padding-left: 20px"></ul>
+      </div>
+    </div>
+
+    <div id="uxModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('uxModal')">&times;</span>
+        <h3 id="uxModalTitle">Custom Interface Versions</h3>
+        <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 15px">
+          Select a version to launch the store for this client.
+        </p>
+
+        <h4 style="margin: 10px 0 5px 0; border-bottom: 1px solid #eee">
+          Home Page Variants
+        </h4>
+        <ul id="homeVersionList" class="version-list"></ul>
+
+        <h4 style="margin: 20px 0 5px 0; border-bottom: 1px solid #eee">
+          Order Page Variants
+        </h4>
+        <ul id="orderVersionList" class="version-list"></ul>
       </div>
     </div>
 
     <script>
-      // Global store for easy lookup by ID
       window.clientsMap = new Map();
 
       async function init() {
-        // 1. Fetch Dashboard Stats
         const statsRes = await fetch('/api/dashboard');
         const stats = await statsRes.json();
         document.getElementById('totalRevenue').textContent = formatMoney(
           stats.totalRevenue
         );
 
-        // 2. Fetch Clients
         const res = await fetch('/api/clients');
         let clients = await res.json();
 
-        // 3. Update Client Stats
         document.getElementById('totalClients').textContent = clients.length;
-        const registeredCount = clients.filter((c) => c.isRegistered).length;
-        document.getElementById('totalRegistered').textContent =
-          registeredCount;
+        document.getElementById('totalRegistered').textContent = clients.filter(
+          (c) => c.isRegistered
+        ).length;
 
-        // 4. SORT: Highest Spenders First (Descending)
-        clients.sort((a, b) => {
-          const spentA = a.totalSpent || 0;
-          const spentB = b.totalSpent || 0;
-          return spentB - spentA; // Descending
-        });
-
-        // Store for Modal Access
+        clients.sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0));
         clients.forEach((c) => window.clientsMap.set(c.id, c));
 
-        // 5. Render Table
         const tbody = document.getElementById('clientTable');
-
         tbody.innerHTML = clients
           .map((c) => {
-            const totalSpent = c.totalSpent || 0;
-
-            // Logic: Only show link if ID is valid
             const actionButton =
               c.id && c.id !== 'undefined'
                 ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
                 : `<span style="color:#ccc">N/A</span>`;
 
-            // Logic: CRM Notes Button
             let notesButton = `<span style="color:#ccc">-</span>`;
             if (c.crmNotes && c.crmNotes.length > 0) {
-              notesButton = `<button class="notes-btn" onclick="openModal('${c.id}')">View (${c.crmNotes.length})</button>`;
+              notesButton = `<button class="notes-btn" onclick="openNoteModal('${c.id}')">View (${c.crmNotes.length})</button>`;
             }
 
-            // Logic: Custom UX Badges
+            // UX Badges Logic
             let uxBadges = '';
-            if (c.hasCustomHome)
-              uxBadges += `<span class="ux-badge ux-home">Home</span>`;
-            if (c.hasCustomOrder)
-              uxBadges += `<span class="ux-badge ux-order">Order</span>`;
-            if (!c.hasCustomHome && !c.hasCustomOrder)
+            const hasHome =
+              c.customHomeVersions && c.customHomeVersions.length > 0;
+            const hasOrder =
+              c.customOrderVersions && c.customOrderVersions.length > 0;
+
+            if (hasHome) {
+              uxBadges += `<button class="ux-btn ux-home" onclick="openUxModal('${c.id}')">Home (${c.customHomeVersions.length})</button>`;
+            }
+            if (hasOrder) {
+              uxBadges += `<button class="ux-btn ux-order" onclick="openUxModal('${c.id}')">Order (${c.customOrderVersions.length})</button>`;
+            }
+            if (!hasHome && !hasOrder)
               uxBadges = `<span class="ux-none">-</span>`;
 
             return `
                 <tr>
                     <td>${c.id || 'Unknown'}</td>
-                    <td class="${c.isRegistered ? 'registered' : 'guest'}">
-                        ${c.isRegistered ? 'MEMBER' : 'GUEST'}
-                    </td>
+                    <td class="${c.isRegistered ? 'registered' : 'guest'}">${
+              c.isRegistered ? 'MEMBER' : 'GUEST'
+            }</td>
                     <td>${c.city || '-'}</td>
                     <td>${c.age || '-'}</td>
-                    <td class="money">${formatMoney(totalSpent)}</td>
+                    <td class="money">${formatMoney(c.totalSpent)}</td>
                     <td>${notesButton}</td>
                     <td>${uxBadges}</td>
                     <td>${actionButton}</td>
@@ -328,32 +353,71 @@
         );
       }
 
-      // MODAL FUNCTIONS
-      function openModal(clientId) {
+      function openNoteModal(clientId) {
         const client = window.clientsMap.get(clientId);
-        if (!client || !client.crmNotes) return;
-
-        const modal = document.getElementById('noteModal');
-        const list = document.getElementById('noteList');
-        const title = document.getElementById('modalTitle');
-
-        title.textContent = `Notes for ${client.id}`;
-        list.innerHTML = client.crmNotes
-          .map((note) => `<li>${note}</li>`)
+        if (!client) return;
+        document.getElementById(
+          'noteModalTitle'
+        ).textContent = `Notes for ${client.id}`;
+        document.getElementById('noteList').innerHTML = client.crmNotes
+          .map((n) => `<li>${n}</li>`)
           .join('');
-
-        modal.classList.add('visible');
+        document.getElementById('noteModal').classList.add('visible');
       }
 
-      function closeModal() {
-        document.getElementById('noteModal').classList.remove('visible');
+      function openUxModal(clientId) {
+        const client = window.clientsMap.get(clientId);
+        if (!client) return;
+
+        document.getElementById(
+          'uxModalTitle'
+        ).textContent = `UX Versions: ${client.id}`;
+
+        const createLink = (hash, type) => {
+          // type is 'homeHash' or 'orderHash'
+          return `
+             <li>
+               <a href="/?clientId=${
+                 client.id
+               }&${type}=${hash}" target="_blank">
+                 Version: <span class="version-tag">${hash.substring(
+                   0,
+                   8
+                 )}...</span>
+               </a>
+             </li>`;
+        };
+
+        const homeList = document.getElementById('homeVersionList');
+        if (client.customHomeVersions && client.customHomeVersions.length) {
+          homeList.innerHTML = client.customHomeVersions
+            .map((h) => createLink(h, 'homeHash'))
+            .join('');
+        } else {
+          homeList.innerHTML =
+            '<li style="color:#aaa; font-style:italic;">No custom home pages found.</li>';
+        }
+
+        const orderList = document.getElementById('orderVersionList');
+        if (client.customOrderVersions && client.customOrderVersions.length) {
+          orderList.innerHTML = client.customOrderVersions
+            .map((h) => createLink(h, 'orderHash'))
+            .join('');
+        } else {
+          orderList.innerHTML =
+            '<li style="color:#aaa; font-style:italic;">No custom order pages found.</li>';
+        }
+
+        document.getElementById('uxModal').classList.add('visible');
       }
 
-      // Close if clicked outside content
+      function closeModal(id) {
+        document.getElementById(id).classList.remove('visible');
+      }
+
       window.onclick = function (event) {
-        const modal = document.getElementById('noteModal');
-        if (event.target == modal) {
-          closeModal();
+        if (event.target.classList.contains('modal')) {
+          event.target.classList.remove('visible');
         }
       };
 
