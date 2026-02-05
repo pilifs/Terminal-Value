@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
 import { generateValueResults } from '../../examples/ski-shop/devMocks/generateValueResults.js';
@@ -10,6 +11,7 @@ import { generateValueResults } from '../../examples/ski-shop/devMocks/generateV
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
+const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
@@ -22,9 +24,87 @@ if (!fs.existsSync(LOCAL_INPUTS_DIR)) {
   fs.mkdirSync(LOCAL_INPUTS_DIR, { recursive: true });
 }
 
+// --- Helper: Ski Shop Results Persistence ---
+
+function readResultsFile() {
+  if (!fs.existsSync(RESULTS_FILE_PATH)) {
+    return {};
+  }
+  try {
+    const content = fs.readFileSync(RESULTS_FILE_PATH, 'utf-8');
+
+    // 1. Strip the export statement
+    // Matches "export const results =" with any spacing
+    let objectLiteral = content.replace(/^export\s+const\s+results\s*=\s*/, '');
+
+    // 2. Strip trailing semicolon if present
+    objectLiteral = objectLiteral.replace(/;\s*$/, '');
+
+    // 3. Evaluate safely as JavaScript
+    // This handles unquoted keys, trailing commas, and single quotes which JSON.parse fails on.
+    return new Function('return ' + objectLiteral)();
+  } catch (err) {
+    console.error(
+      '⚠️ Error parsing skiShopResults.js. Ensure it is valid JavaScript syntax.',
+      err
+    );
+    // Return empty object so the process doesn't crash,
+    // but be aware this might overwrite the file with an empty object on next save.
+    return {};
+  }
+}
+
 /**
- * Helper to fetch ALL pages from the API
+ * Saves the results object back to skiShopResults.js as valid JavaScript.
+ * Uses JSON.stringify to ensure the saved format is clean and consistent.
  */
+function saveResultsFile(data) {
+  // serializing with JSON.stringify ensures keys are quoted for the next write,
+  // but the reader above will now support both styles.
+  const fileContent = `export const results = ${JSON.stringify(
+    data,
+    null,
+    2
+  )};`;
+  fs.writeFileSync(RESULTS_FILE_PATH, fileContent);
+  console.log('📝 Updated skiShopResults.js');
+}
+
+function logJobToHistory(
+  job,
+  promptText,
+  customId,
+  modelName,
+  localFileName,
+  pageType
+) {
+  const results = readResultsFile();
+  const promptHash = crypto
+    .createHash('sha256')
+    .update(promptText)
+    .digest('hex');
+  const batchId = job.name.split('/').pop();
+
+  const record = {
+    batchId: batchId,
+    googleAIModel: modelName,
+    timestamp: new Date().toISOString(),
+    clientId: customId || 'UNKNOWN',
+    pageType: pageType || 'generic',
+    inputPrompt: promptText,
+    inputPromptHash: promptHash,
+    inputFileName: localFileName,
+    status: 'SUBMITTED', // Initial State
+    outputFileId: null, // Will be populated by getAllJobs
+    fileOutputResult: null,
+  };
+
+  results[batchId] = record;
+  saveResultsFile(results);
+}
+
+// --- Core Service Functions ---
+
 async function fetchAllPages() {
   let allItems = [];
   const params = {};
@@ -41,16 +121,15 @@ async function fetchAllPages() {
   return allItems;
 }
 
-/**
- * Creates a batch job and SAVES the input file locally using the Google File ID.
- */
-export async function createBatchJob(promptText, customId = null) {
-  // We create the temp file in the CWD (wherever the script runs)
+export async function createBatchJob(
+  promptText,
+  customId = null,
+  pageType = 'generic'
+) {
   const tempFileName = `temp-${Date.now()}.jsonl`;
-  const modelName = GOOGLE_AI_MODELS.STABLE.GEMINI_2_5_FLASH_LITE;
+  const modelName = GOOGLE_AI_MODELS.PREVIEW.GEMINI_3_PRO;
 
   try {
-    // 1. Create Single Request JSONL
     const batchData = [
       {
         request: { contents: [{ parts: [{ text: promptText }] }] },
@@ -62,53 +141,47 @@ export async function createBatchJob(promptText, customId = null) {
       batchData.map((d) => JSON.stringify(d)).join('\n')
     );
 
-    // 2. Upload to Gemini
     const uploadResult = await genAI.files.upload({
       file: tempFileName,
       config: { mimeType: 'text/plain' },
     });
 
-    // 3. Rename/Move temp file to persistent storage
-    // uploadResult.name format is "files/unique-id"
     const googleFileId = uploadResult.name.split('/').pop();
 
-    // Construct local filename: "googleId-customId.jsonl" or "googleId.jsonl"
     let localFileName = `${googleFileId}.jsonl`;
     if (customId) {
-      // Sanitize customId to avoid filesystem issues
       const safeId = customId.replace(/[^a-zA-Z0-9-_]/g, '_');
       localFileName = `${googleFileId}-${safeId}.jsonl`;
     }
 
     const localPath = path.join(LOCAL_INPUTS_DIR, localFileName);
-
-    // We use renameSync. Since tempFileName is likely in the project root (CWD)
-    // and LOCAL_INPUTS_DIR is in the project folder, this works fine.
     fs.renameSync(tempFileName, localPath);
     console.log(`💾 Saved local input: ${localPath}`);
 
-    // 4. Create Batch Job
     const batchJob = await genAI.batches.create({
       model: modelName,
       src: uploadResult.name,
       config: { displayName: `Web_Job_${Date.now()}` },
     });
 
+    logJobToHistory(
+      batchJob,
+      promptText,
+      customId,
+      modelName,
+      localFileName,
+      pageType
+    );
+
     return batchJob;
   } catch (err) {
     console.error('❌ Service Error:', err);
-    // Cleanup temp file if it still exists (i.e. upload failed)
     if (fs.existsSync(tempFileName)) fs.unlinkSync(tempFileName);
     throw err;
   }
 }
 
-/**
- * Helper to read Ski Shop public files recursively, excluding dynamic folders.
- */
 function getSkiShopContext() {
-  // Resolve path relative to: full-project/terminal-value/gemini-batch/geminiBatchService.js
-  // Target: full-project/examples/ski-shop/public
   const skiShopPublicDir = path.resolve(
     __dirname,
     '../../examples/ski-shop/public'
@@ -128,13 +201,11 @@ function getSkiShopContext() {
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        // Exclude specific dynamic folders
         if (entry.name === 'dynamicOrder' || entry.name === 'dynamicHome') {
           continue;
         }
         readDirRecursive(fullPath);
       } else {
-        // Read file content
         const relativePath = path.relative(skiShopPublicDir, fullPath);
         const content = fs.readFileSync(fullPath, 'utf-8');
         fileContents.push(`\n// --- FILE: ${relativePath} ---\n${content}`);
@@ -146,11 +217,11 @@ function getSkiShopContext() {
   return fileContents.join('\n');
 }
 
-/**
- * Creates a batch job specifically for any Ski Shop Web Component.
- * Combines the user's prompt with the relevant codebase files.
- */
-export async function createSkiShopWebComponentPrompt(promptText, customId) {
+export async function createSkiShopWebComponentPrompt(
+  promptText,
+  customId,
+  pageType
+) {
   const fileContext = getSkiShopContext();
 
   const combinedPrompt = `
@@ -163,14 +234,13 @@ ${fileContext}
 `;
 
   console.log(
-    `🚀 Creating Ski Shop Component Job (Client: ${customId || 'Unknown'})...`
+    `🚀 Creating Ski Shop Component Job (Client: ${
+      customId || 'Unknown'
+    }, Type: ${pageType})...`
   );
-  return createBatchJob(combinedPrompt, customId);
+  return createBatchJob(combinedPrompt, customId, pageType);
 }
 
-/**
- * Iterates through the mocked value results and creates a batch job for each Client's HOME Page.
- */
 export async function generateAllHomePageComponents() {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Home Pages...`
@@ -185,8 +255,11 @@ export async function generateAllHomePageComponents() {
 
     console.log(`\n▶️ Processing Home Page for: ${clientId}`);
     try {
-      // Pass clientId as the customId
-      const job = await createSkiShopWebComponentPrompt(promptText, clientId);
+      const job = await createSkiShopWebComponentPrompt(
+        promptText,
+        clientId,
+        'home'
+      );
       jobs.push({
         clientId,
         type: 'HOME',
@@ -194,8 +267,6 @@ export async function generateAllHomePageComponents() {
         status: 'SUBMITTED',
       });
       console.log(`✅ Job created: ${job.name.split('/').pop()}`);
-
-      // Optional delay
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (err) {
       console.error(`❌ Failed for ${clientId}:`, err.message);
@@ -211,9 +282,6 @@ export async function generateAllHomePageComponents() {
   return jobs;
 }
 
-/**
- * Iterates through the mocked value results and creates a batch job for each Client's ORDER Page.
- */
 export async function generateAllOrderPageComponents() {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
@@ -233,8 +301,11 @@ export async function generateAllOrderPageComponents() {
 
     console.log(`\n▶️ Processing Order Page for: ${clientId}`);
     try {
-      // Pass clientId as the customId
-      const job = await createSkiShopWebComponentPrompt(promptText, clientId);
+      const job = await createSkiShopWebComponentPrompt(
+        promptText,
+        clientId,
+        'order'
+      );
       jobs.push({
         clientId,
         type: 'ORDER',
@@ -242,8 +313,6 @@ export async function generateAllOrderPageComponents() {
         status: 'SUBMITTED',
       });
       console.log(`✅ Job created: ${job.name.split('/').pop()}`);
-
-      // Optional delay
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (err) {
       console.error(`❌ Failed for ${clientId}:`, err.message);
@@ -260,11 +329,47 @@ export async function generateAllOrderPageComponents() {
 }
 
 /**
- * Lists ALL jobs.
+ * Lists ALL jobs and UPDATES skiShopResults.js with status and outputFileId.
  */
 export async function getAllJobs() {
   try {
     const allJobs = await fetchAllPages();
+
+    // --- Sync with skiShopResults.js ---
+    const results = readResultsFile();
+    let hasUpdates = false;
+
+    // We only update if we have a local record for this batch ID
+    allJobs.forEach((job) => {
+      const batchId = job.name.split('/').pop();
+
+      if (results[batchId]) {
+        const newState = job.state.replace('JOB_STATE_', '');
+
+        // Extract output file ID if it exists
+        const rawPath =
+          job.outputFile ||
+          job.outputConfig?.filePath ||
+          (job.dest && job.dest.fileName);
+        const newOutputId = rawPath ? rawPath.split('/').pop() : null;
+
+        // Update if changed
+        if (
+          results[batchId].status !== newState ||
+          results[batchId].outputFileId !== newOutputId
+        ) {
+          results[batchId].status = newState;
+          results[batchId].outputFileId = newOutputId;
+          hasUpdates = true;
+        }
+      }
+    });
+
+    if (hasUpdates) {
+      saveResultsFile(results);
+    }
+    // -----------------------------------
+
     const jobMap = new Map();
     allJobs.forEach((j) => jobMap.set(j.name, j));
 
@@ -273,18 +378,20 @@ export async function getAllJobs() {
         new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
     );
 
-    return sortedJobs.map((job) => ({
-      id: job.name.split('/').pop(),
-      fullId: job.name,
-      status: job.state.replace('JOB_STATE_', ''),
-      created: new Date(job.createTime).toLocaleString(),
-      model: job.model?.split('/').pop() || 'Unknown',
-      outputFile:
+    return sortedJobs.map((job) => {
+      const rawPath =
         job.outputFile ||
         job.outputConfig?.filePath ||
-        (job.dest && job.dest.fileName) ||
-        null,
-    }));
+        (job.dest && job.dest.fileName);
+      return {
+        id: job.name.split('/').pop(),
+        fullId: job.name,
+        status: job.state.replace('JOB_STATE_', ''),
+        created: new Date(job.createTime).toLocaleString(),
+        model: job.model?.split('/').pop() || 'Unknown',
+        outputFileId: rawPath ? rawPath.split('/').pop() : null,
+      };
+    });
   } catch (err) {
     console.error('❌ Dashboard Error:', err);
     return [];
@@ -292,15 +399,13 @@ export async function getAllJobs() {
 }
 
 /**
- * Downloads Batch Job Output Results.
+ * Downloads Batch Job Output Results and SAVES it to skiShopResults.js.
  */
 export async function getBatchResults(fileId) {
   try {
     let resourceName = !fileId.startsWith('files/')
       ? `files/${fileId}`
       : fileId;
-
-    // Pattern: https://generativelanguage.googleapis.com/v1beta/files/batch-<JOB_ID>:download?alt=media
     const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     const downloadUrl = `${baseUrl}/${resourceName}:download?alt=media`;
 
@@ -317,7 +422,7 @@ export async function getBatchResults(fileId) {
     }
 
     const text = await response.text();
-    return text
+    const parsedResults = text
       .trim()
       .split('\n')
       .map((line) => {
@@ -328,15 +433,38 @@ export async function getBatchResults(fileId) {
         }
       })
       .filter((item) => item !== null);
+
+    // --- Sync with skiShopResults.js ---
+    const results = readResultsFile();
+    const cleanFileId = fileId.replace('files/', '');
+    let foundBatchId = null;
+
+    // Find the batch record that has this outputFileId
+    for (const [batchId, record] of Object.entries(results)) {
+      if (record.outputFileId === cleanFileId) {
+        foundBatchId = batchId;
+        break;
+      }
+    }
+
+    if (foundBatchId) {
+      results[foundBatchId].fileOutputResult = parsedResults;
+      saveResultsFile(results);
+      console.log(`📝 Saved results to history for Batch ${foundBatchId}`);
+    } else {
+      console.warn(
+        `⚠️ Loaded results for ${cleanFileId}, but could not link to a local Batch ID history record (run 'list' first?).`
+      );
+    }
+    // -----------------------------------
+
+    return parsedResults;
   } catch (err) {
     console.error('❌ Error in getBatchResults:', err);
     throw err;
   }
 }
 
-/**
- * Gets Raw Job Details.
- */
 export async function getRawJob(batchId) {
   const url = `https://generativelanguage.googleapis.com/v1beta/batches/${batchId}?key=${process.env.GEMINI_API_KEY}`;
   try {
@@ -348,26 +476,17 @@ export async function getRawJob(batchId) {
   }
 }
 
-/**
- * Retrieves the LOCAL input file content for a given batch job.
- */
 export async function getJobInput(batchId) {
   try {
     const job = await getRawJob(batchId);
     if (!job) throw new Error('Job not found');
 
-    // Extract input filename from job metadata
     const inputConfig = job.metadata?.inputConfig || job.inputConfig;
     if (!inputConfig || !inputConfig.fileName) {
-      // This might happen for very old jobs or failed jobs
       return null;
     }
 
-    // fileName is "files/xyz". We need "xyz".
     const googleFileId = inputConfig.fileName.split('/').pop();
-
-    // Search for the file in LOCAL_INPUTS_DIR that starts with this ID
-    // matches: "xyz.jsonl" OR "xyz-myClientId.jsonl"
     const files = fs.readdirSync(LOCAL_INPUTS_DIR);
     const foundFile = files.find((file) => {
       return file.startsWith(googleFileId) && file.endsWith('.jsonl');
@@ -395,4 +514,48 @@ export async function getJobInput(batchId) {
 export async function getJob(batchId) {
   const job = await genAI.batches.get({ name: `batches/${batchId}` });
   return job;
+}
+
+/**
+ * NEW: Iterates through completed jobs in skiShopResults.js and fetches outputs if missing.
+ */
+export async function populateFileOutputResult() {
+  console.log('🔄 Checking for completed jobs to fetch results...');
+
+  // 1. Refresh Job Statuses from API (Syncs status and outputFileId to local history)
+  await getAllJobs();
+
+  // 2. Read latest state
+  const results = readResultsFile();
+  let fetchCount = 0;
+
+  for (const [batchId, record] of Object.entries(results)) {
+    // Check criteria: Succeeded, has output ID, but no results yet
+    if (
+      record.status === 'SUCCEEDED' &&
+      record.outputFileId &&
+      !record.fileOutputResult
+    ) {
+      console.log(
+        `⬇️ Fetching results for Batch ${batchId} (File: ${record.outputFileId})...`
+      );
+      try {
+        await getBatchResults(record.outputFileId);
+        fetchCount++;
+        // Optional delay to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (err) {
+        console.error(
+          `❌ Failed to fetch results for ${batchId}:`,
+          err.message
+        );
+      }
+    }
+  }
+
+  if (fetchCount === 0) {
+    console.log('✅ No new results to fetch.');
+  } else {
+    console.log(`🎉 Successfully fetched results for ${fetchCount} jobs.`);
+  }
 }

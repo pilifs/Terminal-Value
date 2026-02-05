@@ -7,6 +7,7 @@ import {
   getJobInput,
   generateAllHomePageComponents,
   generateAllOrderPageComponents,
+  populateFileOutputResult,
 } from './geminiBatchService.js';
 
 const command = process.argv[2];
@@ -27,6 +28,7 @@ Commands:
   input <jobId>         - Get the input file content for a job (Locally stored)
   results <fileId>      - Get the output results for a specific file or job ID
   generate-home         - Generate Home Page components for all clients in mock data
+  generate-order        - Generate Order Page components for all clients in mock data
 `);
     return;
   }
@@ -92,6 +94,11 @@ Commands:
           '🚀 Initiating batch generation for Ski Shop ORDER Pages...'
         );
         await generateAllOrderPageComponents();
+        break;
+
+      case 'populate-results':
+        console.log('🚀 Populating missing results for existing jobs...');
+        await populateFileOutputResult();
         break;
 
       default:
