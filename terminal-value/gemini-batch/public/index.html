@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Batch Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Gemini Batch Manager</h1>
+
+    <div class="input-group">
+      <textarea
+        id="promptInput"
+        placeholder="Enter your prompt here...&#10;(e.g., 'Summarize the history of AI in 3 paragraphs')"
+      ></textarea>
+      <button onclick="createJob()">Create Batch Job</button>
+    </div>
+
+    <button onclick="fetchJobs()" style="background: #6c757d; font-size: 0.9em">
+      🔄 Refresh List
+    </button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Job ID</th>
+          <th>Created At</th>
+          <th>Model</th>
+        </tr>
+      </thead>
+      <tbody id="jobsTableBody"></tbody>
+    </table>
+
+    <div id="resultModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Job Results</h2>
+        <div id="modalBody">
+          </div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

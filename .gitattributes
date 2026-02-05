@@ -1,0 +1,10 @@
+# Enforce consistent EOL (LF) across the repo
+* text=auto eol=lf
+# Explicitly ensure JS/JSON/MD use LF
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+# Keep binary files alone
+*.png binary
+*.jpg binary
+*.gif binary
