@@ -66,5 +66,5 @@ function parseValue(db) { // Renamed to match your request
 }
 
 const promptData = parseValue(db);
-console.log(JSON.stringify(promptData, null, 2));
+
 export default promptData;

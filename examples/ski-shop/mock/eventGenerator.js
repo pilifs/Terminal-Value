@@ -22,7 +22,9 @@ const SKI_CATEGORIES = [
   { name: 'Nordic Cross', cost: 250, sku: 'SKU-XC-008', price: 399 },
 ];
 
-// [New Data] Explicit CRM Note Personas
+// Explicit CRM Note Personas
+// Later on can add scary stuff here manually like: astrology beliefs, favourite colour, political party affiliation, favourite websites -- anything that might impact marketing tone
+// The intent of this is to show how powerfully indivuduals can be targeted with LLMs when given rich context using this technique 
 const CRM_PERSONAS = [
   [ // Persona 0
     "Client is taking a big trip to Vail next month and needs to gear up.",
