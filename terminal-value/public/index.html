@@ -4,84 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gemini Batch Manager</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        max-width: 800px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-      }
-
-      .input-group {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 2rem;
-      }
-
-      textarea {
-        width: 100%;
-        min-height: 120px;
-        padding: 12px;
-        font-size: 16px;
-        font-family: inherit;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        resize: vertical;
-        box-sizing: border-box;
-      }
-
-      button {
-        align-self: flex-start;
-        padding: 10px 20px;
-        cursor: pointer;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-      }
-      button:hover {
-        background: #0056b3;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-      }
-      th,
-      td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-      }
-      th {
-        background-color: #f4f4f4;
-      }
-      .status-SUCCEEDED {
-        color: green;
-        font-weight: bold;
-      }
-      .status-FAILED {
-        color: red;
-        font-weight: bold;
-      }
-      .status-PENDING {
-        color: orange;
-      }
-      .status-RUNNING {
-        color: blue;
-      }
-      
-      /* Result Link Styling */
-      td a {
-        color: #007bff;
-        text-decoration: none;
-      }
-      td a:hover {
-        text-decoration: underline;
-      }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <h1>Gemini Batch Manager</h1>
@@ -110,6 +34,15 @@
       <tbody id="jobsTableBody"></tbody>
     </table>
 
-    <script src="app.js"></script>
+    <div id="resultModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Job Results</h2>
+        <div id="modalBody">
+          </div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
   </body>
 </html>
