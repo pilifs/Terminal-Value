@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fil's Alpine Ski Shop</title>
+    <title>Alpine Ski Shop</title>
     <style>
       /* Global & Shell Styles */
       body {
@@ -122,7 +122,7 @@
   </head>
   <body>
     <header>
-      <div>🎿 <strong>Fil's Alpine Ski Shop</strong></div>
+      <div>🎿 <strong>Alpine Ski Shop</strong></div>
       <nav>
         <a onclick="router('home')">Shop</a>
         <a onclick="router('history')">My Orders</a>
@@ -164,35 +164,56 @@
         const params = new URLSearchParams(window.location.search);
         const clientId = params.get('clientId');
 
+        // --- VERSION CONTROL ---
+        // Separate hashes for independent component versioning.
+        // Set to 'legacy' to use the default/previous folder structure if no hash exists.
+        const HOME_COMPONENT_HASH =
+          'f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f';
+        const ORDER_COMPONENT_HASH =
+          '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a';
+
         // Helper function to resolve component path
-        const getComponentSrc = async (defaultSrc, dynamicSrc) => {
-          if (clientId) {
+        const getComponentSrc = async (
+          defaultSrc,
+          dynamicFolder,
+          fileName,
+          targetHash
+        ) => {
+          if (clientId && targetHash) {
+            // Construct path: ./components/dynamicHome/{hash}/homePage-{id}.js
+            const dynamicSrc = `${dynamicFolder}/${targetHash}/${fileName}`;
             try {
-              // Check if the specific client component exists
+              // Check if the specific client component exists in this hash folder
               const response = await fetch(dynamicSrc, { method: 'HEAD' });
               if (response.ok) {
-                console.log(`Loading dynamic component: ${dynamicSrc}`);
+                console.log(
+                  `%c Loaded Dynamic Component (${targetHash})`,
+                  'color: green; font-weight: bold;'
+                );
                 return dynamicSrc;
               }
             } catch (e) {
-              // Fallback silently if not found or error
-              console.log(
-                `Dynamic component ${dynamicSrc} not found, using default.`
+              console.warn(
+                `Dynamic component not found in ${targetHash}, using default.`
               );
             }
           }
           return defaultSrc;
         };
 
-        // Determine paths for Home and Order pages in parallel
+        // Determine paths for Home and Order pages in parallel using their specific hashes
         const [homeSrc, orderSrc] = await Promise.all([
           getComponentSrc(
             './components/HomePage.js',
-            `./components/dynamicHome/homePage-${clientId}.js`
+            './components/dynamicHome',
+            `homePage-${clientId}.js`,
+            HOME_COMPONENT_HASH
           ),
           getComponentSrc(
             './components/OrderPage.js',
-            `./components/dynamicOrder/orderPage-${clientId}.js`
+            './components/dynamicOrder',
+            `orderPage-${clientId}.js`,
+            ORDER_COMPONENT_HASH
           ),
         ]);
 

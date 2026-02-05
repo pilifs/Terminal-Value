@@ -14,7 +14,7 @@ function generateValue(clientData) {
   // Helper to generate the footer reference for web components
   const getFooter = (pageName, fileName) =>
     `
-    *** Reference the codebase attached. The default ${pageName} web component is located in 'examples/ski-shop/public/components/${fileName}'. Do not make any functional changes to the app, only modify presentation. ***
+    *** Reference the codebase below. The default ${pageName} web component is located in 'examples/ski-shop/public/components/${fileName}'. Do not make any functional changes to the app, only modify presentation. ***
   `.trim();
 
   return clientData.map((client) => {
@@ -28,6 +28,17 @@ function generateValue(clientData) {
         shoppingHistory.flatMap((o) => o.items.map((i) => i.productName))
       ),
     ];
+
+    const businessContext = `You are a partner at a big 4 consulting firm hired by the world's leading ski shop (Fil's Alpine Ski Shop) to increase sales among their highest-value customers. Your task is to create personalized web components, marketing images, and ad copy that will resonate with each client's unique profile and shopping behavior. It is critical that this campaign do whatever it takes to boost sales. 
+    You have a full team at your disposal (analyst, graphic designer, copywriter, web developer, marketing specialist, domain subject matter expert, etc.) to help with this.
+    Supply is limited on high-demand racing ski gear, so focus on driving urgency and exclusivity where possible. The price should be as high as possible to drive revenue. Focus on capturing the user's emotions and generating perceived value via a hyper-personalized digital experience.
+    
+    The high value client we are targeting is ${profile.age} years old and based in ${profile.city}. Our executive sales team has made the following notes in the internal ski shop CRM database: "${notes}". These are the backbone of our sales strategy that should be reflected in the end result digital experience.
+    
+    It is critical that you do not break the base experience. The client must be able to purchase products as normal, but feel free to do anything it takes to the presentation to drive more revenue.
+    
+    Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'HomePage' for this particular high value client that we will serve instead of the regular home page when they visit the site.`;
+    // Exclude past purchases and device from here because the data is not setup to be contextual yet (too random)
 
     // Construct the context string used in all prompts
     const clientContext = `
@@ -44,20 +55,7 @@ function generateValue(clientData) {
       prompts: {
         // 1. Custom Web Component: Home Page
         webComponentHome: `
-          ${headerContext}
-          ${clientContext}
-
-          ${headerTask}
-          Create a custom LitElement/HTMLElement JavaScript class named 'HomePage'.
-          
-          ${headerRequirements}
-          - Replace the standard inventory grid with a personalized layout.
-          - If the user has a history of 'Racing' gear, highlight the "Sales Blowout" on World Cup Racer skis with a dynamic price calculated between 0.4 * COGS and 1.0 * COGS.
-          - Show a personalized greeting using their City or specific interests found in CRM notes (e.g., "Ready for your trip to Vail?").
-          - Use the 'loadInventory()' method to fetch data from '/api/inventory' but filter/sort specifically for this user's persona.
-          - Ensure it matches the existing CSS styling of the shop.
-
-          ${getFooter('Home page', 'HomePage.js')}
+          ${businessContext}
         `.trim(),
 
         // 2. Custom Web Component: Order Page
