@@ -1,4 +1,4 @@
-const generateValueResults = [
+export const generateValueResults = [
   {
     clientId: 'CLIENT-004',
     prompts: {
