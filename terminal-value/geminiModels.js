@@ -55,11 +55,4 @@ export const GOOGLE_AI_MODELS = {
   }
 };
 
-/**
- * Helper to get the full resource string for a model
- * @param {string} modelId - The model ID (e.g. 'gemini-3-pro-preview')
- * @returns {string} The full resource name (e.g. 'models/gemini-3-pro-preview')
- */
-export const getModelResource = (modelId) => `models/${modelId}`;
-
 export default GOOGLE_AI_MODELS;

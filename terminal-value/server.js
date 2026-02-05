@@ -1,12 +1,20 @@
 import express from 'express';
-import { createBatchJob, getAllJobs, getJobResults } from './geminiBatchService.js';
+import { createBatchJob, getAllJobs, getBatchResults } from './geminiBatchService.js';
+import path from 'path';
+import morgan from 'morgan';
 
+const __dirname = path.resolve();
 const app = express();
 const PORT = 3001;
 
 // Middleware to parse JSON and serve static files
 app.use(express.json());
-app.use(express.static('public'));
+
+// Middleware to log reqeusts
+app.use(morgan('dev'));
+
+// Fix node relative paths later so this doesn't break if folder structure changes
+app.use(express.static(path.join(__dirname, './terminal-value/public')));
 
 // GET: List all jobs
 app.get('/api/jobs', async (req, res) => {
@@ -39,8 +47,8 @@ app.listen(PORT, () => {
 app.get('/api/jobs/results/:fileId', async (req, res) => {
   try {
     const { fileId } = req.params;
-    // We expect fileId to be just the ID, so we prepend 'files/'
-    const results = await getJobResults(`files/${fileId}`);
+
+    const results = await getBatchResults(fileId);
     res.json(results);
   } catch (error) {
     res.status(500).json({ error: error.message });

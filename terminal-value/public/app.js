@@ -14,7 +14,7 @@ async function fetchJobs() {
       .map(
         (job) => {
           const isSucceeded = job.status === 'SUCCEEDED' && job.outputFile;
-          console.log('Job:', job);
+
           // Extract the file ID from the output path if it exists
           const fileId = isSucceeded ? job.outputFile.split('/').pop() : null;
           
@@ -77,7 +77,7 @@ async function createJob() {
  */
 async function viewResults(fileId) {
   try {
-    const res = await fetch(`/api/jobs/results/files/${fileId}`);
+    const res = await fetch(`/api/jobs/results/${fileId}`);
     const data = await res.json();
 
     console.log(data);
