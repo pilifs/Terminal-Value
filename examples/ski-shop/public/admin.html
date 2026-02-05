@@ -89,6 +89,82 @@
       a.impersonate-btn:hover {
         background: #3498db;
       }
+
+      /* NOTE BUTTON STYLES */
+      .notes-btn {
+        background: #8e44ad;
+        color: white;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      .notes-btn:hover {
+        background: #9b59b6;
+      }
+
+      /* MODAL STYLES */
+      .modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.visible {
+        display: flex;
+        animation: fadeIn 0.2s;
+      }
+      .modal-content {
+        background-color: #fefefe;
+        color: #2c3e50;
+        padding: 20px;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 500px;
+        position: relative;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      }
+      .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        line-height: 20px;
+      }
+      .close-btn:hover,
+      .close-btn:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      #modalTitle {
+        margin-top: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+      ul.note-list {
+        padding-left: 20px;
+        margin-bottom: 0;
+      }
+      ul.note-list li {
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
     </style>
   </head>
   <body>
@@ -119,18 +195,29 @@
             <th>City</th>
             <th>Age</th>
             <th>Purchases</th>
-            <th>Action</th>
+            <th>CRM Notes</th> <th>Action</th>
           </tr>
         </thead>
         <tbody id="clientTable">
           <tr>
-            <td colspan="6">Loading data...</td>
+            <td colspan="7">Loading data...</td>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <div id="noteModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h3 id="modalTitle">Notes for Client</h3>
+        <ul id="noteList" class="note-list"></ul>
+      </div>
+    </div>
+
     <script>
+      // Global store for easy lookup by ID
+      window.clientsMap = new Map();
+
       async function init() {
         // 1. Fetch Dashboard Stats
         const statsRes = await fetch('/api/dashboard');
@@ -156,6 +243,9 @@
           return spentB - spentA; // Descending
         });
 
+        // Store for Modal Access
+        clients.forEach(c => window.clientsMap.set(c.id, c));
+
         // 5. Render Table
         const tbody = document.getElementById('clientTable');
 
@@ -169,6 +259,12 @@
                 ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
                 : `<span style="color:#ccc">N/A</span>`;
 
+            // Logic: CRM Notes Button
+            let notesButton = `<span style="color:#ccc">-</span>`;
+            if (c.crmNotes && c.crmNotes.length > 0) {
+                notesButton = `<button class="notes-btn" onclick="openModal('${c.id}')">View (${c.crmNotes.length})</button>`;
+            }
+
             return `
                 <tr>
                     <td>${c.id || 'Unknown'}</td>
@@ -178,6 +274,7 @@
                     <td>${c.city || '-'}</td>
                     <td>${c.age || '-'}</td>
                     <td class="money">${formatMoney(totalSpent)}</td>
+                    <td>${notesButton}</td>
                     <td>${actionButton}</td>
                 </tr>
             `;
@@ -193,6 +290,33 @@
             maximumFractionDigits: 2,
           })
         );
+      }
+
+      // MODAL FUNCTIONS
+      function openModal(clientId) {
+        const client = window.clientsMap.get(clientId);
+        if(!client || !client.crmNotes) return;
+
+        const modal = document.getElementById('noteModal');
+        const list = document.getElementById('noteList');
+        const title = document.getElementById('modalTitle');
+
+        title.textContent = `Notes for ${client.id}`;
+        list.innerHTML = client.crmNotes.map(note => `<li>${note}</li>`).join('');
+        
+        modal.classList.add('visible');
+      }
+
+      function closeModal() {
+        document.getElementById('noteModal').classList.remove('visible');
+      }
+
+      // Close if clicked outside content
+      window.onclick = function(event) {
+        const modal = document.getElementById('noteModal');
+        if (event.target == modal) {
+            closeModal();
+        }
       }
 
       init();

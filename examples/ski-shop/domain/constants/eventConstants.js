@@ -9,6 +9,7 @@ module.exports = {
       REGISTERED: 'CLIENT_REGISTERED',
       MOVED: 'CLIENT_MOVED',
       DEVICE_LINKED: 'DEVICE_LINKED',
+      NOTE_ADDED: 'CLIENT_NOTE_ADDED',
     },
     Device: {
       DETECTED: 'DEVICE_DETECTED',
