@@ -104,6 +104,26 @@
         background: #9b59b6;
       }
 
+      /* CUSTOM UX BADGES */
+      .ux-badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-right: 4px;
+        color: white;
+      }
+      .ux-home {
+        background: #d35400;
+      }
+      .ux-order {
+        background: #16a085;
+      }
+      .ux-none {
+        color: #ccc;
+        font-style: italic;
+      }
+
       /* MODAL STYLES */
       .modal {
         display: none; /* Hidden by default */
@@ -130,7 +150,7 @@
         width: 80%;
         max-width: 500px;
         position: relative;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
       }
       .close-btn {
         color: #aaa;
@@ -160,10 +180,14 @@
         margin-bottom: 8px;
         line-height: 1.4;
       }
-      
+
       @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
       }
     </style>
   </head>
@@ -195,12 +219,14 @@
             <th>City</th>
             <th>Age</th>
             <th>Purchases</th>
-            <th>CRM Notes</th> <th>Action</th>
+            <th>CRM Notes</th>
+            <th>Custom UX</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="clientTable">
           <tr>
-            <td colspan="7">Loading data...</td>
+            <td colspan="8">Loading data...</td>
           </tr>
         </tbody>
       </table>
@@ -244,7 +270,7 @@
         });
 
         // Store for Modal Access
-        clients.forEach(c => window.clientsMap.set(c.id, c));
+        clients.forEach((c) => window.clientsMap.set(c.id, c));
 
         // 5. Render Table
         const tbody = document.getElementById('clientTable');
@@ -262,8 +288,17 @@
             // Logic: CRM Notes Button
             let notesButton = `<span style="color:#ccc">-</span>`;
             if (c.crmNotes && c.crmNotes.length > 0) {
-                notesButton = `<button class="notes-btn" onclick="openModal('${c.id}')">View (${c.crmNotes.length})</button>`;
+              notesButton = `<button class="notes-btn" onclick="openModal('${c.id}')">View (${c.crmNotes.length})</button>`;
             }
+
+            // Logic: Custom UX Badges
+            let uxBadges = '';
+            if (c.hasCustomHome)
+              uxBadges += `<span class="ux-badge ux-home">Home</span>`;
+            if (c.hasCustomOrder)
+              uxBadges += `<span class="ux-badge ux-order">Order</span>`;
+            if (!c.hasCustomHome && !c.hasCustomOrder)
+              uxBadges = `<span class="ux-none">-</span>`;
 
             return `
                 <tr>
@@ -275,6 +310,7 @@
                     <td>${c.age || '-'}</td>
                     <td class="money">${formatMoney(totalSpent)}</td>
                     <td>${notesButton}</td>
+                    <td>${uxBadges}</td>
                     <td>${actionButton}</td>
                 </tr>
             `;
@@ -295,15 +331,17 @@
       // MODAL FUNCTIONS
       function openModal(clientId) {
         const client = window.clientsMap.get(clientId);
-        if(!client || !client.crmNotes) return;
+        if (!client || !client.crmNotes) return;
 
         const modal = document.getElementById('noteModal');
         const list = document.getElementById('noteList');
         const title = document.getElementById('modalTitle');
 
         title.textContent = `Notes for ${client.id}`;
-        list.innerHTML = client.crmNotes.map(note => `<li>${note}</li>`).join('');
-        
+        list.innerHTML = client.crmNotes
+          .map((note) => `<li>${note}</li>`)
+          .join('');
+
         modal.classList.add('visible');
       }
 
@@ -312,12 +350,12 @@
       }
 
       // Close if clicked outside content
-      window.onclick = function(event) {
+      window.onclick = function (event) {
         const modal = document.getElementById('noteModal');
         if (event.target == modal) {
-            closeModal();
+          closeModal();
         }
-      }
+      };
 
       init();
     </script>

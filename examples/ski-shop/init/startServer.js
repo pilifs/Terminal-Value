@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fs = require('fs'); // Added fs module
 
 const Projector = require('../store/projections');
 const CommandDispatcher = require('../framework/commandDispatcher');
@@ -33,9 +34,34 @@ function startServer() {
       return res.json(Projector.getClientsByCity(req.query.city));
 
     // Return ALL clients (Admin View)
-    // We use Array.from to convert the Map values to an Array
-    // We slice(0, 100) to prevent sending too much data in this demo
-    res.json(Projector.getClients().slice(0, 100));
+    // Get basic client data
+    let clients = Projector.getClients().slice(0, 100);
+
+    // AUGMENTATION: Check file system for custom views
+    // We map over the clients to add flags if their custom files exist
+    const dynamicHomeDir = path.join(
+      __dirname,
+      '../public/components/dynamicHome'
+    );
+    const dynamicOrderDir = path.join(
+      __dirname,
+      '../public/components/dynamicOrder'
+    );
+
+    const augmentedClients = clients.map((client) => {
+      // Clone client to avoid mutating store state if it's a direct reference
+      const c = { ...client };
+
+      const homePath = path.join(dynamicHomeDir, `homePage-${c.id}.js`);
+      const orderPath = path.join(dynamicOrderDir, `orderPage-${c.id}.js`);
+
+      c.hasCustomHome = fs.existsSync(homePath);
+      c.hasCustomOrder = fs.existsSync(orderPath);
+
+      return c;
+    });
+
+    res.json(augmentedClients);
   });
 
   app.get('/api/clients/:id', (req, res) => {
