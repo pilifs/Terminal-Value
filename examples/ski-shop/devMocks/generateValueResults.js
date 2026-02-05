@@ -1,6 +1,6 @@
-[
+const generateValueResults = [
   {
-    clientId: "CLIENT-004",
+    clientId: 'CLIENT-004',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -82,7 +82,7 @@
     },
   },
   {
-    clientId: "CLIENT-012",
+    clientId: 'CLIENT-012',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -164,7 +164,7 @@
     },
   },
   {
-    clientId: "CLIENT-010",
+    clientId: 'CLIENT-010',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -246,7 +246,7 @@
     },
   },
   {
-    clientId: "CLIENT-014",
+    clientId: 'CLIENT-014',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -328,7 +328,7 @@
     },
   },
   {
-    clientId: "CLIENT-006",
+    clientId: 'CLIENT-006',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -410,7 +410,7 @@
     },
   },
   {
-    clientId: "CLIENT-020",
+    clientId: 'CLIENT-020',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -492,7 +492,7 @@
     },
   },
   {
-    clientId: "CLIENT-002",
+    clientId: 'CLIENT-002',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -574,7 +574,7 @@
     },
   },
   {
-    clientId: "CLIENT-008",
+    clientId: 'CLIENT-008',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -656,7 +656,7 @@
     },
   },
   {
-    clientId: "CLIENT-018",
+    clientId: 'CLIENT-018',
     prompts: {
       webComponentHome: `CONTEXT:
           
@@ -738,7 +738,7 @@
     },
   },
   {
-    clientId: "CLIENT-016",
+    clientId: 'CLIENT-016',
     prompts: {
       webComponentHome: `CONTEXT:
           

@@ -159,8 +159,49 @@
       </div>
     </div>
 
-    <script type="module" src="components/HomePage.js"></script>
-    <script type="module" src="components/OrderPage.js"></script>
+    <script type="module">
+      (async function () {
+        const params = new URLSearchParams(window.location.search);
+        const clientId = params.get('clientId');
+
+        // Helper function to resolve component path
+        const getComponentSrc = async (defaultSrc, dynamicSrc) => {
+          if (clientId) {
+            try {
+              // Check if the specific client component exists
+              const response = await fetch(dynamicSrc, { method: 'HEAD' });
+              if (response.ok) {
+                console.log(`Loading dynamic component: ${dynamicSrc}`);
+                return dynamicSrc;
+              }
+            } catch (e) {
+              // Fallback silently if not found or error
+              console.log(
+                `Dynamic component ${dynamicSrc} not found, using default.`
+              );
+            }
+          }
+          return defaultSrc;
+        };
+
+        // Determine paths for Home and Order pages in parallel
+        const [homeSrc, orderSrc] = await Promise.all([
+          getComponentSrc(
+            './components/HomePage.js',
+            `./components/dynamicHome/homePage-${clientId}.js`
+          ),
+          getComponentSrc(
+            './components/OrderPage.js',
+            `./components/dynamicOrder/orderPage-${clientId}.js`
+          ),
+        ]);
+
+        // Import the resolved modules
+        await import(homeSrc);
+        await import(orderSrc);
+      })();
+    </script>
+
     <script src="app.js"></script>
   </body>
 </html>
