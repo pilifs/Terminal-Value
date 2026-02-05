@@ -29,6 +29,7 @@ Commands:
   results <fileId>      - Get the output results for a specific file or job ID
   generate-home         - Generate Home Page components for all clients in mock data
   generate-order        - Generate Order Page components for all clients in mock data
+  populate-results      - Populate output files for successfully completed jobs
 `);
     return;
   }
