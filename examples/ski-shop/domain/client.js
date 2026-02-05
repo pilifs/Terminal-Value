@@ -7,8 +7,9 @@ class Client extends AggregateRoot {
       id: id,
       age: null,
       city: null,
-      deviceId: null, // Foreign key to ClientDevice aggregate
+      deviceId: null,
       isRegistered: false,
+      crmNotes: [], // [New Field]
     });
   }
 
@@ -24,6 +25,9 @@ class Client extends AggregateRoot {
         break;
       case Events.Client.DEVICE_LINKED:
         this.deviceId = event.deviceId;
+        break;
+      case Events.Client.NOTE_ADDED: // [New Handler]
+        this.crmNotes.push(event.note);
         break;
     }
   }
@@ -49,11 +53,19 @@ class Client extends AggregateRoot {
   }
 
   linkDevice(deviceId) {
-    // We only store the ID, not the object, to keep aggregates decoupled
     return {
       type: Events.Client.DEVICE_LINKED,
       aggregateId: this.id,
       deviceId,
+      timestamp: Date.now(),
+    };
+  }
+
+  addCrmNote(note) {
+    return {
+      type: Events.Client.NOTE_ADDED,
+      aggregateId: this.id,
+      note,
       timestamp: Date.now(),
     };
   }

@@ -1,10 +1,13 @@
-import { 
-  getAllJobs, 
-  getBatchResults, 
-  createBatchJob, 
-  getJob, 
+import {
+  getAllJobs,
+  getBatchResults,
+  createBatchJob,
+  getJob,
   getRawJob,
-  getJobInput 
+  getJobInput,
+  generateAllHomePageComponents,
+  generateAllOrderPageComponents,
+  populateFileOutputResult,
 } from './geminiBatchService.js';
 
 const command = process.argv[2];
@@ -24,6 +27,9 @@ Commands:
   rawjob <jobId>        - Get raw details of a specific job (REST API method)
   input <jobId>         - Get the input file content for a job (Locally stored)
   results <fileId>      - Get the output results for a specific file or job ID
+  generate-home         - Generate Home Page components for all clients in mock data
+  generate-order        - Generate Order Page components for all clients in mock data
+  populate-results      - Populate output files for successfully completed jobs
 `);
     return;
   }
@@ -37,12 +43,13 @@ Commands:
         break;
 
       case 'create':
-        if (!argument) throw new Error('Prompt argument is required for "create"');
+        if (!argument)
+          throw new Error('Prompt argument is required for "create"');
         console.log(`🚀 Creating job with prompt: "${argument}"...`);
         const newJob = await createBatchJob(argument);
         console.log('✅ Job Created:', JSON.stringify(newJob, null, 2));
         break;
-      
+
       case 'job':
         if (!argument) throw new Error('Job ID is required for "job"');
         console.log(`🔍 Fetching SDK job details for: ${argument}...`);
@@ -67,12 +74,32 @@ Commands:
           console.log('⚠️ Input file not found locally.');
         }
         break;
-      
+
       case 'results':
-        if (!argument) throw new Error('File ID (or Job ID) is required for "results"');
+        if (!argument)
+          throw new Error('File ID (or Job ID) is required for "results"');
         console.log(`⬇️ Fetching results for: ${argument}...`);
         const results = await getBatchResults(argument);
         console.log(JSON.stringify(results, null, 2));
+        break;
+
+      case 'generate-home':
+        console.log(
+          '🚀 Initiating batch generation for Ski Shop Home Pages...'
+        );
+        await generateAllHomePageComponents();
+        break;
+
+      case 'generate-order':
+        console.log(
+          '🚀 Initiating batch generation for Ski Shop ORDER Pages...'
+        );
+        await generateAllOrderPageComponents();
+        break;
+
+      case 'populate-results':
+        console.log('🚀 Populating missing results for existing jobs...');
+        await populateFileOutputResult();
         break;
 
       default:

@@ -138,11 +138,20 @@ window.router = function (pageId, itemId = null, itemObj = null) {
 };
 
 function updateUrl(pageId, itemId = null, replace = false) {
-  const params = new URLSearchParams();
+  // Preserve existing params (like homeHash, orderHash) by initializing with window.location.search
+  const params = new URLSearchParams(window.location.search);
+  
   if (state.clientId) params.set('clientId', state.clientId);
   if (pageId) params.set('page', pageId);
-  if (itemId) params.set('itemId', itemId);
+  
+  if (itemId) {
+    params.set('itemId', itemId);
+  } else {
+    params.delete('itemId');
+  }
+
   const newUrl = `${window.location.pathname}?${params.toString()}`;
+  
   replace
     ? window.history.replaceState({ pageId, itemId }, '', newUrl)
     : window.history.pushState({ pageId, itemId }, '', newUrl);

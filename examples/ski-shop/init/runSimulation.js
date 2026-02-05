@@ -8,7 +8,10 @@ const Client = require('../domain/client');
 const Order = require('../domain/order');
 
 // Import Generated Data
-const initialHistory = require('../mock/eventGenerator');
+// const initialHistory = require('../mock/eventGenerator');
+
+// Use fixed events for now to link custom templates to users without re-generating
+const initialHistory = require('../devMocks/generateEventsResults').default;
 
 async function runSimulation() {
   console.log('--- 🎿 SKI SHOP SYSTEM STARTUP 🎿 ---');

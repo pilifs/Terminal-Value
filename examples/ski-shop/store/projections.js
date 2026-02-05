@@ -63,6 +63,7 @@ const Projector = {
       case Events.Client.REGISTERED:
         const existingClient = db.clients.get(event.aggregateId) || {
           devices: [],
+          crmNotes: [],
         };
         db.clients.set(event.aggregateId, {
           ...existingClient,
@@ -72,6 +73,13 @@ const Projector = {
           isRegistered: true,
           registeredAt: event.timestamp,
         });
+        break;
+      case Events.Client.NOTE_ADDED:
+        if (db.clients.has(event.aggregateId)) {
+          const client = db.clients.get(event.aggregateId);
+          if (!client.crmNotes) client.crmNotes = [];
+          client.crmNotes.push(event.note);
+        }
         break;
       case Events.Client.MOVED:
         if (db.clients.has(event.aggregateId)) {

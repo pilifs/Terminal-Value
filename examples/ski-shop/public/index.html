@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Alpine Ski Shop</title>
     <style>
-      /* Global & Shell Styles */
+      /* ... Existing Styles ... */
       body {
         font-family: 'Segoe UI', sans-serif;
         margin: 0;
@@ -44,14 +44,42 @@
         display: flex;
         gap: 20px;
         color: #555;
+        position: relative;
       }
-
-      /* Utility for hiding/showing pages */
       .hidden {
         display: none !important;
       }
+      .info-hover {
+        cursor: help;
+        border-bottom: 1px dotted #aaa;
+        position: relative;
+      }
+      .info-hover:hover {
+        color: #2c3e50;
+        font-weight: bold;
+      }
+      #detailTooltip {
+        position: absolute;
+        top: 45px;
+        left: 20px;
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        min-width: 250px;
+        white-space: pre-wrap;
+        font-family: 'Consolas', monospace;
+        font-size: 0.8rem;
+        display: none;
+      }
+      #detailTooltip.visible {
+        display: block;
+        animation: fadeIn 0.2s;
+      }
 
-      /* Styles for the non-web-component History page */
+      /* Table styles for history */
       table {
         width: 100%;
         border-collapse: collapse;
@@ -72,52 +100,6 @@
         color: green;
         font-weight: bold;
       }
-
-      /* HOVER TOOLTIP STYLES */
-      .client-info {
-        background: #fff;
-        padding: 10px 2rem;
-        border-bottom: 1px solid #ddd;
-        font-size: 0.9rem;
-        display: flex;
-        gap: 20px;
-        color: #555;
-        position: relative;
-      }
-
-      .info-hover {
-        cursor: help;
-        border-bottom: 1px dotted #aaa;
-        position: relative;
-      }
-
-      .info-hover:hover {
-        color: #2c3e50;
-        font-weight: bold;
-      }
-
-      /* The Floating Box */
-      #detailTooltip {
-        position: absolute;
-        top: 45px; /* Push below the header bar */
-        left: 20px;
-        background: #2c3e50;
-        color: #ecf0f1;
-        padding: 15px;
-        border-radius: 5px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        min-width: 250px;
-        white-space: pre-wrap; /* Respect new lines */
-        font-family: 'Consolas', monospace;
-        font-size: 0.8rem;
-        display: none; /* Hidden by default */
-      }
-
-      #detailTooltip.visible {
-        display: block;
-        animation: fadeIn 0.2s;
-      }
     </style>
   </head>
   <body>
@@ -133,15 +115,12 @@
       <span id="displayClient" class="info-hover">Client: ...</span>
       <span id="displayDevice" class="info-hover">Device: ...</span>
       <span id="displayLocation" class="info-hover">Location: ...</span>
-
       <div id="detailTooltip"></div>
     </div>
 
     <div class="container">
       <home-page id="homePage"></home-page>
-
       <order-page id="orderPage" class="hidden"></order-page>
-
       <div id="historyPage" class="hidden">
         <h2>Purchase History</h2>
         <table id="historyTable">
@@ -159,8 +138,64 @@
       </div>
     </div>
 
-    <script type="module" src="components/HomePage.js"></script>
-    <script type="module" src="components/OrderPage.js"></script>
+    <script type="module">
+      (async function () {
+        const params = new URLSearchParams(window.location.search);
+        const clientId = params.get('clientId');
+
+        // --- VERSION CONTROL ---
+        // 1. Check URL for specific version override
+        // 2. Fallback to 'legacy' (or hardcoded default)
+        const HOME_COMPONENT_HASH = params.get('homeHash') || 'legacy';
+        const ORDER_COMPONENT_HASH = params.get('orderHash') || 'legacy';
+
+        const getComponentSrc = async (
+          defaultSrc,
+          dynamicFolder,
+          fileName,
+          targetHash
+        ) => {
+          if (clientId && targetHash) {
+            // Construct path: ./components/dynamicHome/{hash}/homePage-{id}.js
+            const dynamicSrc = `${dynamicFolder}/${targetHash}/${fileName}`;
+            try {
+              const response = await fetch(dynamicSrc, { method: 'HEAD' });
+              if (response.ok) {
+                console.log(
+                  `%c Loaded Dynamic Component (${targetHash})`,
+                  'color: green; font-weight: bold;'
+                );
+                return dynamicSrc;
+              }
+            } catch (e) {
+              console.warn(
+                `Dynamic component not found in ${targetHash}, using default.`
+              );
+            }
+          }
+          return defaultSrc;
+        };
+
+        const [homeSrc, orderSrc] = await Promise.all([
+          getComponentSrc(
+            './components/HomePage.js',
+            './components/dynamicHome',
+            `homePage-${clientId}.js`,
+            HOME_COMPONENT_HASH
+          ),
+          getComponentSrc(
+            './components/OrderPage.js',
+            './components/dynamicOrder',
+            `orderPage-${clientId}.js`,
+            ORDER_COMPONENT_HASH
+          ),
+        ]);
+
+        await import(homeSrc);
+        await import(orderSrc);
+      })();
+    </script>
+
     <script src="app.js"></script>
   </body>
 </html>

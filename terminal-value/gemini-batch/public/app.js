@@ -17,10 +17,10 @@ window.fetchJobs = async function() {
           const isPending = job.status === 'PENDING';
           
           // Extract file ID only if succeeded and exists
-          const outputFileId = (isSucceeded && job.outputFile) ? job.outputFile.split('/').pop() : '';
+          const outputFileId = job.outputFileId || '';
           
           // Allow click if (Succeeded with file) OR (Pending)
-          const canView = (isSucceeded && job.outputFile) || isPending;
+          const canView = (isSucceeded && job.outputFileId) || isPending;
 
           // Pass Job ID, Output File ID, and Status to the view function
           const idDisplay = canView
