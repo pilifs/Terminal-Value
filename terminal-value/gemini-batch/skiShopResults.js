@@ -44,7 +44,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-u5uda1k3xok9uxsv4n12ghf6pumpqbrvxcbp"
+    "outputFileId": "batch-u5uda1k3xok9uxsv4n12ghf6pumpqbrvxcbp",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "9p9rj788yg0evlo4fhp594ha1xmkipjakhq3": {
     "batchId": "9p9rj788yg0evlo4fhp594ha1xmkipjakhq3",
@@ -91,7 +92,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-9p9rj788yg0evlo4fhp594ha1xmkipjakhq3"
+    "outputFileId": "batch-9p9rj788yg0evlo4fhp594ha1xmkipjakhq3",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "mb2tdncpcua8bx3spsxah8y171976jmm9kku": {
     "batchId": "mb2tdncpcua8bx3spsxah8y171976jmm9kku",
@@ -145,7 +147,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-mb2tdncpcua8bx3spsxah8y171976jmm9kku"
+    "outputFileId": "batch-mb2tdncpcua8bx3spsxah8y171976jmm9kku",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "dzirk2xtxu0emc8k2vtz1chjk70lf2ob5kpk": {
     "batchId": "dzirk2xtxu0emc8k2vtz1chjk70lf2ob5kpk",
@@ -192,7 +195,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-dzirk2xtxu0emc8k2vtz1chjk70lf2ob5kpk"
+    "outputFileId": "batch-dzirk2xtxu0emc8k2vtz1chjk70lf2ob5kpk",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "occ2gal1ocub87ime5zfdokpp78dw18ih7do": {
     "batchId": "occ2gal1ocub87ime5zfdokpp78dw18ih7do",
@@ -239,7 +243,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-occ2gal1ocub87ime5zfdokpp78dw18ih7do"
+    "outputFileId": "batch-occ2gal1ocub87ime5zfdokpp78dw18ih7do",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "vybqvt0gps9l5hilln6yj8phr9h4t4ji2mzt": {
     "batchId": "vybqvt0gps9l5hilln6yj8phr9h4t4ji2mzt",
@@ -293,7 +298,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-vybqvt0gps9l5hilln6yj8phr9h4t4ji2mzt"
+    "outputFileId": "batch-vybqvt0gps9l5hilln6yj8phr9h4t4ji2mzt",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "k7xmpsl650z60zykjvktxw6dunvw7poar163": {
     "batchId": "k7xmpsl650z60zykjvktxw6dunvw7poar163",
@@ -340,7 +346,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-k7xmpsl650z60zykjvktxw6dunvw7poar163"
+    "outputFileId": "batch-k7xmpsl650z60zykjvktxw6dunvw7poar163",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "j4v5ghwnxysqjp89brd2tm6z4vgffc22kotq": {
     "batchId": "j4v5ghwnxysqjp89brd2tm6z4vgffc22kotq",
@@ -394,7 +401,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-j4v5ghwnxysqjp89brd2tm6z4vgffc22kotq"
+    "outputFileId": "batch-j4v5ghwnxysqjp89brd2tm6z4vgffc22kotq",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "sxhava3mcsp1kn7puvz13ivghsi72f4ktsgg": {
     "batchId": "sxhava3mcsp1kn7puvz13ivghsi72f4ktsgg",
@@ -441,7 +449,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-sxhava3mcsp1kn7puvz13ivghsi72f4ktsgg"
+    "outputFileId": "batch-sxhava3mcsp1kn7puvz13ivghsi72f4ktsgg",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "0ejbivi79v809frkqq9t6s0alh8oezila40a": {
     "batchId": "0ejbivi79v809frkqq9t6s0alh8oezila40a",
@@ -495,7 +504,8 @@ export const results = {
       }
     ],
     "status": "SUCCEEDED",
-    "outputFileId": "batch-0ejbivi79v809frkqq9t6s0alh8oezila40a"
+    "outputFileId": "batch-0ejbivi79v809frkqq9t6s0alh8oezila40a",
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "3zisnl5t3ixln53dmgzpjs560bpj96rex421": {
     "batchId": "3zisnl5t3ixln53dmgzpjs560bpj96rex421",
@@ -542,7 +552,8 @@ export const results = {
           }
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "affn726r0cfdcbrulxwqqlursei65v43xtmf": {
     "batchId": "affn726r0cfdcbrulxwqqlursei65v43xtmf",
@@ -589,7 +600,8 @@ export const results = {
           "modelVersion": "gemini-3-pro-preview"
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "ggy3bowbbzqd07upialhctht8cflsqk9biba": {
     "batchId": "ggy3bowbbzqd07upialhctht8cflsqk9biba",
@@ -636,7 +648,8 @@ export const results = {
           "modelVersion": "gemini-3-pro-preview"
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "08ld9fkqbbx13whn0bwtyoa5k39jzr43ulpo": {
     "batchId": "08ld9fkqbbx13whn0bwtyoa5k39jzr43ulpo",
@@ -683,7 +696,8 @@ export const results = {
           }
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "kev0x25sqwwrci5g7nyt14po6d3yciwpxc1f": {
     "batchId": "kev0x25sqwwrci5g7nyt14po6d3yciwpxc1f",
@@ -730,7 +744,8 @@ export const results = {
           ]
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "t8a24vokufxmfimq0irfj9hbfwjyvsyxh1no": {
     "batchId": "t8a24vokufxmfimq0irfj9hbfwjyvsyxh1no",
@@ -777,7 +792,8 @@ export const results = {
           ]
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "p8v6liudopk2u36rk4cu3fvndmh6in1p1kn3": {
     "batchId": "p8v6liudopk2u36rk4cu3fvndmh6in1p1kn3",
@@ -824,7 +840,8 @@ export const results = {
           "responseId": "xX6EadulO-itz7IPuLSlgAc"
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "r4o0uliqa27bixdtm68jyabqw4gjwq308x36": {
     "batchId": "r4o0uliqa27bixdtm68jyabqw4gjwq308x36",
@@ -871,7 +888,8 @@ export const results = {
           "modelVersion": "gemini-3-pro-preview"
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "lkeuclmg5q86bj9qdrciaza05dxjz48jr8ok": {
     "batchId": "lkeuclmg5q86bj9qdrciaza05dxjz48jr8ok",
@@ -918,7 +936,8 @@ export const results = {
           ]
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   },
   "n33rrjc7zx9j1y0g5o2psa5ei863mq2j59vk": {
     "batchId": "n33rrjc7zx9j1y0g5o2psa5ei863mq2j59vk",
@@ -965,6 +984,7 @@ export const results = {
           "modelVersion": "gemini-3-pro-preview"
         }
       }
-    ]
+    ],
+    "valueInputHash": "0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a"
   }
 };

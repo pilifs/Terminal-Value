@@ -12,6 +12,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
 const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
+const GENERATE_VALUE_PATH = path.join(
+  __dirname,
+  '../../examples/ski-shop/devMocks/generateValueResults.js'
+);
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
@@ -24,6 +28,19 @@ if (!fs.existsSync(LOCAL_INPUTS_DIR)) {
   fs.mkdirSync(LOCAL_INPUTS_DIR, { recursive: true });
 }
 
+// --- Helper: Get Hash of Generate Value Input ---
+function getGenerateValueHash() {
+  try {
+    if (fs.existsSync(GENERATE_VALUE_PATH)) {
+      const content = fs.readFileSync(GENERATE_VALUE_PATH, 'utf-8');
+      return crypto.createHash('sha256').update(content).digest('hex');
+    }
+  } catch (e) {
+    console.warn('⚠️ Could not calculate hash for generateValueResults.js', e);
+  }
+  return null;
+}
+
 // --- Helper: Ski Shop Results Persistence ---
 
 function readResultsFile() {
@@ -32,35 +49,19 @@ function readResultsFile() {
   }
   try {
     const content = fs.readFileSync(RESULTS_FILE_PATH, 'utf-8');
-
-    // 1. Strip the export statement
-    // Matches "export const results =" with any spacing
     let objectLiteral = content.replace(/^export\s+const\s+results\s*=\s*/, '');
-
-    // 2. Strip trailing semicolon if present
     objectLiteral = objectLiteral.replace(/;\s*$/, '');
-
-    // 3. Evaluate safely as JavaScript
-    // This handles unquoted keys, trailing commas, and single quotes which JSON.parse fails on.
     return new Function('return ' + objectLiteral)();
   } catch (err) {
     console.error(
       '⚠️ Error parsing skiShopResults.js. Ensure it is valid JavaScript syntax.',
       err
     );
-    // Return empty object so the process doesn't crash,
-    // but be aware this might overwrite the file with an empty object on next save.
     return {};
   }
 }
 
-/**
- * Saves the results object back to skiShopResults.js as valid JavaScript.
- * Uses JSON.stringify to ensure the saved format is clean and consistent.
- */
 function saveResultsFile(data) {
-  // serializing with JSON.stringify ensures keys are quoted for the next write,
-  // but the reader above will now support both styles.
   const fileContent = `export const results = ${JSON.stringify(
     data,
     null,
@@ -76,7 +77,8 @@ function logJobToHistory(
   customId,
   modelName,
   localFileName,
-  pageType
+  pageType,
+  valueInputHash // New Parameter
 ) {
   const results = readResultsFile();
   const promptHash = crypto
@@ -94,8 +96,9 @@ function logJobToHistory(
     inputPrompt: promptText,
     inputPromptHash: promptHash,
     inputFileName: localFileName,
-    status: 'SUBMITTED', // Initial State
-    outputFileId: null, // Will be populated by getAllJobs
+    valueInputHash: valueInputHash || null, // Store the hash
+    status: 'SUBMITTED',
+    outputFileId: null,
     fileOutputResult: null,
   };
 
@@ -124,7 +127,8 @@ async function fetchAllPages() {
 export async function createBatchJob(
   promptText,
   customId = null,
-  pageType = 'generic'
+  pageType = 'generic',
+  valueInputHash = null // New Parameter
 ) {
   const tempFileName = `temp-${Date.now()}.jsonl`;
   const modelName = GOOGLE_AI_MODELS.PREVIEW.GEMINI_3_PRO;
@@ -170,7 +174,8 @@ export async function createBatchJob(
       customId,
       modelName,
       localFileName,
-      pageType
+      pageType,
+      valueInputHash // Pass to logger
     );
 
     return batchJob;
@@ -220,7 +225,8 @@ function getSkiShopContext() {
 export async function createSkiShopWebComponentPrompt(
   promptText,
   customId,
-  pageType
+  pageType,
+  valueInputHash = null
 ) {
   const fileContext = getSkiShopContext();
 
@@ -238,13 +244,17 @@ ${fileContext}
       customId || 'Unknown'
     }, Type: ${pageType})...`
   );
-  return createBatchJob(combinedPrompt, customId, pageType);
+  return createBatchJob(combinedPrompt, customId, pageType, valueInputHash);
 }
 
 export async function generateAllHomePageComponents() {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Home Pages...`
   );
+
+  // Calculate hash once for this batch run
+  const valueInputHash = getGenerateValueHash();
+
   const jobs = [];
 
   for (const clientData of generateValueResults) {
@@ -258,7 +268,8 @@ export async function generateAllHomePageComponents() {
       const job = await createSkiShopWebComponentPrompt(
         promptText,
         clientId,
-        'home'
+        'home',
+        valueInputHash // Pass Hash
       );
       jobs.push({
         clientId,
@@ -286,6 +297,10 @@ export async function generateAllOrderPageComponents() {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
   );
+
+  // Calculate hash once for this batch run
+  const valueInputHash = getGenerateValueHash();
+
   const jobs = [];
 
   for (const clientData of generateValueResults) {
@@ -304,7 +319,8 @@ export async function generateAllOrderPageComponents() {
       const job = await createSkiShopWebComponentPrompt(
         promptText,
         clientId,
-        'order'
+        'order',
+        valueInputHash // Pass Hash
       );
       jobs.push({
         clientId,
@@ -328,9 +344,9 @@ export async function generateAllOrderPageComponents() {
   return jobs;
 }
 
-/**
- * Lists ALL jobs and UPDATES skiShopResults.js with status and outputFileId.
- */
+// ... Rest of the file (getAllJobs, getBatchResults, etc.) remains unchanged ...
+// (Ensure getAllJobs, getBatchResults, getRawJob, getJobInput, getJob, populateFileOutputResult are included below as in previous version)
+
 export async function getAllJobs() {
   try {
     const allJobs = await fetchAllPages();
@@ -398,9 +414,6 @@ export async function getAllJobs() {
   }
 }
 
-/**
- * Downloads Batch Job Output Results and SAVES it to skiShopResults.js.
- */
 export async function getBatchResults(fileId) {
   try {
     let resourceName = !fileId.startsWith('files/')
@@ -516,9 +529,6 @@ export async function getJob(batchId) {
   return job;
 }
 
-/**
- * NEW: Iterates through completed jobs in skiShopResults.js and fetches outputs if missing.
- */
 export async function populateFileOutputResult() {
   console.log('🔄 Checking for completed jobs to fetch results...');
 
