@@ -1,19 +1,27 @@
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
+
+// --- Path Resolution Logic ---
+// We use import.meta.url to get the absolute path of THIS file (geminiBatchService.js)
+// This ensures LOCAL_INPUTS_DIR is always ./terminal-value/local-inputs 
+// regardless of where the node process was started (root vs subdir).
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
 }
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const LOCAL_INPUTS_DIR = 'local-inputs';
 
 // Ensure local storage directory exists
 if (!fs.existsSync(LOCAL_INPUTS_DIR)) {
-  fs.mkdirSync(LOCAL_INPUTS_DIR);
+  fs.mkdirSync(LOCAL_INPUTS_DIR, { recursive: true });
 }
 
 /**
@@ -39,6 +47,8 @@ async function fetchAllPages() {
  * Creates a batch job and SAVES the input file locally using the Google File ID.
  */
 export async function createBatchJob(promptText) {
+  // We create the temp file in the CWD (wherever the script runs) 
+  // before moving it to the stable local-inputs storage.
   const tempFileName = `temp-${Date.now()}.jsonl`;
   const modelName = GOOGLE_AI_MODELS.STABLE.GEMINI_2_5_FLASH_LITE;
 
@@ -66,6 +76,9 @@ export async function createBatchJob(promptText) {
     const googleFileId = uploadResult.name.split('/').pop();
     const localPath = path.join(LOCAL_INPUTS_DIR, `${googleFileId}.jsonl`);
     
+    // We use renameSync. Since tempFileName is likely in the project root (CWD)
+    // and LOCAL_INPUTS_DIR is in the project folder, this works fine.
+    // If you ever cross partitions, you might need copy+unlink.
     fs.renameSync(tempFileName, localPath);
     console.log(`💾 Saved local input: ${localPath}`);
 

@@ -131,7 +131,7 @@ td a:hover {
   padding: 10px;
   border-radius: 4px;
   margin-bottom: 10px;
-  border-left: 4px solid #007bff;
+  border-left: 4px solid #007bff; /* Keeps the blue accent for Output results */
 }
 .meta-header h3 {
   margin: 0 0 5px 0;
@@ -153,13 +153,10 @@ td a:hover {
   white-space: pre-wrap; /* Wrap long code lines */
 }
 
-/* --- New Input Section Styles --- */
-.input-section {
-  border-left: 4px solid #6c757d; /* Gray border for input */
-}
+
 .input-header {
-  border-left: 4px solid #6c757d;
   background: #e9ecef;
+  border-left: none; 
 }
 
 .section-title {
@@ -172,6 +169,17 @@ td a:hover {
   background-color: #fff3cd;
   color: #856404;
   border: 1px solid #ffeeba;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.info-box {
+  background-color: #cce5ff;
+  color: #004085;
+  border: 1px solid #b8daff;
   padding: 15px;
   border-radius: 4px;
   margin-bottom: 20px;

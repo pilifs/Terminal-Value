@@ -13,12 +13,18 @@ window.fetchJobs = async function() {
     tbody.innerHTML = jobs
       .map(
         (job) => {
-          const isSucceeded = job.status === 'SUCCEEDED' && job.outputFile;
-          const outputFileId = isSucceeded ? job.outputFile.split('/').pop() : '';
+          const isSucceeded = job.status === 'SUCCEEDED';
+          const isPending = job.status === 'PENDING';
           
-          // Pass both Job ID (for inputs) and Output File ID (for results)
-          const idDisplay = isSucceeded 
-            ? `<a href="#" onclick="window.viewResults('${job.id}', '${outputFileId}'); return false;">${job.id}</a>`
+          // Extract file ID only if succeeded and exists
+          const outputFileId = (isSucceeded && job.outputFile) ? job.outputFile.split('/').pop() : '';
+          
+          // Allow click if (Succeeded with file) OR (Pending)
+          const canView = (isSucceeded && job.outputFile) || isPending;
+
+          // Pass Job ID, Output File ID, and Status to the view function
+          const idDisplay = canView
+            ? `<a href="#" onclick="window.viewResults('${job.id}', '${outputFileId}', '${job.status}'); return false;">${job.id}</a>`
             : job.id;
 
           return `
@@ -71,9 +77,9 @@ window.createJob = async function() {
 };
 
 /**
- * Displays both INPUT request and OUTPUT results in the modal.
+ * Displays INPUT request and OUTPUT results (or status) in the modal.
  */
-window.viewResults = async function(jobId, outputFileId) {
+window.viewResults = async function(jobId, outputFileId, status) {
   const modal = document.getElementById('resultModal');
   const modalBody = document.getElementById('modalBody');
 
@@ -82,7 +88,7 @@ window.viewResults = async function(jobId, outputFileId) {
   modal.style.display = 'block';
 
   try {
-    // Parallel fetch: Get Input (local) and Output (remote)
+    // Parallel fetch: Get Input (local) and Output (remote) if available
     const [inputData, outputData] = await Promise.all([
       getJobInput(jobId),
       outputFileId ? getJobResults(outputFileId) : Promise.resolve([])
@@ -92,7 +98,6 @@ window.viewResults = async function(jobId, outputFileId) {
 
     // --- RENDER INPUT ---
     if (inputData) {
-      // Assuming single prompt structure for now
       const inputText = inputData[0]?.request?.contents?.[0]?.parts?.[0]?.text || "Unknown";
       html += `
         <div class="result-entry input-section">
@@ -105,21 +110,27 @@ window.viewResults = async function(jobId, outputFileId) {
         </div>
       `;
     } else {
-      // Specific message for missing local files (e.g. old jobs)
       html += `
         <div class="alert-box">
           <strong>⚠️ Input file not found.</strong><br/>
-          This input is served locally because the Gemini Batch API does not currently expose input files. 
-          (This may be an older job created before local storage was implemented).
+          This input is served locally because the Gemini Batch API does not currently expose input files.
         </div>
       `;
     }
 
-    // --- RENDER OUTPUT ---
-    if (!outputData || outputData.length === 0) {
+    // --- RENDER OUTPUT OR STATUS ---
+    html += `<h3 class="section-title">📥 Output Results</h3>`;
+
+    if (status === 'PENDING') {
+      html += `
+        <div class="info-box">
+          <strong>⏳ Job is currently processing.</strong><br/>
+          The results file is not yet generated. Please check back later.
+        </div>
+      `;
+    } else if (!outputData || outputData.length === 0) {
       html += '<p>No output results found.</p>';
     } else {
-      html += `<h3 class="section-title">📥 Output Results</h3>`;
       
       outputData.forEach(item => {
         const key = item.key || 'req';
