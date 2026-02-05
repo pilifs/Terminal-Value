@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import 'dotenv/config';
-import GOOGLE_AI_MODELS from './geminiModels.js';
+import GOOGLE_AI_MODELS from './constants/geminiModels.js';
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
