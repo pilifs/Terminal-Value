@@ -6,14 +6,29 @@ import clients from './devMocks/parseValueResults.js';
  * @returns {Array} List of prompt sets for each client
  */
 function generateValue(clientData) {
+  // --- Common Prompt Sections ---
+  const headerContext = 'CONTEXT:';
+  const headerTask = 'TASK:';
+  const headerRequirements = 'REQUIREMENTS:';
+
+  // Helper to generate the footer reference for web components
+  const getFooter = (pageName, fileName) =>
+    `
+    *** Reference the codebase attached. The default ${pageName} web component is located in 'examples/ski-shop/public/components/${fileName}'. Do not make any functional changes to the app, only modify presentation. ***
+  `.trim();
+
   return clientData.map((client) => {
     const { profile, shoppingHistory, techContext } = client;
     const notes = profile.crmNotes.join(' ');
     const device = techContext[0] || { device: 'Unknown', browser: 'Unknown' };
-    
+
     // Calculate preferences based on history
-    const purchasedCategories = [...new Set(shoppingHistory.flatMap(o => o.items.map(i => i.productName)))];
-    
+    const purchasedCategories = [
+      ...new Set(
+        shoppingHistory.flatMap((o) => o.items.map((i) => i.productName))
+      ),
+    ];
+
     // Construct the context string used in all prompts
     const clientContext = `
       User Profile: ${profile.age}-year-old based in ${profile.city}.
@@ -29,49 +44,59 @@ function generateValue(clientData) {
       prompts: {
         // 1. Custom Web Component: Home Page
         webComponentHome: `
-          CONTEXT:
+          ${headerContext}
           ${clientContext}
 
-          TASK:
+          ${headerTask}
           Create a custom LitElement/HTMLElement JavaScript class named 'HomePage'.
           
-          REQUIREMENTS:
+          ${headerRequirements}
           - Replace the standard inventory grid with a personalized layout.
           - If the user has a history of 'Racing' gear, highlight the "Sales Blowout" on World Cup Racer skis with a dynamic price calculated between 0.4 * COGS and 1.0 * COGS.
           - Show a personalized greeting using their City or specific interests found in CRM notes (e.g., "Ready for your trip to Vail?").
           - Use the 'loadInventory()' method to fetch data from '/api/inventory' but filter/sort specifically for this user's persona.
           - Ensure it matches the existing CSS styling of the shop.
 
-          *** Reference the codebase attached. The default Home page web component is located in 'examples/ski-shop/public/components/HomePage.js'. Do not make any functional changes to the app, only modify presentation. ***
+          ${getFooter('Home page', 'HomePage.js')}
         `.trim(),
 
         // 2. Custom Web Component: Order Page
         webComponentOrder: `
-          CONTEXT:
+          ${headerContext}
           ${clientContext}
 
-          TASK:
+          ${headerTask}
           Create a custom LitElement/HTMLElement JavaScript class named 'OrderPage'.
 
-          REQUIREMENTS:
+          ${headerRequirements}
           - This component handles the final checkout logic.
           - Implement an upsell logic: If they are buying skis, suggest bindings or poles that match their specific 'Past Purchases' style.
-          - If the client is from ${profile.city}, display a banner: "Free Express Shipping to ${profile.city} included for our VIP members."
-          - Include a "One-Click Buy" button styled specifically for ${device.device} touch targets.
+          - If the client is from ${
+            profile.city
+          }, display a banner: "Free Express Shipping to ${
+          profile.city
+        } included for our VIP members."
+          - Include a "One-Click Buy" button styled specifically for ${
+            device.device
+          } touch targets.
 
-          *** Reference the codebase attached. The default Order page web component is located in 'examples/ski-shop/public/components/OrderPage.js'. Do not make any functional changes to the app, only modify presentation. ***
+          ${getFooter('Order page', 'OrderPage.js')}
         `.trim(),
 
         // 3. Marketing Image Prompt
         marketingImage: `
-          CONTEXT:
+          ${headerContext}
           ${clientContext}
 
-          TASK:
+          ${headerTask}
           Generate a text-to-image prompt for a 300x300 advertisement banner.
 
-          REQUIREMENTS:
-          - Subject: A skier matching the user's demographic (${profile.age}, ${profile.city}) engaging in their preferred ski style (${purchasedCategories[0] || 'General Skiing'}).
+          ${headerRequirements}
+          - Subject: A skier matching the user's demographic (${profile.age}, ${
+          profile.city
+        }) engaging in their preferred ski style (${
+          purchasedCategories[0] || 'General Skiing'
+        }).
           - Atmosphere: High energy, aspirational, specific to the location if mentioned in notes (e.g., "Vail", "Whistler").
           - Text Overlay: Include the phrase "VIP Access" in the visual description.
           - Style: Professional sports photography, photorealistic, 4k.
@@ -79,13 +104,13 @@ function generateValue(clientData) {
 
         // 4. Reddit Advertisement Post
         redditPost: `
-          CONTEXT:
+          ${headerContext}
           ${clientContext}
 
-          TASK:
+          ${headerTask}
           Write a Reddit paid advertisement post targeting /r/skiing.
 
-          REQUIREMENTS:
+          ${headerRequirements}
           - Tone: Authentic, helpful, expert advice. Avoid overly "salesy" language.
           - Title: Catchy, relating to ${profile.city} skiers or their specific interest (e.g., "Backcountry setups" or "Racing gear").
           - Body: Acknowledge the "Sales Blowout" on racing gear. Mention that we have specific stock available for ${profile.city} locals.
