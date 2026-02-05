@@ -1,8 +1,7 @@
-import { getJobsList, submitBatchJob, getJobResults } from './api.js';
+import { getJobsList, submitBatchJob, getJobResults, getJobInput } from './api.js';
 
 /**
  * Fetches the list of all batch jobs and populates the results table.
- * Attached to window to support HTML onclick attributes.
  */
 window.fetchJobs = async function() {
   const tbody = document.getElementById('jobsTableBody');
@@ -15,13 +14,11 @@ window.fetchJobs = async function() {
       .map(
         (job) => {
           const isSucceeded = job.status === 'SUCCEEDED' && job.outputFile;
-
-          // Extract the file ID from the output path if it exists
-          const fileId = isSucceeded ? job.outputFile.split('/').pop() : null;
+          const outputFileId = isSucceeded ? job.outputFile.split('/').pop() : '';
           
-          // Note: we use window.viewResults here
+          // Pass both Job ID (for inputs) and Output File ID (for results)
           const idDisplay = isSucceeded 
-            ? `<a href="#" onclick="window.viewResults('${fileId}'); return false;">${job.id}</a>`
+            ? `<a href="#" onclick="window.viewResults('${job.id}', '${outputFileId}'); return false;">${job.id}</a>`
             : job.id;
 
           return `
@@ -57,10 +54,9 @@ window.createJob = async function() {
 
   try {
     const res = await submitBatchJob(prompt);
-
     if (res.ok) {
       input.value = '';
-      window.fetchJobs(); // Refresh table immediately
+      window.fetchJobs(); 
     } else {
       const err = await res.json();
       alert('Error: ' + err.error);
@@ -75,89 +71,101 @@ window.createJob = async function() {
 };
 
 /**
- * Displays the content of a succeeded batch job's output file in a modal.
+ * Displays both INPUT request and OUTPUT results in the modal.
  */
-window.viewResults = async function(fileId) {
+window.viewResults = async function(jobId, outputFileId) {
   const modal = document.getElementById('resultModal');
   const modalBody = document.getElementById('modalBody');
 
   // Show loading state
-  modalBody.innerHTML = '<p>Loading results...</p>';
+  modalBody.innerHTML = '<p>Loading details...</p>';
   modal.style.display = 'block';
 
   try {
-    const data = await getJobResults(fileId);
+    // Parallel fetch: Get Input (local) and Output (remote)
+    const [inputData, outputData] = await Promise.all([
+      getJobInput(jobId),
+      outputFileId ? getJobResults(outputFileId) : Promise.resolve([])
+    ]);
 
-    if (!data || data.length === 0) {
-      modalBody.innerHTML = '<p>No results found in file.</p>';
-      return;
-    }
+    let html = '';
 
-    // Clear loading message
-    modalBody.innerHTML = '';
-
-    // Render each response item
-    data.forEach(item => {
-      // 1. Extract Metadata
-      const key = item.key || 'Unknown Request';
-      const modelVersion = item.response?.modelVersion || 'Unknown Model';
-      const usage = item.response?.usageMetadata || {};
-      
-      const totalTokens = usage.totalTokenCount || 0;
-      const promptTokens = usage.promptTokenCount || 0;
-      const responseTokens = usage.candidatesTokenCount || 0;
-
-      // 2. Extract Text Content
-      const candidate = item.response?.candidates?.[0];
-      let rawText = "*No content generated*";
-      
-      if (candidate && candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-        rawText = candidate.content.parts[0].text || rawText;
-      }
-
-      // 3. Render Markdown (using global marked instance)
-      const htmlContent = marked.parse(rawText);
-
-      // 4. Construct HTML Card
-      const resultEntry = document.createElement('div');
-      resultEntry.className = 'result-entry';
-      resultEntry.innerHTML = `
-        <div class="meta-header">
-          <h3>Request ID: ${key}</h3>
-          <div class="meta-stats">
-             <strong>Model:</strong> ${modelVersion} | 
-             <strong>Tokens:</strong> ${totalTokens} (In: ${promptTokens}, Out: ${responseTokens})
+    // --- RENDER INPUT ---
+    if (inputData) {
+      // Assuming single prompt structure for now
+      const inputText = inputData[0]?.request?.contents?.[0]?.parts?.[0]?.text || "Unknown";
+      html += `
+        <div class="result-entry input-section">
+          <div class="meta-header input-header">
+            <h3>📤 Input Prompt</h3>
+          </div>
+          <div class="response-body">
+            <pre>${inputText}</pre>
           </div>
         </div>
-        <div class="response-body">
-          ${htmlContent}
+      `;
+    } else {
+      // Specific message for missing local files (e.g. old jobs)
+      html += `
+        <div class="alert-box">
+          <strong>⚠️ Input file not found.</strong><br/>
+          This input is served locally because the Gemini Batch API does not currently expose input files. 
+          (This may be an older job created before local storage was implemented).
         </div>
       `;
+    }
+
+    // --- RENDER OUTPUT ---
+    if (!outputData || outputData.length === 0) {
+      html += '<p>No output results found.</p>';
+    } else {
+      html += `<h3 class="section-title">📥 Output Results</h3>`;
       
-      modalBody.appendChild(resultEntry);
-    });
+      outputData.forEach(item => {
+        const key = item.key || 'req';
+        const modelVersion = item.response?.modelVersion || 'Unknown';
+        const usage = item.response?.usageMetadata || {};
+        
+        const candidate = item.response?.candidates?.[0];
+        let rawText = "*No content generated*";
+        if (candidate?.content?.parts?.length > 0) {
+          rawText = candidate.content.parts[0].text || rawText;
+        }
+
+        const htmlContent = marked.parse(rawText);
+
+        html += `
+          <div class="result-entry">
+            <div class="meta-header">
+              <h3>Response ID: ${key}</h3>
+              <div class="meta-stats">
+                 Model: ${modelVersion} | 
+                 Tokens: ${usage.totalTokenCount || 0}
+              </div>
+            </div>
+            <div class="response-body">
+              ${htmlContent}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    modalBody.innerHTML = html;
 
   } catch (err) {
     console.error(err);
-    modalBody.innerHTML = `<p style="color:red">Failed to load results. Check console for details.</p>`;
+    modalBody.innerHTML = `<p style="color:red">Failed to load details.</p>`;
   }
 };
 
-/**
- * Closes the modal
- */
 window.closeModal = function() {
-  const modal = document.getElementById('resultModal');
-  modal.style.display = 'none';
+  document.getElementById('resultModal').style.display = 'none';
 };
 
-// Close modal when clicking outside the box
 window.onclick = function(event) {
   const modal = document.getElementById('resultModal');
-  if (event.target === modal) {
-    window.closeModal();
-  }
+  if (event.target === modal) window.closeModal();
 };
 
-// Initialize the job list on page load
 window.fetchJobs();

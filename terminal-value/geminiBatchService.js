@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
+import path from 'path';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
 
@@ -8,47 +9,41 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const LOCAL_INPUTS_DIR = 'local-inputs';
+
+// Ensure local storage directory exists
+if (!fs.existsSync(LOCAL_INPUTS_DIR)) {
+  fs.mkdirSync(LOCAL_INPUTS_DIR);
+}
 
 /**
  * Helper to fetch ALL pages from the API
- * Iterates through nextPageToken to retrieve the full history.
  */
 async function fetchAllPages() {
   let allItems = [];
-
   const params = {};
+  params.config = { pageSize: 50 };
 
-  params.config = {
-    pageSize: 50,
-  };
-
-  // 2. Make the API request
-  // Note: We pass currentParams directly (no 'config' wrapper) to avoid fetch errors
   const response = await genAI.batches.list(params);
-
-  // 3. Extract items from SDK's specific response structure
+  
   const items =
     response.pageInternal?.length > 0
       ? response.pageInternal
       : response.batches || [];
 
   allItems = allItems.concat(items);
-
   return allItems;
 }
 
 /**
- * Creates a batch job with a SINGLE prompt request.
- * Newlines in the input are preserved as part of the text.
+ * Creates a batch job and SAVES the input file locally using the Google File ID.
  */
 export async function createBatchJob(promptText) {
-  const fileName = `request-${Date.now()}.jsonl`;
-  
-  // Use 2-5 flash lite for testing
+  const tempFileName = `temp-${Date.now()}.jsonl`;
   const modelName = GOOGLE_AI_MODELS.STABLE.GEMINI_2_5_FLASH_LITE;
 
   try {
-    // Single Request Logic: Wrap the entire text into one request object
+    // 1. Create Single Request JSONL
     const batchData = [
       {
         request: { contents: [{ parts: [{ text: promptText }] }] },
@@ -56,15 +51,25 @@ export async function createBatchJob(promptText) {
     ];
 
     fs.writeFileSync(
-      fileName,
+      tempFileName,
       batchData.map((d) => JSON.stringify(d)).join('\n')
     );
 
+    // 2. Upload to Gemini
     const uploadResult = await genAI.files.upload({
-      file: fileName,
+      file: tempFileName,
       config: { mimeType: 'text/plain' },
     });
 
+    // 3. Rename/Move temp file to persistent storage using the Google File ID
+    // uploadResult.name format is "files/unique-id"
+    const googleFileId = uploadResult.name.split('/').pop();
+    const localPath = path.join(LOCAL_INPUTS_DIR, `${googleFileId}.jsonl`);
+    
+    fs.renameSync(tempFileName, localPath);
+    console.log(`💾 Saved local input: ${localPath}`);
+
+    // 4. Create Batch Job
     const batchJob = await genAI.batches.create({
       model: modelName,
       src: uploadResult.name,
@@ -74,22 +79,18 @@ export async function createBatchJob(promptText) {
     return batchJob;
   } catch (err) {
     console.error('❌ Service Error:', err);
+    // Cleanup temp file if it still exists (i.e. upload failed)
+    if (fs.existsSync(tempFileName)) fs.unlinkSync(tempFileName);
     throw err;
-  } finally {
-    if (fs.existsSync(fileName)) fs.unlinkSync(fileName);
   }
 }
 
 /**
- * Lists ALL jobs by fetching the full history.
+ * Lists ALL jobs.
  */
 export async function getAllJobs() {
   try {
-    // Fetch everything in one go (Server-side filtering is not supported)
     const allJobs = await fetchAllPages();
-
-    // Sort by creation time (Newest First)
-    // We use a Map to deduplicate just in case, though the linear fetch should be unique
     const jobMap = new Map();
     allJobs.forEach((j) => jobMap.set(j.name, j));
 
@@ -113,34 +114,19 @@ export async function getAllJobs() {
 }
 
 /**
- * Downloads Batch Job results by manually constructing the :download endpoint
- * to bypass SDK validation bugs (file name is > 40 chars).
- * * @param {string} fileId - The full file resource name (e.g. 'files/batch-abc...') 
- * OR just the Batch Job ID.
+ * Downloads Batch Job Output Results.
  */
 export async function getBatchResults(fileId) {
   try {
-    // 1. Sanitize the input to ensure we have the correct resource name
-    // If user passed just the Job ID (e.g. 'maip...'), convert it to 'files/batch-maip...'
     let resourceName = !fileId.startsWith('files/') ? `files/${fileId}` : fileId;
-
-
-    console.log(`🎯 Target Resource: ${resourceName}`);
-
-    // 2. Construct the URL following the CURL pattern
+    
     // Pattern: https://generativelanguage.googleapis.com/v1beta/files/batch-<JOB_ID>:download?alt=media
     const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     const downloadUrl = `${baseUrl}/${resourceName}:download?alt=media`;
 
-    console.log(`⬇️ Fetching from: ${downloadUrl}`);
-
-    // 3. Perform the fetch using the API Key header (mirroring -H "x-goog-api-key: ...")
     const response = await fetch(downloadUrl, {
       method: 'GET',
-      headers: {
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-        // Optional: 'Content-Type': 'application/json' usually not needed for GET
-      },
+      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY },
     });
 
     if (!response.ok) {
@@ -148,22 +134,10 @@ export async function getBatchResults(fileId) {
       throw new Error(`Download failed: ${response.status} ${response.statusText} - ${errText}`);
     }
 
-    // 4. Parse the JSONL content
     const text = await response.text();
-    
-    const results = text
-      .trim()
-      .split('\n')
-      .map((line) => {
-        try {
-          return line ? JSON.parse(line) : null;
-        } catch (e) {
-          return null;
-        }
-      })
-      .filter(item => item !== null);
-
-    return results;
+    return text.trim().split('\n').map((line) => {
+        try { return line ? JSON.parse(line) : null; } catch (e) { return null; }
+      }).filter(item => item !== null);
 
   } catch (err) {
     console.error('❌ Error in getBatchResults:', err);
@@ -171,24 +145,53 @@ export async function getBatchResults(fileId) {
   }
 }
 
-export async function getJob(batchId) {
-  const job = await genAI.batches.get({ name: `batches/${batchId}` });
-  return job;
+/**
+ * Gets Raw Job Details.
+ */
+export async function getRawJob(batchId) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/batches/${batchId}?key=${process.env.GEMINI_API_KEY}`;
+  try {
+    const response = await fetch(url);
+    return await response.json();
+  } catch (e) {
+    console.error('Error fetching raw job:', e);
+    return null;
+  }
 }
 
 /**
- * Fetches the RAW batch job JSON directly from the REST API.
- * Bypass SDK to retrieve additional fields (like inputFileId).
+ * Retrieves the LOCAL input file content for a given batch job.
  */
-export async function getRawJob(batchId) {
-  // Use v1beta endpoint specifically for preview models
-  const url = `https://generativelanguage.googleapis.com/v1beta/batches/${batchId}?key=${process.env.GEMINI_API_KEY}`;
-  
+export async function getJobInput(batchId) {
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data;
-  } catch (e) {
-    console.error('Error fetching raw job:', e);
+    const job = await getRawJob(batchId);
+    if (!job) throw new Error("Job not found");
+
+    // Extract input filename from job metadata
+    const inputConfig = job.metadata?.inputConfig || job.inputConfig;
+    if (!inputConfig || !inputConfig.fileName) {
+      // This might happen for very old jobs or failed jobs
+      return null; 
+    }
+
+    // fileName is "files/xyz". We need "xyz".
+    const googleFileId = inputConfig.fileName.split('/').pop();
+    const localPath = path.join(LOCAL_INPUTS_DIR, `${googleFileId}.jsonl`);
+
+    if (!fs.existsSync(localPath)) {
+      console.warn(`⚠️ Local input file not found: ${localPath}`);
+      return null;
+    }
+
+    const content = fs.readFileSync(localPath, 'utf-8');
+    return content.trim().split('\n').map(line => JSON.parse(line));
+  } catch (error) {
+    console.error('❌ Error in getJobInput:', error);
+    throw error;
   }
+}
+
+export async function getJob(batchId) {
+  const job = await genAI.batches.get({ name: `batches/${batchId}` });
+  return job;
 }

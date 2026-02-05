@@ -10,8 +10,6 @@ export async function getJobsList() {
 
 /**
  * Submits a new prompt to create a batch job.
- * @param {string} prompt 
- * @returns {Promise<Response>} The raw fetch response
  */
 export async function submitBatchJob(prompt) {
   return fetch('/api/jobs', {
@@ -23,11 +21,19 @@ export async function submitBatchJob(prompt) {
 
 /**
  * Fetches the results for a specific output file.
- * @param {string} fileId 
- * @returns {Promise<Array>} Array of result objects
  */
 export async function getJobResults(fileId) {
   const res = await fetch(`/api/jobs/results/${fileId}`);
   if (!res.ok) throw new Error("Failed to fetch results");
+  return res.json();
+}
+
+/**
+ * Fetches the input prompt for a specific job.
+ */
+export async function getJobInput(jobId) {
+  const res = await fetch(`/api/jobs/${jobId}/input`);
+  if (res.status === 404) return null; // Handle missing local file gracefully
+  if (!res.ok) throw new Error("Failed to fetch input");
   return res.json();
 }

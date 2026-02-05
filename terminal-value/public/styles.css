@@ -150,4 +150,31 @@ td a:hover {
   padding: 10px;
   border-radius: 4px;
   overflow-x: auto;
+  white-space: pre-wrap; /* Wrap long code lines */
+}
+
+/* --- New Input Section Styles --- */
+.input-section {
+  border-left: 4px solid #6c757d; /* Gray border for input */
+}
+.input-header {
+  border-left: 4px solid #6c757d;
+  background: #e9ecef;
+}
+
+.section-title {
+  margin-top: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 5px;
+}
+
+.alert-box {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 0.9em;
+  line-height: 1.5;
 }
