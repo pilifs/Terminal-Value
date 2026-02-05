@@ -4,14 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
-
-// SKI SHOP SPECIFIC IMPORTS ----------------------------------
 import { generateValueResults } from '../../examples/ski-shop/devMocks/generateValueResults.js';
 
 // --- Path Resolution Logic ---
-// We use import.meta.url to get the absolute path of THIS file (geminiBatchService.js)
-// This ensures LOCAL_INPUTS_DIR is always ./terminal-value/local-inputs
-// regardless of where the node process was started (root vs subdir).
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
@@ -49,11 +44,10 @@ async function fetchAllPages() {
 /**
  * Creates a batch job and SAVES the input file locally using the Google File ID.
  */
-export async function createBatchJob(promptText) {
+export async function createBatchJob(promptText, customId = null) {
   // We create the temp file in the CWD (wherever the script runs)
-  // before moving it to the stable local-inputs storage.
   const tempFileName = `temp-${Date.now()}.jsonl`;
-  const modelName = GOOGLE_AI_MODELS.PREVIEW.GEMINI_3_PRO;
+  const modelName = GOOGLE_AI_MODELS.STABLE.GEMINI_2_5_FLASH_LITE;
 
   try {
     // 1. Create Single Request JSONL
@@ -74,14 +68,22 @@ export async function createBatchJob(promptText) {
       config: { mimeType: 'text/plain' },
     });
 
-    // 3. Rename/Move temp file to persistent storage using the Google File ID
+    // 3. Rename/Move temp file to persistent storage
     // uploadResult.name format is "files/unique-id"
     const googleFileId = uploadResult.name.split('/').pop();
-    const localPath = path.join(LOCAL_INPUTS_DIR, `${googleFileId}.jsonl`);
+
+    // Construct local filename: "googleId-customId.jsonl" or "googleId.jsonl"
+    let localFileName = `${googleFileId}.jsonl`;
+    if (customId) {
+      // Sanitize customId to avoid filesystem issues
+      const safeId = customId.replace(/[^a-zA-Z0-9-_]/g, '_');
+      localFileName = `${googleFileId}-${safeId}.jsonl`;
+    }
+
+    const localPath = path.join(LOCAL_INPUTS_DIR, localFileName);
 
     // We use renameSync. Since tempFileName is likely in the project root (CWD)
     // and LOCAL_INPUTS_DIR is in the project folder, this works fine.
-    // If you ever cross partitions, you might need copy+unlink.
     fs.renameSync(tempFileName, localPath);
     console.log(`💾 Saved local input: ${localPath}`);
 
@@ -99,6 +101,162 @@ export async function createBatchJob(promptText) {
     if (fs.existsSync(tempFileName)) fs.unlinkSync(tempFileName);
     throw err;
   }
+}
+
+/**
+ * Helper to read Ski Shop public files recursively, excluding dynamic folders.
+ */
+function getSkiShopContext() {
+  // Resolve path relative to: full-project/terminal-value/gemini-batch/geminiBatchService.js
+  // Target: full-project/examples/ski-shop/public
+  const skiShopPublicDir = path.resolve(
+    __dirname,
+    '../../examples/ski-shop/public'
+  );
+
+  if (!fs.existsSync(skiShopPublicDir)) {
+    console.warn(`⚠️ Ski Shop Directory not found at: ${skiShopPublicDir}`);
+    return '';
+  }
+
+  let fileContents = [];
+
+  function readDirRecursive(dir) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        // Exclude specific dynamic folders
+        if (entry.name === 'dynamicOrder' || entry.name === 'dynamicHome') {
+          continue;
+        }
+        readDirRecursive(fullPath);
+      } else {
+        // Read file content
+        const relativePath = path.relative(skiShopPublicDir, fullPath);
+        const content = fs.readFileSync(fullPath, 'utf-8');
+        fileContents.push(`\n// --- FILE: ${relativePath} ---\n${content}`);
+      }
+    }
+  }
+
+  readDirRecursive(skiShopPublicDir);
+  return fileContents.join('\n');
+}
+
+/**
+ * Creates a batch job specifically for any Ski Shop Web Component.
+ * Combines the user's prompt with the relevant codebase files.
+ */
+export async function createSkiShopWebComponentPrompt(promptText, customId) {
+  const fileContext = getSkiShopContext();
+
+  const combinedPrompt = `
+${promptText}
+
+================================================================================
+BELOW IS THE EXISTING CODEBASE FOR THE SKI SHOP SITE (excluding dynamic folders)
+================================================================================
+${fileContext}
+`;
+
+  console.log(
+    `🚀 Creating Ski Shop Component Job (Client: ${customId || 'Unknown'})...`
+  );
+  return createBatchJob(combinedPrompt, customId);
+}
+
+/**
+ * Iterates through the mocked value results and creates a batch job for each Client's HOME Page.
+ */
+export async function generateAllHomePageComponents() {
+  console.log(
+    `🚀 Starting batch generation for ${generateValueResults.length} Home Pages...`
+  );
+  const jobs = [];
+
+  for (const clientData of generateValueResults) {
+    const clientId = clientData.clientId;
+    const promptText = clientData.prompts?.webComponentHome;
+
+    if (!promptText) continue;
+
+    console.log(`\n▶️ Processing Home Page for: ${clientId}`);
+    try {
+      // Pass clientId as the customId
+      const job = await createSkiShopWebComponentPrompt(promptText, clientId);
+      jobs.push({
+        clientId,
+        type: 'HOME',
+        jobId: job.name,
+        status: 'SUBMITTED',
+      });
+      console.log(`✅ Job created: ${job.name.split('/').pop()}`);
+
+      // Optional delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } catch (err) {
+      console.error(`❌ Failed for ${clientId}:`, err.message);
+      jobs.push({
+        clientId,
+        type: 'HOME',
+        status: 'FAILED',
+        error: err.message,
+      });
+    }
+  }
+  console.table(jobs);
+  return jobs;
+}
+
+/**
+ * Iterates through the mocked value results and creates a batch job for each Client's ORDER Page.
+ */
+export async function generateAllOrderPageComponents() {
+  console.log(
+    `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
+  );
+  const jobs = [];
+
+  for (const clientData of generateValueResults) {
+    const clientId = clientData.clientId;
+    const promptText = clientData.prompts?.webComponentOrder;
+
+    if (!promptText) {
+      console.warn(
+        `⚠️ Skipping ${clientId}: No 'webComponentOrder' prompt found.`
+      );
+      continue;
+    }
+
+    console.log(`\n▶️ Processing Order Page for: ${clientId}`);
+    try {
+      // Pass clientId as the customId
+      const job = await createSkiShopWebComponentPrompt(promptText, clientId);
+      jobs.push({
+        clientId,
+        type: 'ORDER',
+        jobId: job.name,
+        status: 'SUBMITTED',
+      });
+      console.log(`✅ Job created: ${job.name.split('/').pop()}`);
+
+      // Optional delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } catch (err) {
+      console.error(`❌ Failed for ${clientId}:`, err.message);
+      jobs.push({
+        clientId,
+        type: 'ORDER',
+        status: 'FAILED',
+        error: err.message,
+      });
+    }
+  }
+  console.table(jobs);
+  return jobs;
 }
 
 /**
@@ -207,13 +365,22 @@ export async function getJobInput(batchId) {
 
     // fileName is "files/xyz". We need "xyz".
     const googleFileId = inputConfig.fileName.split('/').pop();
-    const localPath = path.join(LOCAL_INPUTS_DIR, `${googleFileId}.jsonl`);
 
-    if (!fs.existsSync(localPath)) {
-      console.warn(`⚠️ Local input file not found: ${localPath}`);
+    // Search for the file in LOCAL_INPUTS_DIR that starts with this ID
+    // matches: "xyz.jsonl" OR "xyz-myClientId.jsonl"
+    const files = fs.readdirSync(LOCAL_INPUTS_DIR);
+    const foundFile = files.find((file) => {
+      return file.startsWith(googleFileId) && file.endsWith('.jsonl');
+    });
+
+    if (!foundFile) {
+      console.warn(
+        `⚠️ Local input file not found for ID prefix: ${googleFileId}`
+      );
       return null;
     }
 
+    const localPath = path.join(LOCAL_INPUTS_DIR, foundFile);
     const content = fs.readFileSync(localPath, 'utf-8');
     return content
       .trim()
@@ -228,166 +395,4 @@ export async function getJobInput(batchId) {
 export async function getJob(batchId) {
   const job = await genAI.batches.get({ name: `batches/${batchId}` });
   return job;
-}
-
-// SKI SHOP EXAMPLE SPECIFIC CODE --------------------------------------------------
-
-/**
- * Helper to read Ski Shop public files recursively, excluding dynamic folders.
- */
-function getSkiShopContext() {
-  // Resolve path relative to: full-project/terminal-value/gemini-batch/geminiBatchService.js
-  // Target: full-project/examples/ski-shop/public
-  const skiShopPublicDir = path.resolve(
-    __dirname,
-    '../../examples/ski-shop/public'
-  );
-
-  if (!fs.existsSync(skiShopPublicDir)) {
-    console.warn(`⚠️ Ski Shop Directory not found at: ${skiShopPublicDir}`);
-    return '';
-  }
-
-  let fileContents = [];
-
-  function readDirRecursive(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-
-      if (entry.isDirectory()) {
-        // Exclude specific dynamic folders
-        if (entry.name === 'dynamicOrder' || entry.name === 'dynamicHome') {
-          continue;
-        }
-        readDirRecursive(fullPath);
-      } else {
-        // Read file content
-        const relativePath = path.relative(skiShopPublicDir, fullPath);
-        const content = fs.readFileSync(fullPath, 'utf-8');
-        fileContents.push(`\n// --- FILE: ${relativePath} ---\n${content}`);
-      }
-    }
-  }
-
-  readDirRecursive(skiShopPublicDir);
-  return fileContents.join('\n');
-}
-
-/**
- * Creates a prompt to generate a Ski Shop Web Component dynamically for users.
- * Combines the user's prompt with the relevant codebase files.
- */
-export async function createSkiShopWebComponentPrompt(promptText) {
-  const fileContext = getSkiShopContext();
-
-  const combinedPrompt = `
-${promptText}
-
-================================================================================
-BELOW IS THE EXISTING CODEBASE FOR THE SKI SHOP SITE (excluding dynamic folders)
-================================================================================
-${fileContext}
-`;
-
-  console.log(`🚀 Creating Ski Shop Component Job...`);
-  return createBatchJob(combinedPrompt);
-}
-
-export async function generateAllHomePageComponents() {
-  console.log(
-    `🚀 Starting batch generation for ${generateValueResults.length} clients...`
-  );
-
-  const jobs = [];
-
-  for (const clientData of generateValueResults) {
-    const clientId = clientData.clientId;
-    const promptText = clientData.prompts?.webComponentHome;
-
-    if (!promptText) {
-      console.warn(
-        `⚠️ Skipping ${clientId}: No 'webComponentHome' prompt found.`
-      );
-      continue;
-    }
-
-    console.log(`\n▶️ Processing Client: ${clientId}`);
-    try {
-      // Call the createSkiShopWebComponentPrompt method we defined earlier
-      const job = await createSkiShopWebComponentPrompt(promptText);
-
-      jobs.push({
-        clientId: clientId,
-        jobId: job.name,
-        status: 'SUBMITTED',
-      });
-
-      console.log(
-        `✅ Job created successfully for ${clientId} (Job ID: ${job.name
-          .split('/')
-          .pop()})`
-      );
-
-      // Optional: Add a small delay to ensure unique temp file names if your system is very fast
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    } catch (err) {
-      console.error(`❌ Failed to create job for ${clientId}:`, err);
-      jobs.push({ clientId: clientId, status: 'FAILED', error: err.message });
-    }
-  }
-
-  console.log('\n🏁 Batch Generation Complete.');
-  console.table(jobs);
-  return jobs;
-}
-
-/**
- * Iterates through the mocked value results and creates a batch job for each Client's ORDER Page.
- */
-export async function generateAllOrderPageComponents() {
-  console.log(
-    `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
-  );
-  const jobs = [];
-
-  for (const clientData of generateValueResults) {
-    const clientId = clientData.clientId;
-    const promptText = clientData.prompts?.webComponentOrder;
-
-    if (!promptText) {
-      console.warn(
-        `⚠️ Skipping ${clientId}: No 'webComponentOrder' prompt found.`
-      );
-      continue;
-    }
-
-    console.log(`\n▶️ Processing Order Page for: ${clientId}`);
-    try {
-      // Calls the same refactored generic method
-      const job = await createSkiShopWebComponentPrompt(promptText);
-      jobs.push({
-        clientId,
-        type: 'ORDER',
-        jobId: job.name,
-        status: 'SUBMITTED',
-      });
-
-      console.log(`✅ Job created: ${job.name.split('/').pop()}`);
-
-      // Optional: Add a small delay to ensure unique temp file names if your system is very fast
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    } catch (err) {
-      console.error(`❌ Failed for ${clientId}:`, err.message);
-      jobs.push({
-        clientId,
-        type: 'ORDER',
-        status: 'FAILED',
-        error: err.message,
-      });
-    }
-  }
-  console.table(jobs);
-  return jobs;
 }
