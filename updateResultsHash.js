@@ -1,3 +1,6 @@
+// This is a temporary util that was used to migrate pre-hash results to include the hash of the value input.
+// Leaving here for posterity, or in case any similar backfill is needed. Not intended for long term use.
+
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');

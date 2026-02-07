@@ -82,11 +82,17 @@ INSTRUCTIONS:
 2. Check for syntax errors, missing imports, or broken logic.
 3. Verify that the personalized view still renders a functional page.
 4. Most importantly, ensure that none of the external API call logic is broken, so user can still add items to cart and complete purchases.
-5. Provide a confidence score (High/Medium/Low) and a brief justification for the file in the form of a JSON object like this so it can be programatically accessed:
+5. Provide two confidence scores (High/Medium/Low) that represent your assessment along with a brief justification for why each score was chosen.
+5a. functionalEquivalencyConfidence -- confidence that the page is functionally equivalent to the default homePage.js provided, irrespective of broader issues with the original page
+5b. productionReadinessConfidence -- confidence that the page is ready to be deployed in production without causing issues for users or the business
+6. Return results in the form of a JSON object like below so it can be programatically accesssed.
+
 {
   "${fileName}": { 
-    "confidence": "High",
-    "justification": "The component renders correctly, maintains all core functionalities, and the personalization is consistent with the client's profile."
+    "functionalEquivalencyConfidence": "<VALUE (High / Medium / Low )>",
+    "functionalEquivalencyJustifcation": "<Justifcation for why value above was chosen>",
+    "productionReadinessConfidence": "<VALUE>",
+    "productionReadinessJustification": "<Justifcation for why value above was chosen>",
   }
 }
 `.trim();
@@ -99,5 +105,11 @@ INSTRUCTIONS:
     };
   });
 }
+
+const test = verifyExternalConfidence(
+  '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a'
+);
+
+test;
 
 export default verifyExternalConfidence;
