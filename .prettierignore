@@ -10,3 +10,6 @@ coverage
 package-lock.json
 yarn.lock
 **/public/*.js
+skiShopResults.js
+**/devMocks
+**/memoizedResults
