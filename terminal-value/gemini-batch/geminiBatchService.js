@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
 import { generateValueResults } from '../../examples/ski-shop/memoizedResults/generateValueResults.js';
+// import verifyExternalConfidence from '../../examples/ski-shop/verifyExternalConfidence.js';
 
 // --- Path Resolution Logic ---
 const __filename = fileURLToPath(import.meta.url);
@@ -344,9 +345,6 @@ export async function generateAllOrderPageComponents() {
   return jobs;
 }
 
-// ... Rest of the file (getAllJobs, getBatchResults, etc.) remains unchanged ...
-// (Ensure getAllJobs, getBatchResults, getRawJob, getJobInput, getJob, populateFileOutputResult are included below as in previous version)
-
 export async function getAllJobs() {
   try {
     const allJobs = await fetchAllPages();
@@ -568,4 +566,10 @@ export async function populateFileOutputResult() {
   } else {
     console.log(`🎉 Successfully fetched results for ${fetchCount} jobs.`);
   }
+}
+
+export async function verifyExternalConfidenceMethod(hash) {
+  // Implement logic to verify external confidence for generated components based on the provided hash
+  // This function can read the generated components for the given hash, compare them to the default implementation,
+  // and use a Gemini model to assess confidence and safety. The results can be logged or stored as needed.
 }

@@ -1,3 +1,4 @@
+import verifyExternalConfidence from '../../examples/ski-shop/verifyExternalConfidence.js';
 import {
   getAllJobs,
   getBatchResults,
@@ -8,6 +9,7 @@ import {
   generateAllHomePageComponents,
   generateAllOrderPageComponents,
   populateFileOutputResult,
+  verifyExternalConfidenceMethod,
 } from './geminiBatchService.js';
 
 const command = process.argv[2];
@@ -100,6 +102,13 @@ Commands:
       case 'populate-results':
         console.log('🚀 Populating missing results for existing jobs...');
         await populateFileOutputResult();
+        break;
+
+      case 'verify-external-confidence':
+        console.log(
+          '🚀 Verifying external confidence for generated Home page components...'
+        );
+        await verifyExternalConfidenceMethod(argument);
         break;
 
       default:
