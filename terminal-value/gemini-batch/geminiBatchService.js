@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import 'dotenv/config';
 import GOOGLE_AI_MODELS from './constants/geminiModels.js';
-import { generateValueResults } from '../../examples/ski-shop/devMocks/generateValueResults.js';
+import { generateValueResults } from '../../examples/ski-shop/memoizedResults/generateValueResults.js';
 
 // --- Path Resolution Logic ---
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +14,7 @@ const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
 const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
 const GENERATE_VALUE_PATH = path.join(
   __dirname,
-  '../../examples/ski-shop/devMocks/generateValueResults.js'
+  '../../examples/ski-shop/memoizedResults/generateValueResults.js'
 );
 
 if (!process.env.GEMINI_API_KEY) {

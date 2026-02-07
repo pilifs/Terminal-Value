@@ -11,7 +11,8 @@ const Order = require('../domain/order');
 // const initialHistory = require('../mock/eventGenerator');
 
 // Use fixed events for now to link custom templates to users without re-generating
-const initialHistory = require('../devMocks/generateEventsResults').default;
+const initialHistory =
+  require('../memoizedResults/generateEventsResults').default;
 
 async function runSimulation() {
   console.log('--- 🎿 SKI SHOP SYSTEM STARTUP 🎿 ---');

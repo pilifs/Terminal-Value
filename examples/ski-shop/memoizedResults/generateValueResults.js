@@ -4,7 +4,7 @@ export const generateValueResults = [
     prompts: {
       webComponentHome: `You are a partner at a big 4 consulting firm hired by the world's leading ski shop (Fil's Alpine Ski Shop) to increase sales among their highest-value customers. Your task is to create personalized web components, marketing images, and ad copy that will resonate with each client's unique profile and shopping behavior. It is critical that this campaign do whatever it takes to boost sales. 
     You have a full team at your disposal (analyst, graphic designer, copywriter, web developer, marketing specialist, domain subject matter expert, etc.) to help with this.
-    Supply is limited on high-demand racing ski gear, so focus on driving urgency and exclusivity where possible. The price should be as high as possible to drive revenue. Focus on capturing the user's emotions and generating perceived value via a hyper-personalized digital experience.
+    Supply is limited on high-demand racing ski gear, so focus on driving urgency and exclusivity where possible. The price should be as high as possible to drive revenue within a profit margin threshold of +40-100%. Focus on capturing the user's emotions and generating perceived value via a hyper-personalized digital experience.
     
     The high value client we are targeting is 32 years old and based in Aspen. Our executive sales team has made the following notes in the internal ski shop CRM database: "Former pro racer, extremely technical about edge tuning. Only skis on hardpack groomers. Prefers stiff boots and high DIN bindings.". These are the backbone of our sales strategy that should be reflected in the end result digital experience.
     
