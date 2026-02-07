@@ -1,4 +1,4 @@
-class AggregateRoot {
+export default class AggregateRoot {
   constructor(id, history = [], initialState = {}) {
     this.id = id;
     this.version = 0;
@@ -44,5 +44,3 @@ class AggregateRoot {
     throw new Error('apply(event) method must be implemented by subclass');
   }
 }
-
-module.exports = AggregateRoot;

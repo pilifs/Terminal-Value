@@ -1,12 +1,12 @@
-const EventStore = require('./eventStore');
-const Projector = require('../store/projections');
+import EventStore from './eventStore.js';
+import Projector from '../store/projections.js';
 
 /**
  * APPLICATION SERVICE LAYER
  * Handles the "Load -> Execute -> Save" cycle for all aggregates.
  * Manages concurrency retries.
  */
-async function dispatch(AggregateClass, aggregateId, actionCallback) {
+export async function dispatch(AggregateClass, aggregateId, actionCallback) {
   let retries = 3;
   while (retries > 0) {
     try {
@@ -37,4 +37,4 @@ async function dispatch(AggregateClass, aggregateId, actionCallback) {
   throw new Error('Transaction failed due to high contention.');
 }
 
-module.exports = { dispatch };
+export default { dispatch };

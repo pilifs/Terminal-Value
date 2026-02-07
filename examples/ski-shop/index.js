@@ -1,4 +1,4 @@
-const Main = require('./main');
+import * as Main from './main.js';
 
 Main.runSimulation().then(() => {
   // Simulation complete

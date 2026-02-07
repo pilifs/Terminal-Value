@@ -1,15 +1,20 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const Projector = require('../store/projections');
-const CommandDispatcher = require('../framework/commandDispatcher');
+import Projector from '../store/projections.js';
+import { dispatch } from '../framework/commandDispatcher.js';
 
-const InventoryItem = require('../domain/inventoryItem');
-const Client = require('../domain/client');
-const Order = require('../domain/order');
+import InventoryItem from '../domain/inventoryItem.js';
+import Client from '../domain/client.js';
+import Order from '../domain/order.js';
+
+// Setup paths for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // --- HELPER: Scan for Component Versions ---
 function getComponentVersions(type, clientId) {
@@ -109,19 +114,17 @@ function startServer() {
     const { clientId, items } = req.body;
     const orderId = `ORDER-${Date.now()}`;
     try {
-      await CommandDispatcher.dispatch(Order, orderId, (order) =>
+      await dispatch(Order, orderId, (order) =>
         order.initiatePurchase(clientId)
       );
       for (const item of items) {
-        await CommandDispatcher.dispatch(Order, orderId, (order) =>
+        await dispatch(Order, orderId, (order) =>
           order.addItem(item.skuId, item.quantity, item.price)
         );
       }
-      await CommandDispatcher.dispatch(Order, orderId, (order) =>
-        order.confirm()
-      );
+      await dispatch(Order, orderId, (order) => order.confirm());
       for (const item of items) {
-        await CommandDispatcher.dispatch(InventoryItem, item.skuId, (inv) =>
+        await dispatch(InventoryItem, item.skuId, (inv) =>
           inv.removeStock(item.quantity)
         );
       }
@@ -134,10 +137,8 @@ function startServer() {
   app.post('/api/clients/:id/register', async (req, res) => {
     const { age, city } = req.body;
     try {
-      const result = await CommandDispatcher.dispatch(
-        Client,
-        req.params.id,
-        (client) => client.register(age, city)
+      const result = await dispatch(Client, req.params.id, (client) =>
+        client.register(age, city)
       );
       res.json(result);
     } catch (e) {
@@ -152,30 +153,14 @@ function startServer() {
 
   app.listen(PORT, () => {
     console.log(`\n🚀 Ski Shop running at http://localhost:${PORT}`);
-
-    // --- START & LOG ROUTES ---
-    app.listen(PORT, () => {
-      console.log(
-        `\n🚀 Single Page Application running at http://localhost:${PORT}/index.html`
-      );
-      console.log(
-        `\n🚀 Admin Page running at http://localhost:${PORT}/admin.html`
-      );
-      console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
-      console.log(`\n--- 🔗 AVAILABLE ENDPOINTS ---`);
-
-      // Dynamic Route Discovery
-      app.router.stack.forEach(function (r) {
-        if (r.route && r.route.path) {
-          const method = Object.keys(r.route.methods)[0].toUpperCase();
-          // Add some padding for alignment
-          const methodPad = method.padEnd(6, ' ');
-          console.log(`${methodPad} http://localhost:${PORT}${r.route.path}`);
-        }
-      });
-      console.log('-------------------------------\n');
-    });
+    console.log(
+      `\n🚀 Single Page Application running at http://localhost:${PORT}/index.html`
+    );
+    console.log(
+      `\n🚀 Admin Page running at http://localhost:${PORT}/admin.html`
+    );
+    console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
   });
 }
 
-module.exports = startServer;
+export default startServer;

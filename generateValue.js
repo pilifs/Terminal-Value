@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import clients from './memoizedResults/parseValueResults.js';
-import { getMemoizedResult } from './utils/memoizer.js';
+import { getMemoizedResult } from './examples/ski-shop/utils/memoizer.js';
 
 // Setup paths for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -90,10 +90,10 @@ function generateValue(clientData) {
 
           ${headerRequirements}
           - Subject: A skier matching the user's demographic (${profile.age}, ${
-              profile.city
-            }) engaging in their preferred ski style (${
-              purchasedCategories[0] || 'General Skiing'
-            }).
+            profile.city
+          }) engaging in their preferred ski style (${
+            purchasedCategories[0] || 'General Skiing'
+          }).
           - Atmosphere: High energy, aspirational, specific to the location if mentioned in notes (e.g., "Vail", "Whistler").
           - Text Overlay: Include the phrase "VIP Access" in the visual description.
           - Style: Professional sports photography, photorealistic, 4k.

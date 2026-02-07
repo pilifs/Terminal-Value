@@ -15,10 +15,13 @@ function verifyExternalConfidence(hash) {
   // 1. Resolve Paths
   const dynamicDir = path.join(
     __dirname,
-    'public/components/dynamicHome',
+    'examples/ski-shop/public/components/dynamicHome',
     hash
   );
-  const defaultFilePath = path.join(__dirname, 'public/components/homePage.js');
+  const defaultFilePath = path.join(
+    __dirname,
+    'examples/ski-shop/public/components/homePage.js'
+  );
 
   // 2. Read Default Home Page
   let defaultContent = '';

@@ -1,12 +1,11 @@
 {
   "name": "terminal-value",
   "version": "1.0.0",
-  "description": "CLI examples for interacting with Google Gemini batch/file APIs",
+  "description": "Example showcasing Terminal Value (or 'Higher-Order Transactional AI', HOTAI) Architecture",
   "type": "module",
-  "main": "gemini-batch/index.js",
   "scripts": {
-    "start": "node ./gemini-batch/server.js",
-    "start:inspect": "node --inspect=9229 ./gemini-batch/server.js",
+    "start:gemini": "node ./terminal-value/gemini-batch/server.js",
+    "start:ski-shop": "node ./examples/ski-shop/index.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\""
   },
@@ -20,8 +19,10 @@
   },
   "dependencies": {
     "@google/genai": "1.39.0",
+    "cors": "2.8.6",
     "dotenv": "17.2.3",
     "express": "5.2.1",
-    "morgan": "1.10.1"
+    "morgan": "1.10.1",
+    "uuid": "13.0.0"
   }
 }

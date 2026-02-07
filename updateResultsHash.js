@@ -12,7 +12,7 @@ const RESULTS_FILE_PATH = path.join(
 );
 const GENERATE_VALUE_PATH = path.join(
   __dirname,
-  'examples/ski-shop/memoizedResults/generateValueResults.js'
+  'memoizedResults/generateValueResults.js'
 );
 
 function updateHash() {

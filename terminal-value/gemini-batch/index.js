@@ -6,11 +6,13 @@ import {
   getJob,
   getRawJob,
   getJobInput,
-  generateAllHomePageComponents,
-  generateAllOrderPageComponents,
   populateFileOutputResult,
   verifyExternalConfidenceMethod,
 } from './geminiBatchService.js';
+import {
+  generateAllHomePageComponents,
+  generateAllOrderPageComponents,
+} from './coreServices.js';
 
 const command = process.argv[2];
 const argument = process.argv[3];

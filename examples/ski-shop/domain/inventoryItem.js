@@ -1,7 +1,7 @@
-const AggregateRoot = require('../framework/aggregateRoot');
-const { Events } = require('./constants/eventConstants');
+import AggregateRoot from '../framework/aggregateRoot.js';
+import { Events } from './constants/eventConstants.js';
 
-class InventoryItem extends AggregateRoot {
+export default class InventoryItem extends AggregateRoot {
   constructor(id, history) {
     super(id, history, {
       id: id,
@@ -66,5 +66,3 @@ class InventoryItem extends AggregateRoot {
     };
   }
 }
-
-module.exports = InventoryItem;

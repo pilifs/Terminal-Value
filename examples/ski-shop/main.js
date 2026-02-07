@@ -1,4 +1,4 @@
-const runSimulation = require('./init/runSimulation');
-const startServer = require('./init/startServer');
+import runSimulation from './init/runSimulation.js';
+import startServer from './init/startServer.js';
 
-module.exports = { runSimulation, startServer };
+export { runSimulation, startServer };

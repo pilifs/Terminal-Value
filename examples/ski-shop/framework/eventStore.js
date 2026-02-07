@@ -32,4 +32,4 @@ class EventStore {
   }
 }
 
-module.exports = new EventStore();
+export default new EventStore();

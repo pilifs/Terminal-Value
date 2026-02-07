@@ -1,7 +1,7 @@
-const AggregateRoot = require('../framework/aggregateRoot');
-const { Events } = require('./constants/eventConstants');
+import AggregateRoot from '../framework/aggregateRoot.js';
+import { Events } from './constants/eventConstants.js';
 
-class Client extends AggregateRoot {
+export default class Client extends AggregateRoot {
   constructor(id, history) {
     super(id, history, {
       id: id,
@@ -9,7 +9,7 @@ class Client extends AggregateRoot {
       city: null,
       deviceId: null,
       isRegistered: false,
-      crmNotes: [], // [New Field]
+      crmNotes: [],
     });
   }
 
@@ -26,7 +26,7 @@ class Client extends AggregateRoot {
       case Events.Client.DEVICE_LINKED:
         this.deviceId = event.deviceId;
         break;
-      case Events.Client.NOTE_ADDED: // [New Handler]
+      case Events.Client.NOTE_ADDED:
         this.crmNotes.push(event.note);
         break;
     }
@@ -70,5 +70,3 @@ class Client extends AggregateRoot {
     };
   }
 }
-
-module.exports = Client;
