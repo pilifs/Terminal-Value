@@ -25,13 +25,22 @@ class OrderPage extends HTMLElement {
   isRacingGear(item) {
     const name = item.name.toLowerCase();
     const sku = item.sku.toLowerCase();
-    return name.includes('racer') || name.includes('cup') || name.includes('speed') || sku.includes('rc');
+    return (
+      name.includes('racer') ||
+      name.includes('cup') ||
+      name.includes('speed') ||
+      sku.includes('rc')
+    );
   }
 
   // Helper to determine if item is Backcountry/Touring
   isBackcountryGear(item) {
     const name = item.name.toLowerCase();
-    return name.includes('backcountry') || name.includes('tour') || name.includes('powder');
+    return (
+      name.includes('backcountry') ||
+      name.includes('tour') ||
+      name.includes('powder')
+    );
   }
 
   loadItem(item) {
@@ -54,11 +63,11 @@ class OrderPage extends HTMLElement {
     // --- DOM Updates ---
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     // Formatting price
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${price.toFixed(2)}`;
-    
+
     if (isBlowout) {
       priceEl.classList.add('blowout-price');
       root.getElementById('saleBadge').style.display = 'inline-block';
@@ -80,7 +89,7 @@ class OrderPage extends HTMLElement {
     // Context: "Past Purchases: Nordic Cross, Backcountry Tour..."
     // Context: "Excited to buy new stuff... lightweight setups"
     if (this.isBackcountryGear(item)) {
-        upsellContainer.innerHTML = `
+      upsellContainer.innerHTML = `
             <div class="upsell-box">
                 <span class="upsell-icon">🏔️</span>
                 <div class="upsell-text">
@@ -92,7 +101,7 @@ class OrderPage extends HTMLElement {
             </div>
         `;
     } else if (this.isRacingGear(item)) {
-        upsellContainer.innerHTML = `
+      upsellContainer.innerHTML = `
             <div class="upsell-box">
                 <span class="upsell-icon">🏁</span>
                 <div class="upsell-text">
@@ -108,8 +117,8 @@ class OrderPage extends HTMLElement {
   async submitOrder() {
     const root = this.shadowRoot;
     // Default to 1 for One-Click logic to reduce friction
-    const qty = 1; 
-    
+    const qty = 1;
+
     // Recalculate price based on logic in loadItem
     let multiplier = this.isRacingGear(this.selectedItem) ? 1.2 : 1.5;
     const price = this.selectedItem.cost * multiplier;
@@ -137,11 +146,14 @@ class OrderPage extends HTMLElement {
         // Visual feedback for iPad user
         btn.style.background = '#27ae60';
         btn.innerHTML = '<span class="btn-primary-text">Success! ⛷️</span>';
-        
+
         setTimeout(() => {
-            this.dispatchEvent(
-                new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Error: ' + data.error);
@@ -343,7 +355,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

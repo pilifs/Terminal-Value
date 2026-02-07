@@ -1,141 +1,154 @@
 class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        this.clientCity = 'Vancouver';
-        this.persona = 'Executive Digital Nomad';
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.clientCity = 'Vancouver';
+    this.persona = 'Executive Digital Nomad';
+  }
 
-    connectedCallback() {
-        this.render();
-        this.loadInventory();
-        this.startUrgencyTimers();
-    }
+  connectedCallback() {
+    this.render();
+    this.loadInventory();
+    this.startUrgencyTimers();
+  }
 
-    async loadInventory() {
-        const grid = this.shadowRoot.getElementById('productGrid');
-        const exclusiveGrid = this.shadowRoot.getElementById('exclusiveGrid');
-        
-        // Simulating a delay to look like we are fetching "Secure Data"
-        grid.innerHTML = '<div class="loading">Authenticating VIP Tier...</div>';
+  async loadInventory() {
+    const grid = this.shadowRoot.getElementById('productGrid');
+    const exclusiveGrid = this.shadowRoot.getElementById('exclusiveGrid');
 
-        try {
-            const res = await fetch('/api/inventory');
-            const inventory = await res.json();
+    // Simulating a delay to look like we are fetching "Secure Data"
+    grid.innerHTML = '<div class="loading">Authenticating VIP Tier...</div>';
 
-            // CLEAR LOADERS
-            grid.innerHTML = '';
-            exclusiveGrid.innerHTML = '';
+    try {
+      const res = await fetch('/api/inventory');
+      const inventory = await res.json();
 
-            // STRATEGY: Sort by most expensive first to anchor high prices
-            inventory.sort((a, b) => b.cost - a.cost);
+      // CLEAR LOADERS
+      grid.innerHTML = '';
+      exclusiveGrid.innerHTML = '';
 
-            inventory.forEach((item, index) => {
-                // INTELLIGENT PRODUCT TRANSFORMATION
-                // We rename items to fit the "Digital Nomad / Heated Tech" persona
-                // and inflate prices significantly.
-                
-                let isExclusive = false;
-                let marketingName = item.name;
-                let badge = '';
-                
-                // INFLATION LOGIC: 
-                // Standard site is Cost * 1.5. We want Price to be Cost * 5.
-                // NewCost = (OriginalCost * 5) / 1.5
-                const originalCost = item.cost;
-                const inflatedCost = (originalCost * 5) / 1.5; 
-                
-                // Mutate item for the checkout process to capture higher revenue
-                item.cost = inflatedCost; 
-                const displayPrice = (item.cost * 1.5).toFixed(2);
+      // STRATEGY: Sort by most expensive first to anchor high prices
+      inventory.sort((a, b) => b.cost - a.cost);
 
-                // Analyze keywords for the "Heated/Nomad" persona
-                const lowerName = item.name.toLowerCase();
-                
-                if (lowerName.includes('glove') || lowerName.includes('sock') || lowerName.includes('boot')) {
-                    isExclusive = true;
-                    marketingName = `🔥 ${item.name} [Pyro-Tech Series]`;
-                    badge = 'USB-C HEATED';
-                } else if (lowerName.includes('ski') || lowerName.includes('board')) {
-                    marketingName = `${item.name} // Lodge Edition`;
-                    badge = 'VANCOUVER RELEASE';
-                }
+      inventory.forEach((item, index) => {
+        // INTELLIGENT PRODUCT TRANSFORMATION
+        // We rename items to fit the "Digital Nomad / Heated Tech" persona
+        // and inflate prices significantly.
 
-                // Copywriting Logic
-                const urgencySeed = Math.floor(Math.random() * 5) + 2; // Random low number
-                
-                const cardHTML = `
+        let isExclusive = false;
+        let marketingName = item.name;
+        let badge = '';
+
+        // INFLATION LOGIC:
+        // Standard site is Cost * 1.5. We want Price to be Cost * 5.
+        // NewCost = (OriginalCost * 5) / 1.5
+        const originalCost = item.cost;
+        const inflatedCost = (originalCost * 5) / 1.5;
+
+        // Mutate item for the checkout process to capture higher revenue
+        item.cost = inflatedCost;
+        const displayPrice = (item.cost * 1.5).toFixed(2);
+
+        // Analyze keywords for the "Heated/Nomad" persona
+        const lowerName = item.name.toLowerCase();
+
+        if (
+          lowerName.includes('glove') ||
+          lowerName.includes('sock') ||
+          lowerName.includes('boot')
+        ) {
+          isExclusive = true;
+          marketingName = `🔥 ${item.name} [Pyro-Tech Series]`;
+          badge = 'USB-C HEATED';
+        } else if (lowerName.includes('ski') || lowerName.includes('board')) {
+          marketingName = `${item.name} // Lodge Edition`;
+          badge = 'VANCOUVER RELEASE';
+        }
+
+        // Copywriting Logic
+        const urgencySeed = Math.floor(Math.random() * 5) + 2; // Random low number
+
+        const cardHTML = `
                     <div class="card ${isExclusive ? 'exclusive-card' : ''}">
                         ${badge ? `<div class="badge">${badge}</div>` : ''}
                         <div class="img-placeholder"></div>
                         <h3>${marketingName}</h3>
                         <p class="description">
-                            ${isExclusive 
-                                ? "Engineered for slope-to-zoom-call transitions. Maximum thermal efficiency." 
-                                : "High-performance gear for the modern remote executive."}
+                            ${
+                              isExclusive
+                                ? 'Engineered for slope-to-zoom-call transitions. Maximum thermal efficiency.'
+                                : 'High-performance gear for the modern remote executive.'
+                            }
                         </p>
                         <div class="price-row">
                             <span class="price">$${displayPrice}</span>
-                            <span class="scarcity">Only ${urgencySeed} reserved in ${this.clientCity}</span>
+                            <span class="scarcity">Only ${urgencySeed} reserved in ${
+          this.clientCity
+        }</span>
                         </div>
-                        <button class="buy-btn ${isExclusive ? 'btn-gold' : ''}" data-id="${item.id}">
+                        <button class="buy-btn ${
+                          isExclusive ? 'btn-gold' : ''
+                        }" data-id="${item.id}">
                             ${isExclusive ? 'SECURE ALLOCATION' : 'ADD TO CART'}
                         </button>
                         <div class="viewer-count">
-                            <span class="dot"></span> ${Math.floor(Math.random() * 12) + 3} digital nomads viewing this
+                            <span class="dot"></span> ${
+                              Math.floor(Math.random() * 12) + 3
+                            } digital nomads viewing this
                         </div>
                     </div>
                 `;
 
-                if (isExclusive) {
-                    exclusiveGrid.innerHTML += cardHTML;
-                } else {
-                    grid.innerHTML += cardHTML;
-                }
-
-                // Add event listener to the specific button created above
-                // Note: We must wait for DOM update or use event delegation. 
-                // For simplicity in this loop, we attach later via delegation.
-            });
-
-            // Event Delegation for Performance and simplicity
-            this.shadowRoot.addEventListener('click', (e) => {
-                if (e.target.classList.contains('buy-btn')) {
-                    const itemId = e.target.dataset.id;
-                    const selectedItem = inventory.find(i => i.id === itemId);
-                    
-                    // PASS THE INFLATED COST ITEM TO ORDER PAGE
-                    this.dispatchEvent(new CustomEvent('navigate-order', {
-                        detail: { item: selectedItem },
-                        bubbles: true,
-                        composed: true
-                    }));
-                }
-            });
-
-        } catch (e) {
-            console.error(e);
-            grid.innerHTML = '<p>Connection lost. Re-establishing secure link...</p>';
+        if (isExclusive) {
+          exclusiveGrid.innerHTML += cardHTML;
+        } else {
+          grid.innerHTML += cardHTML;
         }
-    }
 
-    startUrgencyTimers() {
-        // Ticks down a "Reservation Timer" to induce panic buying
-        let time = 15 * 60; // 15 minutes
-        const timerEl = this.shadowRoot.getElementById('timer');
-        
-        setInterval(() => {
-            const minutes = Math.floor(time / 60);
-            const seconds = time % 60;
-            if(timerEl) {
-                timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            }
-            if (time > 0) time--;
-        }, 1000);
-    }
+        // Add event listener to the specific button created above
+        // Note: We must wait for DOM update or use event delegation.
+        // For simplicity in this loop, we attach later via delegation.
+      });
 
-    render() {
-        this.shadowRoot.innerHTML = `
+      // Event Delegation for Performance and simplicity
+      this.shadowRoot.addEventListener('click', (e) => {
+        if (e.target.classList.contains('buy-btn')) {
+          const itemId = e.target.dataset.id;
+          const selectedItem = inventory.find((i) => i.id === itemId);
+
+          // PASS THE INFLATED COST ITEM TO ORDER PAGE
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: selectedItem },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML = '<p>Connection lost. Re-establishing secure link...</p>';
+    }
+  }
+
+  startUrgencyTimers() {
+    // Ticks down a "Reservation Timer" to induce panic buying
+    let time = 15 * 60; // 15 minutes
+    const timerEl = this.shadowRoot.getElementById('timer');
+
+    setInterval(() => {
+      const minutes = Math.floor(time / 60);
+      const seconds = time % 60;
+      if (timerEl) {
+        timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      }
+      if (time > 0) time--;
+    }, 1000);
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
         <style>
             :host { 
                 display: block; 
@@ -336,7 +349,7 @@ class HomePage extends HTMLElement {
         <h2>⛷️ Priority Access: Alpine Gear</h2>
         <div id="productGrid" class="grid"></div>
         `;
-    }
+  }
 }
 
 customElements.define('home-page', HomePage);

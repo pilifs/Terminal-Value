@@ -30,7 +30,7 @@ class OrderPage extends HTMLElement {
     // Accessing the global state object defined in app.js
     const profile = window.state?.clientProfile;
     const banner = this.shadowRoot.getElementById('calgaryBanner');
-    
+
     if (banner && profile && profile.city === 'Calgary') {
       banner.style.display = 'block';
     }
@@ -38,12 +38,13 @@ class OrderPage extends HTMLElement {
 
   loadItem(item) {
     this.selectedItem = item;
-    
+
     // --- PRICING STRATEGY ---
     // Racing gear (Sales Blowout) at 120% COGS, others at standard 150%
-    const isRaceGear = item.name.toLowerCase().includes('race') || 
-                       item.name.toLowerCase().includes('pro'); // Assuming Pro is race-adjacent based on context
-    
+    const isRaceGear =
+      item.name.toLowerCase().includes('race') ||
+      item.name.toLowerCase().includes('pro'); // Assuming Pro is race-adjacent based on context
+
     const markup = isRaceGear ? 1.2 : 1.5;
     this.calculatedPrice = item.cost * markup;
 
@@ -51,11 +52,15 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    root.getElementById('orderItemPrice').textContent = `$${this.calculatedPrice.toFixed(2)}`;
-    
+    root.getElementById(
+      'orderItemPrice'
+    ).textContent = `$${this.calculatedPrice.toFixed(2)}`;
+
     // Highlight discount if it's race gear
-    if(isRaceGear) {
-        root.getElementById('priceTag').innerHTML += ` <span class="badge">Sales Blowout!</span>`;
+    if (isRaceGear) {
+      root.getElementById(
+        'priceTag'
+      ).innerHTML += ` <span class="badge">Sales Blowout!</span>`;
     }
 
     this.updateTotal();
@@ -71,7 +76,7 @@ class OrderPage extends HTMLElement {
     // Add upsell price if checked
     const upsellCheckbox = this.shadowRoot.getElementById('upsellCheck');
     if (upsellCheckbox && upsellCheckbox.checked && this.upsellItem) {
-        total += this.upsellItem.price;
+      total += this.upsellItem.price;
     }
 
     this.shadowRoot.getElementById('orderTotal').textContent = total.toFixed(2);
@@ -84,28 +89,32 @@ class OrderPage extends HTMLElement {
     // Logic based on Past Purchases and current item context
     let suggestedProduct = null;
 
-    if (name.includes('race') || name.includes('pro') || name.includes('piste')) {
-        suggestedProduct = {
-            id: 'UPSELL-BIND-RACE', 
-            name: 'Titanium Race Bindings', 
-            price: 150.00,
-            desc: 'Perfect match for your racing setup.'
-        };
+    if (
+      name.includes('race') ||
+      name.includes('pro') ||
+      name.includes('piste')
+    ) {
+      suggestedProduct = {
+        id: 'UPSELL-BIND-RACE',
+        name: 'Titanium Race Bindings',
+        price: 150.0,
+        desc: 'Perfect match for your racing setup.',
+      };
     } else if (name.includes('powder') || name.includes('backcountry')) {
-        suggestedProduct = {
-            id: 'UPSELL-POLE-Tele', 
-            name: 'Carbon Telescopic Poles', 
-            price: 85.00,
-            desc: 'Essential for your backcountry tours.'
-        };
+      suggestedProduct = {
+        id: 'UPSELL-POLE-Tele',
+        name: 'Carbon Telescopic Poles',
+        price: 85.0,
+        desc: 'Essential for your backcountry tours.',
+      };
     } else {
-        // Generic Fallback
-        suggestedProduct = {
-            id: 'UPSELL-WAX', 
-            name: 'Pro Glide Wax Kit', 
-            price: 25.00,
-            desc: 'Keep your new gear running fast.'
-        };
+      // Generic Fallback
+      suggestedProduct = {
+        id: 'UPSELL-WAX',
+        name: 'Pro Glide Wax Kit',
+        price: 25.0,
+        desc: 'Keep your new gear running fast.',
+      };
     }
 
     this.upsellItem = suggestedProduct;
@@ -119,7 +128,9 @@ class OrderPage extends HTMLElement {
                     <strong>${suggestedProduct.name}</strong><br>
                     <small>${suggestedProduct.desc}</small>
                 </div>
-                <div style="color: #e74c3c; font-weight:bold;">$${suggestedProduct.price.toFixed(2)}</div>
+                <div style="color: #e74c3c; font-weight:bold;">$${suggestedProduct.price.toFixed(
+                  2
+                )}</div>
             </div>
             <label class="upsell-label">
                 <input type="checkbox" id="upsellCheck"> 
@@ -129,9 +140,11 @@ class OrderPage extends HTMLElement {
     `;
 
     // Re-attach event listener for the dynamic checkbox
-    this.shadowRoot.getElementById('upsellCheck').addEventListener('change', () => {
+    this.shadowRoot
+      .getElementById('upsellCheck')
+      .addEventListener('change', () => {
         this.updateTotal();
-    });
+      });
   }
 
   async submitOrder() {
@@ -143,20 +156,22 @@ class OrderPage extends HTMLElement {
     btn.innerHTML = 'Processing... <span class="spinner"></span>';
 
     // Prepare Items Array
-    const items = [{ 
-        skuId: this.selectedItem.id, 
-        quantity: qty, 
-        price: this.calculatedPrice 
-    }];
+    const items = [
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: this.calculatedPrice,
+      },
+    ];
 
     // Add Upsell if selected
     const upsellCheckbox = root.getElementById('upsellCheck');
     if (upsellCheckbox && upsellCheckbox.checked && this.upsellItem) {
-        items.push({
-            skuId: this.upsellItem.id,
-            quantity: 1,
-            price: this.upsellItem.price
-        });
+      items.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -175,7 +190,7 @@ class OrderPage extends HTMLElement {
       if (data.success) {
         // Haptic feedback simulation for mobile feel
         if (navigator.vibrate) navigator.vibrate(200);
-        
+
         alert('🎉 Order Confirmed! Reference: ' + data.orderId);
         this.dispatchEvent(
           new CustomEvent('order-completed', { bubbles: true, composed: true })
@@ -335,8 +350,10 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('orderQty').onchange = () => this.updateTotal();
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('orderQty').onchange = () =>
+      this.updateTotal();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

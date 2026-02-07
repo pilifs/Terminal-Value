@@ -1,185 +1,196 @@
 class OrderPage extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: 'open' });
-      this.selectedItem = null;
-      this.clientId = null;
-      this.upsellItem = null;
-      this.hasUpsell = false;
-      this.currentPrice = 0;
-    }
-  
-    connectedCallback() {
-      this.render();
-      this.clientId = this.getAttribute('client-id');
-    }
-  
-    static get observedAttributes() {
-      return ['client-id'];
-    }
-  
-    attributeChangedCallback(name, oldValue, newValue) {
-      if (name === 'client-id') {
-        this.clientId = newValue;
-      }
-    }
-  
-    // Logic to determine if this is racing gear based on the item name
-    isRacingGear(item) {
-        const name = item.name.toLowerCase();
-        return name.includes('race') || name.includes('world cup') || name.includes('comp');
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.selectedItem = null;
+    this.clientId = null;
+    this.upsellItem = null;
+    this.hasUpsell = false;
+    this.currentPrice = 0;
+  }
 
-    // Logic to generate a matching upsell based on user history/style
-    generateUpsell(mainItem) {
-        // Default Upsell
-        let upsell = {
-            id: 'UPSELL-ACC-001',
-            name: 'Pro-Grip Carbon Poles (Neon Edition)',
-            sku: 'POLE-NEON-X',
-            cost: 80 // Base cost
-        };
+  connectedCallback() {
+    this.render();
+    this.clientId = this.getAttribute('client-id');
+  }
 
-        // If buying skis, suggest bindings or poles
-        if (mainItem.name.toLowerCase().includes('ski') || mainItem.name.toLowerCase().includes('racer')) {
-            upsell = {
-                id: 'UPSELL-BIND-002',
-                name: 'Gold-Plated Pivot Bindings 18',
-                sku: 'BIND-GOLD-VIP',
-                cost: 200, // Expensive
-                desc: 'Matches your flashy style perfectly.'
-            };
-        }
+  static get observedAttributes() {
+    return ['client-id'];
+  }
 
-        return upsell;
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === 'client-id') {
+      this.clientId = newValue;
     }
-  
-    loadItem(item) {
-      this.selectedItem = item;
-      this.hasUpsell = false; // Reset
-      
-      // 1. Pricing Strategy Logic
-      // Racing gear = 120% COGS, Others = Standard (150% implied by original code)
-      const isRace = this.isRacingGear(item);
-      const markup = isRace ? 1.2 : 1.5;
-      this.currentPrice = item.cost * markup;
-  
-      // 2. Upsell Logic
-      this.upsellItem = this.generateUpsell(item);
-      const upsellPrice = this.upsellItem.cost * 1.5; // Standard markup on accessories
-  
-      // 3. Render DOM updates
-      const root = this.shadowRoot;
-      
-      // Header Info
-      root.getElementById('orderItemName').textContent = item.name;
-      root.getElementById('orderItemSku').textContent = item.sku;
-      
-      // Price Display
-      const priceEl = root.getElementById('orderItemPrice');
-      priceEl.textContent = `$${this.currentPrice.toFixed(2)}`;
-      
-      // Sales Blowout Badge
-      const badge = root.getElementById('saleBadge');
-      if (isRace) {
-          badge.style.display = 'inline-block';
-          badge.textContent = "🔥 RACING BLOWOUT DEAL";
-          priceEl.style.color = "#d35400";
-      } else {
-          badge.style.display = 'none';
-          priceEl.style.color = "#e74c3c";
-      }
+  }
 
-      // Upsell Section
-      const upsellContainer = root.getElementById('upsellContainer');
-      const upsellName = root.getElementById('upsellName');
-      const upsellPriceEl = root.getElementById('upsellPrice');
-      
-      if (upsellContainer) {
-          upsellName.textContent = this.upsellItem.name;
-          upsellPriceEl.textContent = `$${upsellPrice.toFixed(2)}`;
-          // Show container
-          upsellContainer.classList.remove('hidden');
-          // Reset checkbox
-          root.getElementById('upsellCheck').checked = false;
-      }
-  
-      this.updateTotal();
-    }
+  // Logic to determine if this is racing gear based on the item name
+  isRacingGear(item) {
+    const name = item.name.toLowerCase();
+    return (
+      name.includes('race') ||
+      name.includes('world cup') ||
+      name.includes('comp')
+    );
+  }
 
-    updateTotal() {
-        const root = this.shadowRoot;
-        const qty = parseInt(root.getElementById('orderQty').value);
-        let total = this.currentPrice * qty;
+  // Logic to generate a matching upsell based on user history/style
+  generateUpsell(mainItem) {
+    // Default Upsell
+    let upsell = {
+      id: 'UPSELL-ACC-001',
+      name: 'Pro-Grip Carbon Poles (Neon Edition)',
+      sku: 'POLE-NEON-X',
+      cost: 80, // Base cost
+    };
 
-        // Check Upsell
-        const upsellCheck = root.getElementById('upsellCheck');
-        if (upsellCheck && upsellCheck.checked) {
-            this.hasUpsell = true;
-            total += (this.upsellItem.cost * 1.5);
-        } else {
-            this.hasUpsell = false;
-        }
-
-        root.getElementById('orderTotal').textContent = total.toFixed(2);
-    }
-  
-    async submitOrder() {
-      const root = this.shadowRoot;
-      const qty = parseInt(root.getElementById('orderQty').value);
-      const btn = root.getElementById('btnConfirm');
-  
-      btn.disabled = true;
-      btn.innerHTML = '⚡ Processing VIP Order...';
-  
-      // Construct Payload
-      const items = [{ 
-          skuId: this.selectedItem.id, 
-          quantity: qty, 
-          price: this.currentPrice 
-      }];
-
-      // Add Upsell if selected
-      if (this.hasUpsell) {
-          items.push({
-              skuId: this.upsellItem.id,
-              quantity: 1,
-              price: this.upsellItem.cost * 1.5
-          });
-      }
-  
-      const payload = {
-        clientId: this.clientId,
-        items: items,
+    // If buying skis, suggest bindings or poles
+    if (
+      mainItem.name.toLowerCase().includes('ski') ||
+      mainItem.name.toLowerCase().includes('racer')
+    ) {
+      upsell = {
+        id: 'UPSELL-BIND-002',
+        name: 'Gold-Plated Pivot Bindings 18',
+        sku: 'BIND-GOLD-VIP',
+        cost: 200, // Expensive
+        desc: 'Matches your flashy style perfectly.',
       };
-  
-      try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-  
-        if (data.success) {
-          // Impulse buyer instant gratification message
-          alert(`🎉 VIP ORDER CONFIRMED! \n\nGet ready to shred! Your ${this.selectedItem.name} is on the way.`);
-          this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
-          );
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (e) {
-        alert('Network Error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '⚡ One-Click Buy';
-      }
     }
-  
-    render() {
-      this.shadowRoot.innerHTML = `
+
+    return upsell;
+  }
+
+  loadItem(item) {
+    this.selectedItem = item;
+    this.hasUpsell = false; // Reset
+
+    // 1. Pricing Strategy Logic
+    // Racing gear = 120% COGS, Others = Standard (150% implied by original code)
+    const isRace = this.isRacingGear(item);
+    const markup = isRace ? 1.2 : 1.5;
+    this.currentPrice = item.cost * markup;
+
+    // 2. Upsell Logic
+    this.upsellItem = this.generateUpsell(item);
+    const upsellPrice = this.upsellItem.cost * 1.5; // Standard markup on accessories
+
+    // 3. Render DOM updates
+    const root = this.shadowRoot;
+
+    // Header Info
+    root.getElementById('orderItemName').textContent = item.name;
+    root.getElementById('orderItemSku').textContent = item.sku;
+
+    // Price Display
+    const priceEl = root.getElementById('orderItemPrice');
+    priceEl.textContent = `$${this.currentPrice.toFixed(2)}`;
+
+    // Sales Blowout Badge
+    const badge = root.getElementById('saleBadge');
+    if (isRace) {
+      badge.style.display = 'inline-block';
+      badge.textContent = '🔥 RACING BLOWOUT DEAL';
+      priceEl.style.color = '#d35400';
+    } else {
+      badge.style.display = 'none';
+      priceEl.style.color = '#e74c3c';
+    }
+
+    // Upsell Section
+    const upsellContainer = root.getElementById('upsellContainer');
+    const upsellName = root.getElementById('upsellName');
+    const upsellPriceEl = root.getElementById('upsellPrice');
+
+    if (upsellContainer) {
+      upsellName.textContent = this.upsellItem.name;
+      upsellPriceEl.textContent = `$${upsellPrice.toFixed(2)}`;
+      // Show container
+      upsellContainer.classList.remove('hidden');
+      // Reset checkbox
+      root.getElementById('upsellCheck').checked = false;
+    }
+
+    this.updateTotal();
+  }
+
+  updateTotal() {
+    const root = this.shadowRoot;
+    const qty = parseInt(root.getElementById('orderQty').value);
+    let total = this.currentPrice * qty;
+
+    // Check Upsell
+    const upsellCheck = root.getElementById('upsellCheck');
+    if (upsellCheck && upsellCheck.checked) {
+      this.hasUpsell = true;
+      total += this.upsellItem.cost * 1.5;
+    } else {
+      this.hasUpsell = false;
+    }
+
+    root.getElementById('orderTotal').textContent = total.toFixed(2);
+  }
+
+  async submitOrder() {
+    const root = this.shadowRoot;
+    const qty = parseInt(root.getElementById('orderQty').value);
+    const btn = root.getElementById('btnConfirm');
+
+    btn.disabled = true;
+    btn.innerHTML = '⚡ Processing VIP Order...';
+
+    // Construct Payload
+    const items = [
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: this.currentPrice,
+      },
+    ];
+
+    // Add Upsell if selected
+    if (this.hasUpsell) {
+      items.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.cost * 1.5,
+      });
+    }
+
+    const payload = {
+      clientId: this.clientId,
+      items: items,
+    };
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Impulse buyer instant gratification message
+        alert(
+          `🎉 VIP ORDER CONFIRMED! \n\nGet ready to shred! Your ${this.selectedItem.name} is on the way.`
+        );
+        this.dispatchEvent(
+          new CustomEvent('order-completed', { bubbles: true, composed: true })
+        );
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (e) {
+      alert('Network Error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚡ One-Click Buy';
+    }
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
           <style>
               :host { 
                   display: block; 
@@ -349,21 +360,22 @@ class OrderPage extends HTMLElement {
               <button class="cancel-btn" id="btnCancel">Cancel</button>
           </div>
           `;
-  
-      this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
-      
-      this.shadowRoot.getElementById('btnCancel').onclick = () => {
-        this.dispatchEvent(
-          new CustomEvent('navigate-home', { bubbles: true, composed: true })
-        );
-      };
-  
-      const qtySelect = this.shadowRoot.getElementById('orderQty');
-      qtySelect.onchange = () => this.updateTotal();
-  
-      const upsellCheck = this.shadowRoot.getElementById('upsellCheck');
-      upsellCheck.onchange = () => this.updateTotal();
-    }
+
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
+
+    this.shadowRoot.getElementById('btnCancel').onclick = () => {
+      this.dispatchEvent(
+        new CustomEvent('navigate-home', { bubbles: true, composed: true })
+      );
+    };
+
+    const qtySelect = this.shadowRoot.getElementById('orderQty');
+    qtySelect.onchange = () => this.updateTotal();
+
+    const upsellCheck = this.shadowRoot.getElementById('upsellCheck');
+    upsellCheck.onchange = () => this.updateTotal();
   }
-  
-  customElements.define('order-page', OrderPage);
+}
+
+customElements.define('order-page', OrderPage);

@@ -7,8 +7,8 @@ class OrderPage extends HTMLElement {
     this.upsellItem = {
       id: 'UPSELL-POLE-001',
       name: 'Carbon Team Race Poles',
-      price: 120.00,
-      cost: 80.00
+      price: 120.0,
+      cost: 80.0,
     };
     this.isUpsellSelected = false;
   }
@@ -33,8 +33,11 @@ class OrderPage extends HTMLElement {
   calculatePrice(item) {
     const nameLower = item.name.toLowerCase();
     // Pricing Strategy: Racing gear @ 120% COGS, Standard @ 150% COGS
-    const isRacing = nameLower.includes('race') || nameLower.includes('world cup') || nameLower.includes('slalom');
-    
+    const isRacing =
+      nameLower.includes('race') ||
+      nameLower.includes('world cup') ||
+      nameLower.includes('slalom');
+
     if (isRacing) {
       return { price: item.cost * 1.2, isSale: true };
     }
@@ -44,19 +47,19 @@ class OrderPage extends HTMLElement {
   loadItem(item) {
     this.selectedItem = item;
     const { price, isSale } = this.calculatePrice(item);
-    
+
     // Store calculated price for submission
     this.currentPrice = price;
 
     const root = this.shadowRoot;
-    
+
     // Bind Item Data
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${price.toFixed(2)}`;
-    
+
     // Sale Badge Logic
     if (isSale) {
       root.getElementById('saleBadge').style.display = 'inline-block';
@@ -73,8 +76,8 @@ class OrderPage extends HTMLElement {
     // Render Upsell UI based on Past Purchases (Aggressive/Performance)
     // We only show pole upsells if they are buying Skis
     const isSki = true; // Assuming inventory items are skis for this context
-    if(isSki) {
-        root.getElementById('upsellSection').classList.remove('hidden');
+    if (isSki) {
+      root.getElementById('upsellSection').classList.remove('hidden');
     }
 
     this.updateTotal();
@@ -86,7 +89,7 @@ class OrderPage extends HTMLElement {
     let total = this.currentPrice * qty;
 
     if (this.isUpsellSelected) {
-        total += this.upsellItem.price;
+      total += this.upsellItem.price;
     }
 
     root.getElementById('orderTotal').textContent = total.toFixed(2);
@@ -104,20 +107,20 @@ class OrderPage extends HTMLElement {
 
     // Construct Payload
     const itemsPayload = [
-        { 
-            skuId: this.selectedItem.id, 
-            quantity: qty, 
-            price: this.currentPrice 
-        }
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: this.currentPrice,
+      },
     ];
 
     // Add Upsell if selected
     if (this.isUpsellSelected) {
-        itemsPayload.push({
-            skuId: this.upsellItem.id,
-            quantity: 1,
-            price: this.upsellItem.price
-        });
+      itemsPayload.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -136,14 +139,17 @@ class OrderPage extends HTMLElement {
       if (data.success) {
         // Haptic feedback simulation
         if (navigator.vibrate) navigator.vibrate(50);
-        
+
         btn.innerHTML = `<span>Purchase Complete!</span>`;
         btn.style.backgroundColor = '#27ae60';
-        
+
         setTimeout(() => {
-            this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 800);
       } else {
         alert('Error: ' + data.error);
@@ -288,11 +294,15 @@ class OrderPage extends HTMLElement {
 
         <h2>Review Order</h2>
         <div class="card">
-            ${isCalgary ? `
+            ${
+              isCalgary
+                ? `
             <div class="vip-banner">
                 <span>🚛</span> Free Express Shipping to Calgary included.
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <h3 id="orderItemName">Loading...</h3>
             <p class="sku">SKU: <span id="orderItemSku">...</span></p>
@@ -309,7 +319,9 @@ class OrderPage extends HTMLElement {
                 </div>
                 <div class="upsell-info">
                     <h4>Add Carbon Team Poles?</h4>
-                    <p>Perfect match for your aggressive style. <br><strong>+$${this.upsellItem.price.toFixed(0)}</strong> (Special Offer)</p>
+                    <p>Perfect match for your aggressive style. <br><strong>+$${this.upsellItem.price.toFixed(
+                      0
+                    )}</strong> (Special Offer)</p>
                 </div>
             </div>
 
@@ -332,19 +344,19 @@ class OrderPage extends HTMLElement {
 
     // Event Listeners
     const root = this.shadowRoot;
-    
+
     // Qty Change
     root.getElementById('orderQty').onchange = () => this.updateTotal();
-    
+
     // Upsell Toggle
     root.getElementById('upsellCheckbox').onchange = (e) => {
-        this.isUpsellSelected = e.target.checked;
-        this.updateTotal();
+      this.isUpsellSelected = e.target.checked;
+      this.updateTotal();
     };
 
     // One-Click Buy
     root.getElementById('btnOneClick').onclick = () => this.submitOrder();
-    
+
     // Cancel
     root.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(

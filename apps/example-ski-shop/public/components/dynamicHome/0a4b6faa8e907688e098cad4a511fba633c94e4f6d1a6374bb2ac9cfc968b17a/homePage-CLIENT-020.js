@@ -13,7 +13,8 @@ class HomePage extends HTMLElement {
 
   async loadInventory(client) {
     const grid = this.shadowRoot.getElementById('productGrid');
-    grid.innerHTML = '<p>Finding the lightest gear for your next Strava run...</p>';
+    grid.innerHTML =
+      '<p>Finding the lightest gear for your next Strava run...</p>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -22,9 +23,11 @@ class HomePage extends HTMLElement {
       // 1. Analyze User History for "Racing" or "Nordic" affinity
       // We assume client.pastPurchases is an array of strings based on the prompt context
       // Broadening check to include 'Nordic' to capture this specific user's history
-      const pastPurchases = client.pastPurchases || ['Nordic Cross']; 
-      const hasRacingHistory = pastPurchases.some(p => 
-        p.toLowerCase().includes('racing') || p.toLowerCase().includes('nordic')
+      const pastPurchases = client.pastPurchases || ['Nordic Cross'];
+      const hasRacingHistory = pastPurchases.some(
+        (p) =>
+          p.toLowerCase().includes('racing') ||
+          p.toLowerCase().includes('nordic')
       );
 
       // 2. Filter & Sort for Persona
@@ -32,80 +35,101 @@ class HomePage extends HTMLElement {
       const sortedInventory = inventory.sort((a, b) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
-        
+
         // Prioritize World Cup Racer for this persona
         if (aName.includes('world cup racer')) return -1;
         if (bName.includes('world cup racer')) return 1;
-        
+
         // Then prioritize Nordic/Cross
         const aIsNordic = aName.includes('nordic') || aName.includes('cross');
         const bIsNordic = bName.includes('nordic') || bName.includes('cross');
-        
+
         if (aIsNordic && !bIsNordic) return -1;
         if (!aIsNordic && bIsNordic) return 1;
-        
+
         return 0;
       });
 
       // 3. Render Items with Pricing Logic
-      grid.innerHTML = sortedInventory.map(item => {
-        const isRacingSki = item.name.toLowerCase().includes('world cup racer');
-        
-        let finalPrice = item.cost * 1.5; // Default Markup
-        let isBlowout = false;
+      grid.innerHTML = sortedInventory
+        .map((item) => {
+          const isRacingSki = item.name
+            .toLowerCase()
+            .includes('world cup racer');
 
-        // Apply "Sales Blowout" logic
-        if (isRacingSki && hasRacingHistory) {
-          // Dynamic price between 0.4 * COGS and 1.0 * COGS
-          const multiplier = Math.random() * (1.0 - 0.4) + 0.4;
-          finalPrice = item.cost * multiplier;
-          isBlowout = true;
-        }
+          let finalPrice = item.cost * 1.5; // Default Markup
+          let isBlowout = false;
 
-        return `
+          // Apply "Sales Blowout" logic
+          if (isRacingSki && hasRacingHistory) {
+            // Dynamic price between 0.4 * COGS and 1.0 * COGS
+            const multiplier = Math.random() * (1.0 - 0.4) + 0.4;
+            finalPrice = item.cost * multiplier;
+            isBlowout = true;
+          }
+
+          return `
           <div class="card ${isBlowout ? 'blowout-card' : ''}">
             ${isBlowout ? '<div class="badge">🔥 STRAVA PR MAKER</div>' : ''}
             <h3>${item.name}</h3>
             
             <p class="desc">
-              ${isRacingSki 
-                ? 'Ultralight construction. Perfect for your Banff trails.' 
-                : 'Standard reliability for casual days.'}
+              ${
+                isRacingSki
+                  ? 'Ultralight construction. Perfect for your Banff trails.'
+                  : 'Standard reliability for casual days.'
+              }
             </p>
 
-            <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+            <p class="stock">${
+              item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+            }</p>
             
             <div class="price-container">
-              ${isBlowout 
-                ? `<span class="old-price">$${(item.cost * 1.5).toFixed(2)}</span>` 
-                : ''}
-              <span class="price ${isBlowout ? 'blowout-price' : ''}">$${finalPrice.toFixed(2)}</span>
+              ${
+                isBlowout
+                  ? `<span class="old-price">$${(item.cost * 1.5).toFixed(
+                      2
+                    )}</span>`
+                  : ''
+              }
+              <span class="price ${
+                isBlowout ? 'blowout-price' : ''
+              }">$${finalPrice.toFixed(2)}</span>
             </div>
 
             <button 
               class="buy-btn ${isBlowout ? 'btn-blowout' : ''}" 
               data-id="${item.id}"
               ${item.stock <= 0 ? 'disabled' : ''}>
-              ${isBlowout ? 'Grab Deal' : (item.stock > 0 ? 'Buy Now' : 'Sold Out')}
+              ${
+                isBlowout
+                  ? 'Grab Deal'
+                  : item.stock > 0
+                  ? 'Buy Now'
+                  : 'Sold Out'
+              }
             </button>
           </div>
         `;
-      }).join('');
+        })
+        .join('');
 
       // Add Event Listeners
-      this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
+      this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           const itemId = e.target.dataset.id;
-          const item = inventory.find(i => i.id === itemId);
-          
-          this.dispatchEvent(new CustomEvent('navigate-order', {
-            detail: { item: item },
-            bubbles: true,
-            composed: true
-          }));
+          const item = inventory.find((i) => i.id === itemId);
+
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: item },
+              bubbles: true,
+              composed: true,
+            })
+          );
         });
       });
-
     } catch (e) {
       console.error(e);
       grid.innerHTML = '<p>Error loading your personalized selection.</p>';
@@ -114,7 +138,7 @@ class HomePage extends HTMLElement {
 
   render(client) {
     const city = client.city || 'Banff';
-    
+
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; animation: fadeIn 0.4s; font-family: 'Segoe UI', sans-serif; }

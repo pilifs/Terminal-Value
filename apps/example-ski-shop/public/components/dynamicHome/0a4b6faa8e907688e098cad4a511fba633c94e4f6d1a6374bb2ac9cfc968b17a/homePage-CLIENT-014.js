@@ -12,8 +12,9 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
     const hero = this.shadowRoot.getElementById('heroSection');
-    
-    grid.innerHTML = '<div class="loading">Loading your personalized selection...</div>';
+
+    grid.innerHTML =
+      '<div class="loading">Loading your personalized selection...</div>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -21,18 +22,18 @@ class HomePage extends HTMLElement {
 
       // 1. Logic: Identify the "Blowout" item (World Cup Racer)
       // Task Requirement: Price between 0.4 * COGS and 1.0 * COGS
-      const racingSki = inventory.find(i => i.name === 'World Cup Racer');
-      
+      const racingSki = inventory.find((i) => i.name === 'World Cup Racer');
+
       // 2. Logic: Filter the rest of the inventory
       // Persona: Vancouver based, 100+ days/year, "Prioritizes comfort".
       // We filter out the racer from the main grid and prioritize Powder/All Mountain.
-      let standardItems = inventory.filter(i => i.name !== 'World Cup Racer');
-      
+      let standardItems = inventory.filter((i) => i.name !== 'World Cup Racer');
+
       // Sort logic: Move 'Deep Powder' and 'All Mountain' to the top for Vancouver conditions
       standardItems.sort((a, b) => {
         const priorityKeywords = ['Deep Powder', 'All Mountain', 'Comfort'];
-        const aPriority = priorityKeywords.some(k => a.name.includes(k));
-        const bPriority = priorityKeywords.some(k => b.name.includes(k));
+        const aPriority = priorityKeywords.some((k) => a.name.includes(k));
+        const bPriority = priorityKeywords.some((k) => b.name.includes(k));
         return bPriority - aPriority;
       });
 
@@ -50,7 +51,9 @@ class HomePage extends HTMLElement {
                 <h3>${racingSki.name}</h3>
                 <p>Since you're a fan of the track, we've unlocked a warehouse deal just for you.</p>
                 <div class="price-row">
-                  <span class="old-price">$${(racingSki.cost * 1.5).toFixed(2)}</span>
+                  <span class="old-price">$${(racingSki.cost * 1.5).toFixed(
+                    2
+                  )}</span>
                   <span class="new-price">$${blowoutPrice}</span>
                 </div>
               </div>
@@ -71,13 +74,20 @@ class HomePage extends HTMLElement {
           // Unless it's other racing gear, but for simplicity/safety we use standard markup
           // to highlight the contrast with the blowout deal.
           const price = (item.cost * 1.5).toFixed(2);
-          const isComfort = item.name.includes('Explorer') || item.name.includes('Powder');
+          const isComfort =
+            item.name.includes('Explorer') || item.name.includes('Powder');
 
           return `
             <div class="card ${isComfort ? 'highlight-comfort' : ''}">
-                ${isComfort ? '<div class="badge">Recommended for Comfort</div>' : ''}
+                ${
+                  isComfort
+                    ? '<div class="badge">Recommended for Comfort</div>'
+                    : ''
+                }
                 <h3>${item.name}</h3>
-                <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+                <p class="stock">${
+                  item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+                }</p>
                 <p class="price">$${price}</p>
                 <button 
                     class="buy-btn" 
@@ -105,9 +115,9 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
-      grid.innerHTML = '<p class="loading">Unable to load inventory at this time.</p>';
+      grid.innerHTML =
+        '<p class="loading">Unable to load inventory at this time.</p>';
       console.error(e);
     }
   }

@@ -42,11 +42,13 @@ class OrderPage extends HTMLElement {
   calculatePrice(item) {
     // Strategy: Racing gear (120% COGS) vs Standard (150% COGS)
     // keywords based on CRM notes and Past Purchases (World Cup, Piste, Race)
-    const isRacingGear = /race|world cup|piste/i.test(item.name) || /race|world cup|piste/i.test(item.sku);
+    const isRacingGear =
+      /race|world cup|piste/i.test(item.name) ||
+      /race|world cup|piste/i.test(item.sku);
     const markup = isRacingGear ? 1.2 : 1.5;
     return {
       finalPrice: item.cost * markup,
-      isSale: isRacingGear // Flag for UI "Blowout" tag
+      isSale: isRacingGear, // Flag for UI "Blowout" tag
     };
   }
 
@@ -59,10 +61,10 @@ class OrderPage extends HTMLElement {
   async submitOrder() {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Recalculate price to ensure it matches the display logic
     const { finalPrice } = this.calculatePrice(this.selectedItem);
-    
+
     const btn = root.getElementById('btnConfirm');
 
     btn.disabled = true;
@@ -72,7 +74,9 @@ class OrderPage extends HTMLElement {
 
     const payload = {
       clientId: this.clientId,
-      items: [{ skuId: this.selectedItem.id, quantity: qty, price: finalPrice }],
+      items: [
+        { skuId: this.selectedItem.id, quantity: qty, price: finalPrice },
+      ],
     };
 
     try {
@@ -88,9 +92,12 @@ class OrderPage extends HTMLElement {
         btn.style.background = '#27ae60';
         btn.textContent = 'Purchased!';
         setTimeout(() => {
-            this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 500);
       } else {
         alert('Error: ' + data.error);
@@ -106,11 +113,11 @@ class OrderPage extends HTMLElement {
 
   getUpsellHTML() {
     if (!this.selectedItem) return '';
-    
+
     // Upsell Logic: Only show if buying skis
     // CRM Note: "Extremely technical... Prefers stiff boots and high DIN bindings."
     const isSki = /ski|racer|carver|explorer/i.test(this.selectedItem.name);
-    
+
     if (isSki) {
       return `
         <div class="upsell-container">
@@ -308,19 +315,27 @@ class OrderPage extends HTMLElement {
         <h2>Checkout</h2>
         <div class="card">
             
-            ${isAspen ? `
+            ${
+              isAspen
+                ? `
                 <div class="aspen-banner">
                     <span>🏔️</span>
                     <span>Free Express Shipping to Aspen included for our VIP members.</span>
                 </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <h3 id="orderItemName">${this.selectedItem.name}</h3>
             <div class="sku">SKU: ${this.selectedItem.sku}</div>
             
             <div class="price-container">
                 <span class="price">$${finalPrice.toFixed(2)}</span>
-                ${isSale ? '<span class="sale-tag">Racing Blowout Sale</span>' : ''}
+                ${
+                  isSale
+                    ? '<span class="sale-tag">Racing Blowout Sale</span>'
+                    : ''
+                }
             </div>
 
             <div class="controls">
@@ -333,7 +348,9 @@ class OrderPage extends HTMLElement {
             </div>
 
             <button class="buy-btn" id="btnConfirm">
-                 One-Click Buy &nbsp; ($<span id="orderTotal">${finalPrice.toFixed(2)}</span>)
+                 One-Click Buy &nbsp; ($<span id="orderTotal">${finalPrice.toFixed(
+                  2
+                )}</span>)
             </button>
             
             <button class="buy-btn cancel-btn" id="btnCancel">Cancel Order</button>
@@ -346,14 +363,15 @@ class OrderPage extends HTMLElement {
     const qtySelect = this.shadowRoot.getElementById('orderQty');
     const totalSpan = this.shadowRoot.getElementById('orderTotal');
 
-    if(qtySelect) {
-        qtySelect.onchange = () => {
-            const qty = parseInt(qtySelect.value);
-            totalSpan.textContent = (finalPrice * qty).toFixed(2);
-        };
+    if (qtySelect) {
+      qtySelect.onchange = () => {
+        const qty = parseInt(qtySelect.value);
+        totalSpan.textContent = (finalPrice * qty).toFixed(2);
+      };
     }
 
-    this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

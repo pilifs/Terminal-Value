@@ -14,14 +14,17 @@ class HomePage extends HTMLElement {
    * for this user persona.
    */
   async loadInventory() {
-    const contentContainer = this.shadowRoot.getElementById('personalizedContent');
-    contentContainer.innerHTML = '<div class="loading">Loading your personalized gear...</div>';
+    const contentContainer = this.shadowRoot.getElementById(
+      'personalizedContent'
+    );
+    contentContainer.innerHTML =
+      '<div class="loading">Loading your personalized gear...</div>';
 
     try {
       // 1. Fetch Inventory and User Order History
       const [invRes, ordersRes] = await Promise.all([
         fetch('/api/inventory'),
-        fetch(`/api/orders?clientId=${state.clientId || ''}`)
+        fetch(`/api/orders?clientId=${state.clientId || ''}`),
       ]);
 
       const inventory = await invRes.json();
@@ -29,24 +32,34 @@ class HomePage extends HTMLElement {
 
       // 2. Analyze User History & CRM Data
       // Check for specific keywords in past orders to determine 'Racing' history
-      const hasRacingHistory = orders.some(order => 
-        order.items && order.items.some(item => 
-          (item.name && (item.name.includes('Racer') || item.name.includes('World Cup') || item.name.includes('Piste')))
-        )
+      const hasRacingHistory = orders.some(
+        (order) =>
+          order.items &&
+          order.items.some(
+            (item) =>
+              item.name &&
+              (item.name.includes('Racer') ||
+                item.name.includes('World Cup') ||
+                item.name.includes('Piste'))
+          )
       );
 
       // Check CRM notes for specific destination keywords (Vail)
       const crmNotes = state.clientProfile?.crmNotes || [];
-      const destination = crmNotes.find(n => n.includes('Vail')) ? 'Vail' : 'the slopes';
-      
+      const destination = crmNotes.find((n) => n.includes('Vail'))
+        ? 'Vail'
+        : 'the slopes';
+
       // Check CRM for specific fit needs
-      const needsWideFit = crmNotes.some(n => n.includes('wide fit') || n.includes('too tight'));
+      const needsWideFit = crmNotes.some(
+        (n) => n.includes('wide fit') || n.includes('too tight')
+      );
 
       // 3. Update Header Greeting
       const city = state.clientProfile?.city || 'Vancouver';
       const headerTitle = this.shadowRoot.getElementById('headerTitle');
       const headerSub = this.shadowRoot.getElementById('headerSub');
-      
+
       headerTitle.textContent = `Getting Ready for ${destination}?`;
       headerSub.textContent = `Hello from ${city}. We've curated a durable, high-performance selection for your trip.`;
 
@@ -54,10 +67,10 @@ class HomePage extends HTMLElement {
       const recommendations = {
         boots: [],
         skis: [],
-        other: []
+        other: [],
       };
 
-      inventory.forEach(item => {
+      inventory.forEach((item) => {
         let displayPrice = item.cost * 1.5; // Default Markup
         let note = '';
         let isPromo = false;
@@ -66,7 +79,7 @@ class HomePage extends HTMLElement {
         if (item.name.includes('World Cup') || item.name.includes('Racer')) {
           if (hasRacingHistory) {
             // Dynamic blowout price: Random between 0.4 and 1.0 * COGS
-            const multiplier = 0.4 + (Math.random() * 0.6);
+            const multiplier = 0.4 + Math.random() * 0.6;
             displayPrice = item.cost * multiplier;
             note = '🔥 LOYALTY BLOWOUT';
             isPromo = true;
@@ -81,34 +94,35 @@ class HomePage extends HTMLElement {
 
         // LOGIC: Filter for "Wide Fit" needs based on CRM
         if (item.name.includes('Boot')) {
-            // If user needs wide fit, prioritize wide/comfort boots, penalize others visually
-            if (needsWideFit) {
-                if (item.name.includes('Wide') || item.name.includes('Comfort')) {
-                    productObj.note = '✅ Recommended for Width';
-                    recommendations.boots.unshift(productObj);
-                } else {
-                    recommendations.boots.push(productObj);
-                }
+          // If user needs wide fit, prioritize wide/comfort boots, penalize others visually
+          if (needsWideFit) {
+            if (item.name.includes('Wide') || item.name.includes('Comfort')) {
+              productObj.note = '✅ Recommended for Width';
+              recommendations.boots.unshift(productObj);
             } else {
-                recommendations.boots.push(productObj);
+              recommendations.boots.push(productObj);
             }
-        } 
-        else if (item.name.includes('Ski') || item.name.includes('Board')) {
-            recommendations.skis.push(productObj);
+          } else {
+            recommendations.boots.push(productObj);
+          }
+        } else if (item.name.includes('Ski') || item.name.includes('Board')) {
+          recommendations.skis.push(productObj);
         } else {
-            recommendations.other.push(productObj);
+          recommendations.other.push(productObj);
         }
       });
 
       // 5. Render Sections
       contentContainer.innerHTML = '';
-      
+
       // Render Section: Priority Boots (Addressing CRM Complaint)
       if (recommendations.boots.length) {
         contentContainer.innerHTML += `
           <div class="section-title">Found for you: Comfort & Wide Fit Options</div>
           <div class="grid">
-            ${recommendations.boots.map(item => this.createCard(item)).join('')}
+            ${recommendations.boots
+              .map((item) => this.createCard(item))
+              .join('')}
           </div>
         `;
       }
@@ -118,16 +132,18 @@ class HomePage extends HTMLElement {
         contentContainer.innerHTML += `
           <div class="section-title">High Performance & Durability</div>
           <div class="grid">
-            ${recommendations.skis.map(item => this.createCard(item)).join('')}
+            ${recommendations.skis
+              .map((item) => this.createCard(item))
+              .join('')}
           </div>
         `;
       }
 
       this.attachEventListeners(inventory);
-
     } catch (e) {
       console.error(e);
-      contentContainer.innerHTML = '<p>Unable to load your personalized selection at this time.</p>';
+      contentContainer.innerHTML =
+        '<p>Unable to load your personalized selection at this time.</p>';
     }
   }
 
@@ -136,11 +152,17 @@ class HomePage extends HTMLElement {
       <div class="card ${item.isPromo ? 'promo-card' : ''}">
           ${item.note ? `<div class="badge">${item.note}</div>` : ''}
           <h3>${item.name}</h3>
-          <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+          <p class="stock">${
+            item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+          }</p>
           <div class="price-container">
-            ${item.isPromo 
-                ? `<span class="old-price">$${(item.cost * 1.5).toFixed(2)}</span>` 
-                : ''}
+            ${
+              item.isPromo
+                ? `<span class="old-price">$${(item.cost * 1.5).toFixed(
+                    2
+                  )}</span>`
+                : ''
+            }
             <span class="price">$${item.displayPrice.toFixed(2)}</span>
           </div>
           <button 

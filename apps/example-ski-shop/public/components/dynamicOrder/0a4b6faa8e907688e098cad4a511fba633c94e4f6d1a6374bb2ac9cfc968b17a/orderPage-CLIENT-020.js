@@ -25,7 +25,7 @@ class OrderPage extends HTMLElement {
   // Helper to determine if item is "Racing" gear based on Context
   isRacingGear(item) {
     const keywords = ['race', 'carbon', 'speed', 'nano', 'pro'];
-    return keywords.some(k => item.name.toLowerCase().includes(k));
+    return keywords.some((k) => item.name.toLowerCase().includes(k));
   }
 
   // Helper to get client City safely from global state
@@ -37,7 +37,7 @@ class OrderPage extends HTMLElement {
   loadItem(item) {
     this.selectedItem = item;
     const root = this.shadowRoot;
-    
+
     // 1. Pricing Strategy: 120% for Racing, 150% (Standard) otherwise
     const isRace = this.isRacingGear(item);
     const markup = isRace ? 1.2 : 1.5;
@@ -46,11 +46,11 @@ class OrderPage extends HTMLElement {
     // UI Updates
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     // Price Display
     const priceDisplay = root.getElementById('orderItemPrice');
     priceDisplay.textContent = `$${this.calculatedPrice.toFixed(2)}`;
-    
+
     if (isRace) {
       priceDisplay.innerHTML += ` <span class="badge">🔥 BLOWOUT SALE</span>`;
     }
@@ -69,14 +69,16 @@ class OrderPage extends HTMLElement {
     if (item.name.toLowerCase().includes('ski')) {
       upsellContainer.classList.remove('hidden');
       // Contextual Upsell based on "Nordic/Backcountry" history
-      root.getElementById('upsellText').innerHTML = 
-        `<strong>Complete your setup:</strong> Add <em>Featherweight Nordic Carbon Poles</em>? <br><small>Matches your 'Backcountry Tour' history.</small>`;
+      root.getElementById(
+        'upsellText'
+      ).innerHTML = `<strong>Complete your setup:</strong> Add <em>Featherweight Nordic Carbon Poles</em>? <br><small>Matches your 'Backcountry Tour' history.</small>`;
     } else {
       upsellContainer.classList.add('hidden');
     }
 
     // Reset Totals
-    root.getElementById('orderTotal').textContent = this.calculatedPrice.toFixed(2);
+    root.getElementById('orderTotal').textContent =
+      this.calculatedPrice.toFixed(2);
     const qtySelect = root.getElementById('orderQty');
     qtySelect.value = '1';
 
@@ -90,10 +92,10 @@ class OrderPage extends HTMLElement {
   async submitOrder() {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Use the specific calculated price (Sales Blowout logic)
     const price = this.calculatedPrice;
-    
+
     const btn = root.getElementById('btnConfirm');
 
     btn.disabled = true;
@@ -118,8 +120,11 @@ class OrderPage extends HTMLElement {
         btn.style.background = '#27ae60';
         btn.textContent = 'Success! Redirecting...';
         setTimeout(() => {
-             this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
           );
         }, 800);
       } else {
@@ -262,7 +267,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })
@@ -272,18 +278,18 @@ class OrderPage extends HTMLElement {
     // Simple visual logic for the checkbox (mock functionality for presentation)
     const upsellCheck = this.shadowRoot.getElementById('upsellCheck');
     upsellCheck.onchange = (e) => {
-        const totalSpan = this.shadowRoot.getElementById('orderTotal');
-        const currentTotal = parseFloat(totalSpan.textContent);
-        const upsellPrice = 89.99; // Mock price for poles/bindings
-        
-        if(e.target.checked) {
-            totalSpan.textContent = (currentTotal + upsellPrice).toFixed(2);
-        } else {
-            // Re-calculate based on Qty to be safe
-            const qty = this.shadowRoot.getElementById('orderQty').value;
-            totalSpan.textContent = (this.calculatedPrice * qty).toFixed(2);
-        }
-    }
+      const totalSpan = this.shadowRoot.getElementById('orderTotal');
+      const currentTotal = parseFloat(totalSpan.textContent);
+      const upsellPrice = 89.99; // Mock price for poles/bindings
+
+      if (e.target.checked) {
+        totalSpan.textContent = (currentTotal + upsellPrice).toFixed(2);
+      } else {
+        // Re-calculate based on Qty to be safe
+        const qty = this.shadowRoot.getElementById('orderQty').value;
+        totalSpan.textContent = (this.calculatedPrice * qty).toFixed(2);
+      }
+    };
   }
 }
 

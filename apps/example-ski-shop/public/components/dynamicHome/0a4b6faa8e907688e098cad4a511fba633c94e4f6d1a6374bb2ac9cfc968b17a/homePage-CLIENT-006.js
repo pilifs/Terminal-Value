@@ -13,7 +13,7 @@ class HomePage extends HTMLElement {
     if (clientId) {
       await this.fetchClientData(clientId);
     }
-    
+
     // 2. Load Inventory after we know who the client is
     this.loadInventory();
   }
@@ -25,7 +25,7 @@ class HomePage extends HTMLElement {
         this.client = await res.json();
       }
     } catch (e) {
-      console.error("Failed to fetch client profile", e);
+      console.error('Failed to fetch client profile', e);
     }
   }
 
@@ -55,35 +55,46 @@ class HomePage extends HTMLElement {
     const city = this.client?.city || 'Salt Lake City';
     const crmNotes = this.client?.crmNotes || [];
     const pastPurchases = this.client?.pastPurchases || [];
-    
+
     // Check if user is interested in Backcountry (based on CRM or Past Purchases)
-    const isBackcountryFan = crmNotes.some(n => n.toLowerCase().includes('backcountry') || n.toLowerCase().includes('lightweight')) 
-                             || pastPurchases.some(p => p.includes('Backcountry'));
+    const isBackcountryFan =
+      crmNotes.some(
+        (n) =>
+          n.toLowerCase().includes('backcountry') ||
+          n.toLowerCase().includes('lightweight')
+      ) || pastPurchases.some((p) => p.includes('Backcountry'));
 
     // Check for Racing History (Target for Blowout)
-    const hasRacingHistory = pastPurchases.some(p => p.includes('Racer') || p.includes('World Cup'));
+    const hasRacingHistory = pastPurchases.some(
+      (p) => p.includes('Racer') || p.includes('World Cup')
+    );
 
     // 2. Filter & Sort Inventory
     let blowoutItem = null;
     let recommendedItems = [];
     let otherItems = [];
 
-    inventory.forEach(item => {
+    inventory.forEach((item) => {
       // Logic: World Cup Racer Blowout
       if (hasRacingHistory && item.name.includes('World Cup Racer')) {
         // Dynamic Pricing: 0.4 to 1.0 * COGS
-        const discountFactor = 0.4 + (Math.random() * 0.6);
+        const discountFactor = 0.4 + Math.random() * 0.6;
         item.displayPrice = (item.cost * discountFactor).toFixed(2);
         item.isBlowout = true;
-        item.discountMsg = "ALUMNI DEAL";
+        item.discountMsg = 'ALUMNI DEAL';
         blowoutItem = item;
       } else {
         // Standard Pricing
         item.displayPrice = (item.cost * 1.5).toFixed(2);
         item.isBlowout = false;
-        
+
         // Categorize Backcountry vs Others
-        if (isBackcountryFan && (item.name.includes('Backcountry') || item.name.includes('Nordic') || item.name.includes('Powder'))) {
+        if (
+          isBackcountryFan &&
+          (item.name.includes('Backcountry') ||
+            item.name.includes('Nordic') ||
+            item.name.includes('Powder'))
+        ) {
           recommendedItems.push(item);
         } else {
           otherItems.push(item);
@@ -94,9 +105,9 @@ class HomePage extends HTMLElement {
     // --- HTML GENERATION ---
 
     const greeting = `Welcome back to ${city}!`;
-    const subGreeting = isBackcountryFan 
-      ? "We found some lightweight setups for your next avalanche safety tour."
-      : "Check out the latest gear.";
+    const subGreeting = isBackcountryFan
+      ? 'We found some lightweight setups for your next avalanche safety tour.'
+      : 'Check out the latest gear.';
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -149,7 +160,9 @@ class HomePage extends HTMLElement {
         <p>${subGreeting}</p>
       </div>
 
-      ${blowoutItem ? `
+      ${
+        blowoutItem
+          ? `
         <div class="blowout-banner">
           <div class="blowout-info">
             <span>${blowoutItem.discountMsg}</span>
@@ -161,33 +174,47 @@ class HomePage extends HTMLElement {
              <button class="buy-btn blowout-btn" data-id="${blowoutItem.id}">Grab Deal</button>
           </div>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${recommendedItems.length > 0 ? `
+      ${
+        recommendedItems.length > 0
+          ? `
         <h3 class="section-title">Recommended for Your Tour</h3>
         <div class="grid">
-          ${recommendedItems.map(item => this.createCard(item, true)).join('')}
+          ${recommendedItems
+            .map((item) => this.createCard(item, true))
+            .join('')}
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <h3 class="section-title">Full Inventory</h3>
       <div class="grid">
-        ${otherItems.map(item => this.createCard(item, false)).join('')}
+        ${otherItems.map((item) => this.createCard(item, false)).join('')}
       </div>
     `;
 
     // Attach Event Listeners
-    this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
+    this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const itemId = e.target.dataset.id;
-        const allItems = [blowoutItem, ...recommendedItems, ...otherItems].filter(Boolean);
-        const item = allItems.find(i => i.id === itemId);
-        
-        this.dispatchEvent(new CustomEvent('navigate-order', {
-          detail: { item: item },
-          bubbles: true,
-          composed: true
-        }));
+        const allItems = [
+          blowoutItem,
+          ...recommendedItems,
+          ...otherItems,
+        ].filter(Boolean);
+        const item = allItems.find((i) => i.id === itemId);
+
+        this.dispatchEvent(
+          new CustomEvent('navigate-order', {
+            detail: { item: item },
+            bubbles: true,
+            composed: true,
+          })
+        );
       });
     });
   }
@@ -197,11 +224,15 @@ class HomePage extends HTMLElement {
       <div class="card ${highlight ? 'highlight-card' : ''}">
         <div>
           <h4>${item.name}</h4>
-          <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+          <p class="stock">${
+            item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+          }</p>
         </div>
         <div>
           <p class="price">$${item.displayPrice}</p>
-          <button class="buy-btn" data-id="${item.id}" ${item.stock <= 0 ? 'disabled' : ''}>
+          <button class="buy-btn" data-id="${item.id}" ${
+      item.stock <= 0 ? 'disabled' : ''
+    }>
             ${item.stock > 0 ? 'Add to Setup' : 'Sold Out'}
           </button>
         </div>

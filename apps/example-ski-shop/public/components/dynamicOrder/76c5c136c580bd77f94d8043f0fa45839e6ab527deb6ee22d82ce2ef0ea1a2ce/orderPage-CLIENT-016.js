@@ -39,7 +39,7 @@ class OrderPage extends HTMLElement {
         if (this.selectedItem) this.populateData();
       }
     } catch (e) {
-      console.error("Could not fetch client data", e);
+      console.error('Could not fetch client data', e);
     }
   }
 
@@ -47,10 +47,13 @@ class OrderPage extends HTMLElement {
   loadItem(item) {
     this.selectedItem = item;
     const lowerName = item.name.toLowerCase();
-    
+
     // --- Pricing Strategy: "Sales Blowout" ---
     // Racing gear is 120% COGS, others are Standard 150%
-    const isRacing = lowerName.includes('race') || lowerName.includes('cup') || lowerName.includes('piste');
+    const isRacing =
+      lowerName.includes('race') ||
+      lowerName.includes('cup') ||
+      lowerName.includes('piste');
     const markup = isRacing ? 1.2 : 1.5;
     this.currentPrice = item.cost * markup;
 
@@ -58,18 +61,18 @@ class OrderPage extends HTMLElement {
     // User destroys gear (Rugged) and likes Racing.
     if (isRacing) {
       this.upsellItem = {
-        name: "Carbon World Cup Poles",
-        description: "Ultra-light, high-stability for racing.",
-        price: 120.00,
-        id: "UPSELL-POLE-001"
+        name: 'Carbon World Cup Poles',
+        description: 'Ultra-light, high-stability for racing.',
+        price: 120.0,
+        id: 'UPSELL-POLE-001',
       };
     } else {
       // For Powder/Mountain/Rough usage
       this.upsellItem = {
         name: "Titanium 'Indestructible' Bindings",
-        description: "Rugged construction for heavy usage.",
-        price: 250.00,
-        id: "UPSELL-BINDING-002"
+        description: 'Rugged construction for heavy usage.',
+        price: 250.0,
+        id: 'UPSELL-BINDING-002',
       };
     }
 
@@ -84,14 +87,18 @@ class OrderPage extends HTMLElement {
     // Basic Item Info
     root.getElementById('orderItemName').textContent = this.selectedItem.name;
     root.getElementById('orderItemSku').textContent = this.selectedItem.sku;
-    
+
     // Price Display
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${this.currentPrice.toFixed(2)}`;
-    
+
     // Sale Badge Logic
-    const isSale = this.selectedItem.name.toLowerCase().includes('race') || this.selectedItem.name.toLowerCase().includes('cup');
-    root.getElementById('saleBadge').style.display = isSale ? 'inline-block' : 'none';
+    const isSale =
+      this.selectedItem.name.toLowerCase().includes('race') ||
+      this.selectedItem.name.toLowerCase().includes('cup');
+    root.getElementById('saleBadge').style.display = isSale
+      ? 'inline-block'
+      : 'none';
 
     // Upsell Section
     const upsellContainer = root.getElementById('upsellContainer');
@@ -127,9 +134,11 @@ class OrderPage extends HTMLElement {
     }
 
     root.getElementById('orderTotal').textContent = total.toFixed(2);
-    
+
     // Update Button Text for "One-Click" feel
-    root.getElementById('btnConfirm').textContent = `PAY $${total.toFixed(2)} NOW`;
+    root.getElementById('btnConfirm').textContent = `PAY $${total.toFixed(
+      2
+    )} NOW`;
   }
 
   async submitOrder() {
@@ -142,11 +151,11 @@ class OrderPage extends HTMLElement {
 
     // Build payload
     const items = [
-      { 
-        skuId: this.selectedItem.id, 
-        quantity: qty, 
-        price: this.currentPrice // Send the calculated discounted/standard price
-      }
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: this.currentPrice, // Send the calculated discounted/standard price
+      },
     ];
 
     // Add upsell to payload if selected
@@ -154,7 +163,7 @@ class OrderPage extends HTMLElement {
       items.push({
         skuId: this.upsellItem.id,
         quantity: 1,
-        price: this.upsellItem.price
+        price: this.upsellItem.price,
       });
     }
 
@@ -176,7 +185,12 @@ class OrderPage extends HTMLElement {
         btn.style.background = '#27ae60';
         btn.textContent = 'Purchase Complete';
         setTimeout(() => {
-            this.dispatchEvent(new CustomEvent('order-completed', { bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Error: ' + data.error);
@@ -320,11 +334,15 @@ class OrderPage extends HTMLElement {
       </style>
 
       <div class="order-container">
-        ${isBanff ? `
+        ${
+          isBanff
+            ? `
           <div class="vip-banner">
             <span>🏔️ VIP MEMBER: Free Express Shipping to Banff included.</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
         <div class="header">
           <h2 id="orderItemName">Loading...</h2>

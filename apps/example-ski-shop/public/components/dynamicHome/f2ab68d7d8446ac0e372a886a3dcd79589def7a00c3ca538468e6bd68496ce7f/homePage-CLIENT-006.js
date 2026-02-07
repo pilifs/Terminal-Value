@@ -16,7 +16,7 @@ class HomePage extends HTMLElement {
   startCountdown() {
     const timerEl = this.shadowRoot.getElementById('logisticsTimer');
     let duration = 3 * 60 * 60 + 14 * 60; // 3 hours 14 mins window
-    
+
     const tick = () => {
       const h = Math.floor(duration / 3600);
       const m = Math.floor((duration % 3600) / 60);
@@ -30,7 +30,8 @@ class HomePage extends HTMLElement {
 
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
-    grid.innerHTML = '<div class="loading-pulse">Accessing Private Reserve...</div>';
+    grid.innerHTML =
+      '<div class="loading-pulse">Accessing Private Reserve...</div>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -39,7 +40,7 @@ class HomePage extends HTMLElement {
       // STRATEGY: Sort by Cost (Descending) to maximize revenue per click
       inventory.sort((a, b) => b.cost - a.cost);
 
-      // STRATEGY: Filter to only the top 3 items (The "Trifecta") 
+      // STRATEGY: Filter to only the top 3 items (The "Trifecta")
       // to reduce decision fatigue and force high-value purchase.
       const premiumSelection = inventory.slice(0, 3);
 
@@ -48,9 +49,10 @@ class HomePage extends HTMLElement {
           // Marketing: Rename generic stock to sound explicitly like lightweight touring gear
           // Note: We keep the original ID so the backend order processes correctly.
           const displayPrice = (item.cost * 1.5).toFixed(2);
-          
+
           // Dynamic badge based on index
-          const badge = index === 0 ? "🏆 LIGHTEST IN CLASS" : "⭐ GUIDE'S CHOICE";
+          const badge =
+            index === 0 ? '🏆 LIGHTEST IN CLASS' : "⭐ GUIDE'S CHOICE";
           const scarcity = Math.max(1, Math.floor(item.stock / 5)); // Artificially low number
 
           return `
@@ -60,7 +62,9 @@ class HomePage extends HTMLElement {
                         <span>High-Altitude Carbon Composite</span>
                     </div>
                     <div class="card-content">
-                        <h3>${item.name} <span class="spec-tag">Touring Spec</span></h3>
+                        <h3>${
+                          item.name
+                        } <span class="spec-tag">Touring Spec</span></h3>
                         
                         <div class="specs">
                             <span><span class="icon">⚖️</span> Ultra-Light</span>
@@ -80,7 +84,11 @@ class HomePage extends HTMLElement {
                             class="buy-btn" 
                             data-id="${item.id}"
                             ${item.stock <= 0 ? 'disabled' : ''}>
-                            ${item.stock > 0 ? 'SECURE ALLOCATION' : 'WAITLIST FULL'}
+                            ${
+                              item.stock > 0
+                                ? 'SECURE ALLOCATION'
+                                : 'WAITLIST FULL'
+                            }
                         </button>
                     </div>
                 </div>
@@ -104,7 +112,8 @@ class HomePage extends HTMLElement {
         });
       });
     } catch (e) {
-      grid.innerHTML = '<p style="color:white">Secure connection failed. Please refresh.</p>';
+      grid.innerHTML =
+        '<p style="color:white">Secure connection failed. Please refresh.</p>';
     }
   }
 

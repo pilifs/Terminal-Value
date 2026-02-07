@@ -31,7 +31,7 @@ class OrderPage extends HTMLElement {
       if (res.ok) {
         const client = await res.json();
         const banner = this.shadowRoot.getElementById('calgaryBanner');
-        
+
         // Logic: Calgary Resident Banner
         if (client.city === 'Calgary') {
           banner.classList.remove('hidden');
@@ -58,7 +58,7 @@ class OrderPage extends HTMLElement {
     // Context: User likes Nordic/All Mtn, transitioning to Backcountry.
     const upsellContainer = root.getElementById('upsellContainer');
     const isSki = /ski/i.test(item.name);
-    
+
     if (isSki) {
       upsellContainer.innerHTML = `
         <div class="upsell-box">
@@ -80,19 +80,22 @@ class OrderPage extends HTMLElement {
     // --- DOM UPDATES ---
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     // Formatting price nicely
-    const formattedPrice = price.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const formattedPrice = price.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    });
     root.getElementById('orderItemPrice').textContent = formattedPrice;
-    
+
     // Show discount tag if racing gear
     const tagEl = root.getElementById('priceTag');
     if (isRacingGear) {
-      tagEl.textContent = "🔥 SALES BLOWOUT PRICE";
-      tagEl.className = "tag tag-sale";
+      tagEl.textContent = '🔥 SALES BLOWOUT PRICE';
+      tagEl.className = 'tag tag-sale';
     } else {
-      tagEl.textContent = "Standard Retail";
-      tagEl.className = "tag tag-std";
+      tagEl.textContent = 'Standard Retail';
+      tagEl.className = 'tag tag-std';
     }
 
     // Initialize Total
@@ -103,16 +106,21 @@ class OrderPage extends HTMLElement {
     qtySelect.value = '1';
     qtySelect.onchange = () => {
       const total = price * parseInt(qtySelect.value);
-      root.getElementById('btnTotal').textContent = total.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+      root.getElementById('btnTotal').textContent = total.toLocaleString(
+        'en-US',
+        { style: 'currency', currency: 'USD' }
+      );
     };
   }
 
   async submitOrder() {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Recalculate price based on the strategy defined in loadItem
-    const isRacingGear = /race|carbon|speed|light/i.test(this.selectedItem.name);
+    const isRacingGear = /race|carbon|speed|light/i.test(
+      this.selectedItem.name
+    );
     const markup = isRacingGear ? 1.2 : 1.5;
     const price = this.selectedItem.cost * markup;
 
@@ -138,12 +146,15 @@ class OrderPage extends HTMLElement {
 
       if (data.success) {
         // iOS Style Success Feedback
-        btn.style.background = "#2ecc71";
-        btn.innerHTML = "✓ Purchased";
+        btn.style.background = '#2ecc71';
+        btn.innerHTML = '✓ Purchased';
         setTimeout(() => {
-            this.dispatchEvent(
-                new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 800);
       } else {
         alert('Error: ' + data.error);
@@ -351,7 +362,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Bindings
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

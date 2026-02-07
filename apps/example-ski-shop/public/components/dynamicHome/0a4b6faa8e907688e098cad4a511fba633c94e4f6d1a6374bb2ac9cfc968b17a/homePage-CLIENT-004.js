@@ -13,7 +13,7 @@ class HomePage extends HTMLElement {
     const grid = this.shadowRoot.getElementById('productGrid');
     const hero = this.shadowRoot.getElementById('heroSection');
     const greeting = this.shadowRoot.getElementById('greeting');
-    
+
     // 1. Get Client ID from URL
     const params = new URLSearchParams(window.location.search);
     const clientId = params.get('clientId');
@@ -23,7 +23,7 @@ class HomePage extends HTMLElement {
       const [inventoryRes, clientRes, ordersRes] = await Promise.all([
         fetch('/api/inventory'),
         fetch(`/api/clients/${clientId}`),
-        fetch(`/api/orders?clientId=${clientId}`)
+        fetch(`/api/orders?clientId=${clientId}`),
       ]);
 
       const inventory = await inventoryRes.json();
@@ -36,7 +36,7 @@ class HomePage extends HTMLElement {
 
       // 4. Analyze History for "Racing" gear (to trigger Blowout)
       // Flatten all items from all past orders to check for "Racer" or category clues
-      const allPastItems = orders.flatMap(o => o.items || []);
+      const allPastItems = orders.flatMap((o) => o.items || []);
       // In a real app we'd check category IDs, here we string match 'Racer' based on context
       // The context explicitly says user bought "World Cup Racer", so we look for that history.
       const hasRacingHistory = allPastItems.length > 0; // Simplified based on context saying they have history
@@ -49,7 +49,7 @@ class HomePage extends HTMLElement {
       let heroItem = null;
       let gridItems = [];
 
-      inventory.forEach(item => {
+      inventory.forEach((item) => {
         // Check for the specific Racing Ski
         if (item.name.includes('World Cup Racer') && hasRacingHistory) {
           heroItem = item;
@@ -61,44 +61,57 @@ class HomePage extends HTMLElement {
       // 7. Render Hero Section (Blowout Sale)
       if (heroItem) {
         // Pricing Requirement: 0.4 * COGS to 1.0 * COGS
-        const randomMultiplier = 0.4 + Math.random() * 0.6; 
+        const randomMultiplier = 0.4 + Math.random() * 0.6;
         const blowoutPrice = (heroItem.cost * randomMultiplier).toFixed(2);
-        
+
         hero.innerHTML = `
           <div class="hero-card">
             <div class="badge">🔥 VIP SALES BLOWOUT</div>
             <h3>${heroItem.name}</h3>
             <p class="desc">Top tier racing performance. Only for the elite.</p>
             <div class="price-container">
-                <span class="old-price">$${(heroItem.cost * 1.5).toFixed(2)}</span>
+                <span class="old-price">$${(heroItem.cost * 1.5).toFixed(
+                  2
+                )}</span>
                 <span class="new-price">$${blowoutPrice}</span>
             </div>
             <p class="stock">⚠ Only ${heroItem.stock} left in stock</p>
-            <button class="buy-btn hero-btn" data-id="${heroItem.id}">IMPULSE BUY NOW</button>
+            <button class="buy-btn hero-btn" data-id="${
+              heroItem.id
+            }">IMPULSE BUY NOW</button>
           </div>
         `;
         hero.style.display = 'block';
-        
+
         // Attach listener for hero button
-        this.shadowRoot.querySelector('.hero-btn').addEventListener('click', () => {
-             // Pass the discounted price logic via the object, or let OrderPage handle it. 
-             // Since OrderPage calculates price based on cost * 1.5, we technically need to override it 
-             // in a real app. For this visual layer, we send the item. 
-             // *Note: The OrderPage standard logic uses standard markup. 
-             // To strictly follow instructions "Do not make any functional changes", 
-             // I will dispatch the item. Ideally, the order logic handles the price override.*
-             this.dispatchOrder(heroItem);
-        });
+        this.shadowRoot
+          .querySelector('.hero-btn')
+          .addEventListener('click', () => {
+            // Pass the discounted price logic via the object, or let OrderPage handle it.
+            // Since OrderPage calculates price based on cost * 1.5, we technically need to override it
+            // in a real app. For this visual layer, we send the item.
+            // *Note: The OrderPage standard logic uses standard markup.
+            // To strictly follow instructions "Do not make any functional changes",
+            // I will dispatch the item. Ideally, the order logic handles the price override.*
+            this.dispatchOrder(heroItem);
+          });
       }
 
       // 8. Render Grid (Standard Markup)
-      grid.innerHTML = gridItems.map(item => {
+      grid.innerHTML = gridItems
+        .map((item) => {
           const price = (item.cost * 1.5).toFixed(2);
           return `
             <div class="card ${item.cost > 400 ? 'premium' : ''}">
-                ${item.cost > 400 ? '<div class="premium-tag">PREMIUM</div>' : ''}
+                ${
+                  item.cost > 400
+                    ? '<div class="premium-tag">PREMIUM</div>'
+                    : ''
+                }
                 <h3>${item.name}</h3>
-                <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+                <p class="stock">${
+                  item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+                }</p>
                 <p class="price">$${price}</p>
                 <button 
                     class="buy-btn" 
@@ -108,17 +121,17 @@ class HomePage extends HTMLElement {
                 </button>
             </div>
           `;
-      }).join('');
+        })
+        .join('');
 
       // Add Event Listeners to Grid Buttons
-      this.shadowRoot.querySelectorAll('.grid .buy-btn').forEach(btn => {
+      this.shadowRoot.querySelectorAll('.grid .buy-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           const itemId = e.target.dataset.id;
-          const item = gridItems.find(i => i.id === itemId);
+          const item = gridItems.find((i) => i.id === itemId);
           this.dispatchOrder(item);
         });
       });
-
     } catch (e) {
       console.error(e);
       grid.innerHTML = '<p>Error loading VIP inventory.</p>';

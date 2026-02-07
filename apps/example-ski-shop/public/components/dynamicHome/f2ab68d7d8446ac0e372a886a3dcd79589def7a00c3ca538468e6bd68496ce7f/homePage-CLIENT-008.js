@@ -1,60 +1,73 @@
 class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-    connectedCallback() {
-        this.render();
-        this.loadInventory();
-        this.startCountdown();
-    }
+  connectedCallback() {
+    this.render();
+    this.loadInventory();
+    this.startCountdown();
+  }
 
-    // Psychological Trigger: Countdown to first race of the season
-    startCountdown() {
-        const timer = this.shadowRoot.getElementById('raceTimer');
-        // Set date to a fictional "First Race" in November
-        const countDownDate = new Date().getTime() + (5 * 24 * 60 * 60 * 1000); 
+  // Psychological Trigger: Countdown to first race of the season
+  startCountdown() {
+    const timer = this.shadowRoot.getElementById('raceTimer');
+    // Set date to a fictional "First Race" in November
+    const countDownDate = new Date().getTime() + 5 * 24 * 60 * 60 * 1000;
 
-        setInterval(() => {
-            const now = new Date().getTime();
-            const distance = countDownDate - now;
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            
-            if(timer) timer.innerHTML = `SEASON STARTS IN: <span style="color:#e74c3c">${days}d ${hours}h</span>`;
-        }, 1000);
-    }
+    setInterval(() => {
+      const now = new Date().getTime();
+      const distance = countDownDate - now;
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
 
-    async loadInventory() {
-        const grid = this.shadowRoot.getElementById('productGrid');
-        grid.innerHTML = '<div class="loading">Retrieving V.I.P. Allocation...</div>';
+      if (timer)
+        timer.innerHTML = `SEASON STARTS IN: <span style="color:#e74c3c">${days}d ${hours}h</span>`;
+    }, 1000);
+  }
 
-        try {
-            const res = await fetch('/api/inventory');
-            const inventory = await res.json();
+  async loadInventory() {
+    const grid = this.shadowRoot.getElementById('productGrid');
+    grid.innerHTML =
+      '<div class="loading">Retrieving V.I.P. Allocation...</div>';
 
-            // STRATEGY: Sort by Price DESC. Filter out cheap gear.
-            // We want to drive revenue, so we hide anything under $400 cost if possible.
-            const premiumInventory = inventory
-                .sort((a, b) => b.cost - a.cost) 
-                .filter(item => item.cost > 0); // Display all, but ordered by highest value
+    try {
+      const res = await fetch('/api/inventory');
+      const inventory = await res.json();
 
-            grid.innerHTML = premiumInventory.map((item, index) => {
-                // MARKUP: Add artificial scarcity based on index
-                const stockLevel = item.stock > 0 ? item.stock : 0;
-                const isCritical = stockLevel < 5;
-                const price = (item.cost * 1.5).toFixed(2);
-                
-                // UX: The first item is the "Podium Pick" (Biggest Image)
-                const isHero = index === 0;
+      // STRATEGY: Sort by Price DESC. Filter out cheap gear.
+      // We want to drive revenue, so we hide anything under $400 cost if possible.
+      const premiumInventory = inventory
+        .sort((a, b) => b.cost - a.cost)
+        .filter((item) => item.cost > 0); // Display all, but ordered by highest value
 
-                return `
+      grid.innerHTML = premiumInventory
+        .map((item, index) => {
+          // MARKUP: Add artificial scarcity based on index
+          const stockLevel = item.stock > 0 ? item.stock : 0;
+          const isCritical = stockLevel < 5;
+          const price = (item.cost * 1.5).toFixed(2);
+
+          // UX: The first item is the "Podium Pick" (Biggest Image)
+          const isHero = index === 0;
+
+          return `
                 <div class="card ${isHero ? 'hero-card' : ''}">
-                    ${isHero ? '<div class="badge-hero">COACH\'S RECOMMENDATION</div>' : ''}
+                    ${
+                      isHero
+                        ? '<div class="badge-hero">COACH\'S RECOMMENDATION</div>'
+                        : ''
+                    }
                     <div class="card-header">
                         <h3>${item.name}</h3>
-                        ${isCritical ? '<span class="alert-badge">ALMOST GONE</span>' : ''}
+                        ${
+                          isCritical
+                            ? '<span class="alert-badge">ALMOST GONE</span>'
+                            : ''
+                        }
                     </div>
                     
                     <div class="specs">
@@ -71,41 +84,52 @@ class HomePage extends HTMLElement {
                             class="buy-btn ${isHero ? 'btn-gold' : ''}" 
                             data-id="${item.id}"
                             ${stockLevel <= 0 ? 'disabled' : ''}>
-                            ${stockLevel > 0 ? (isHero ? 'SECURE FOR TEAM' : 'ADD TO ALLOCATION') : 'WAITLIST'}
+                            ${
+                              stockLevel > 0
+                                ? isHero
+                                  ? 'SECURE FOR TEAM'
+                                  : 'ADD TO ALLOCATION'
+                                : 'WAITLIST'
+                            }
                         </button>
                     </div>
                     
                     <div class="stock-footer">
-                        ${stockLevel > 0 
-                            ? `<span class="stock-pulse">●</span> ${stockLevel} units reserved at Calgary Warehouse` 
-                            : 'Sold out globally'}
+                        ${
+                          stockLevel > 0
+                            ? `<span class="stock-pulse">●</span> ${stockLevel} units reserved at Calgary Warehouse`
+                            : 'Sold out globally'
+                        }
                     </div>
                 </div>
-            `}).join('');
+            `;
+        })
+        .join('');
 
-            // Re-attach event listeners to maintain base experience compatibility
-            this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const itemId = e.target.dataset.id;
-                    const item = inventory.find(i => i.id === itemId);
-                    
-                    // Dispatches standard event expected by app.js
-                    this.dispatchEvent(new CustomEvent('navigate-order', {
-                        detail: { item: item },
-                        bubbles: true,
-                        composed: true
-                    }));
-                });
-            });
+      // Re-attach event listeners to maintain base experience compatibility
+      this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const itemId = e.target.dataset.id;
+          const item = inventory.find((i) => i.id === itemId);
 
-        } catch (e) {
-            grid.innerHTML = '<p>Error loading exclusive inventory.</p>';
-            console.error(e);
-        }
+          // Dispatches standard event expected by app.js
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: item },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+      });
+    } catch (e) {
+      grid.innerHTML = '<p>Error loading exclusive inventory.</p>';
+      console.error(e);
     }
+  }
 
-    render() {
-        this.shadowRoot.innerHTML = `
+  render() {
+    this.shadowRoot.innerHTML = `
         <style>
             :host { 
                 display: block; 
@@ -270,7 +294,7 @@ class HomePage extends HTMLElement {
             * Team Bundle pricing applied automatically at checkout.
         </div>
         `;
-    }
+  }
 }
 
 customElements.define('home-page', HomePage);

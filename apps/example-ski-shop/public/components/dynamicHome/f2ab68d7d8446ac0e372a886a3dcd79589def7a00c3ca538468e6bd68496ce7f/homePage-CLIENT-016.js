@@ -11,15 +11,18 @@ class HomePage extends HTMLElement {
 
   // Helper to format currency for the "High Value" experience
   formatMoney(amount) {
-    return '$' + (amount || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    return (
+      '$' +
+      (amount || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    );
   }
 
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
-    
+
     try {
       // Fetch base inventory
       const res = await fetch('/api/inventory');
@@ -37,10 +40,10 @@ class HomePage extends HTMLElement {
           // We will modify the item object later to ensure the order page reflects this premium.
           // Visual Price here matches the logic: Cost * 2.5 (Significant markup).
           const premiumPrice = item.cost * 2.5;
-          
+
           // PSEUDO-SCARCITY GENERATOR
-          const stockLevel = item.stock > 5 ? 3 : item.stock; 
-          
+          const stockLevel = item.stock > 5 ? 3 : item.stock;
+
           return `
             <div class="card">
                 <div class="badge">PRO STOCK RESERVED</div>
@@ -52,8 +55,12 @@ class HomePage extends HTMLElement {
                         <strong>Durability:</strong> EXPEDITION GRADE
                     </p>
                     <div class="price-row">
-                        <span class="price">${this.formatMoney(premiumPrice)}</span>
-                        <span class="msrp">Std: ${this.formatMoney(item.cost * 1.5)}</span>
+                        <span class="price">${this.formatMoney(
+                          premiumPrice
+                        )}</span>
+                        <span class="msrp">Std: ${this.formatMoney(
+                          item.cost * 1.5
+                        )}</span>
                     </div>
                     
                     <div class="urgency-box">
@@ -65,11 +72,16 @@ class HomePage extends HTMLElement {
                         class="buy-btn" 
                         data-id="${item.id}"
                         ${item.stock <= 0 ? 'disabled' : ''}>
-                        ${item.stock > 0 ? 'SECURE ASSET NOW' : 'ALLOCATION DEPLETED'}
+                        ${
+                          item.stock > 0
+                            ? 'SECURE ASSET NOW'
+                            : 'ALLOCATION DEPLETED'
+                        }
                     </button>
                 </div>
             </div>
-        `})
+        `;
+        })
         .join('');
 
       // Add Event Listeners
@@ -80,14 +92,14 @@ class HomePage extends HTMLElement {
           let item = { ...inventory.find((i) => i.id === itemId) };
 
           // --- REVENUE MAXIMIZATION HACK ---
-          // The base OrderPage calculates price as `cost * 1.5`. 
-          // To achieve our "Pro Tier" price of `cost * 2.5`, we must artificially 
+          // The base OrderPage calculates price as `cost * 1.5`.
+          // To achieve our "Pro Tier" price of `cost * 2.5`, we must artificially
           // inflate the cost basis passed to the order component.
           // Calculation: NewCost = (TargetPrice / 1.5)
           // TargetPrice = OldCost * 2.5
           // NewCost = (OldCost * 2.5) / 1.5 = OldCost * 1.666
-          
-          item.cost = item.cost * 1.6666; 
+
+          item.cost = item.cost * 1.6666;
           item.name = `${item.name} [Pro-Reinforced]`; // Rebrand the item on the invoice
 
           this.dispatchEvent(
@@ -101,7 +113,8 @@ class HomePage extends HTMLElement {
       });
     } catch (e) {
       console.error(e);
-      grid.innerHTML = '<p style="color:white; text-align:center;">Secure connection to inventory failed.</p>';
+      grid.innerHTML =
+        '<p style="color:white; text-align:center;">Secure connection to inventory failed.</p>';
     }
   }
 

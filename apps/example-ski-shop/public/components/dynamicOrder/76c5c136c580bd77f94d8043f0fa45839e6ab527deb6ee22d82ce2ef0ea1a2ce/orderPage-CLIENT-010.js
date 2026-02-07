@@ -48,8 +48,11 @@ class OrderPage extends HTMLElement {
   calculatePrice(item) {
     const name = item.name.toLowerCase();
     // Keywords indicating racing gear based on User Profile context
-    const isRacingGear = name.includes('race') || name.includes('world cup') || name.includes('pro');
-    
+    const isRacingGear =
+      name.includes('race') ||
+      name.includes('world cup') ||
+      name.includes('pro');
+
     // Racing gear = 1.2x markup (Blowout), Standard = 1.5x
     const multiplier = isRacingGear ? 1.2 : 1.5;
     return (item.cost * multiplier).toFixed(2);
@@ -58,25 +61,28 @@ class OrderPage extends HTMLElement {
   loadItem(item) {
     this.selectedItem = item;
     const finalPrice = this.calculatePrice(item);
-    
+
     const root = this.shadowRoot;
-    
+
     // Update Text
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
     root.getElementById('orderItemPrice').textContent = `$${finalPrice}`;
-    
+
     // Determine visual price display (showing discount if racing)
     const priceDisplay = root.getElementById('priceContainer');
-    if (item.name.toLowerCase().includes('race') || item.name.toLowerCase().includes('world cup')) {
-        const standardPrice = (item.cost * 1.5).toFixed(2);
-        priceDisplay.innerHTML = `
+    if (
+      item.name.toLowerCase().includes('race') ||
+      item.name.toLowerCase().includes('world cup')
+    ) {
+      const standardPrice = (item.cost * 1.5).toFixed(2);
+      priceDisplay.innerHTML = `
             <span class="strikethrough">$${standardPrice}</span> 
             <span class="sale-price">$${finalPrice}</span> 
             <span class="badge">RACER DEAL</span>
         `;
     } else {
-        priceDisplay.innerHTML = `<span class="price">$${finalPrice}</span>`;
+      priceDisplay.innerHTML = `<span class="price">$${finalPrice}</span>`;
     }
 
     // Update Button Total
@@ -106,13 +112,13 @@ class OrderPage extends HTMLElement {
 
   renderUpsell(currentItem) {
     const upsellContainer = this.shadowRoot.getElementById('upsellContainer');
-    
+
     // Only suggest bindings/poles if buying skis
     // Assuming context implies current items are Skis
-    const isSki = true; 
+    const isSki = true;
 
     if (isSki) {
-        upsellContainer.innerHTML = `
+      upsellContainer.innerHTML = `
             <div class="upsell-box">
                 <div class="upsell-header">PERFECT MATCH FOR YOUR STYLE</div>
                 <div class="upsell-item">
@@ -125,17 +131,17 @@ class OrderPage extends HTMLElement {
                 </div>
             </div>
         `;
-        upsellContainer.classList.remove('hidden');
+      upsellContainer.classList.remove('hidden');
     }
   }
 
   async submitOrder() {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Recalculate price logic to ensure payload is correct
     const price = parseFloat(this.calculatePrice(this.selectedItem));
-    
+
     const btn = root.getElementById('btnOneClick');
 
     btn.disabled = true;
@@ -159,8 +165,12 @@ class OrderPage extends HTMLElement {
       if (data.success) {
         // Haptic feedback simulation
         if (navigator.vibrate) navigator.vibrate(50);
-        
-        alert(`VIP Order Confirmed!\nShipping to: ${this.clientProfile?.city || 'Address'}`);
+
+        alert(
+          `VIP Order Confirmed!\nShipping to: ${
+            this.clientProfile?.city || 'Address'
+          }`
+        );
         this.dispatchEvent(
           new CustomEvent('order-completed', { bubbles: true, composed: true })
         );
@@ -338,7 +348,8 @@ class OrderPage extends HTMLElement {
         </div>
     `;
 
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

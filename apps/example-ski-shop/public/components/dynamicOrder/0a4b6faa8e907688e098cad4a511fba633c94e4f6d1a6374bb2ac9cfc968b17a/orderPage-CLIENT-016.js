@@ -33,7 +33,7 @@ class OrderPage extends HTMLElement {
       this.clientCity = data.city;
       this.isRegistered = data.isRegistered;
       // Re-render to show/hide Whistler banner
-      this.render(); 
+      this.render();
       // Re-populate item data if we have one selected (to preserve view)
       if (this.selectedItem) this.loadItem(this.selectedItem);
     } catch (e) {
@@ -57,9 +57,9 @@ class OrderPage extends HTMLElement {
     const price = item.cost * multiplier;
 
     const root = this.shadowRoot;
-    
+
     // Safety check if render hasn't finished
-    if(!root.getElementById('orderItemName')) return;
+    if (!root.getElementById('orderItemName')) return;
 
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
@@ -71,8 +71,8 @@ class OrderPage extends HTMLElement {
     if (item.name.toLowerCase().includes('ski')) {
       upsellContainer.classList.remove('hidden');
       // Context: User destroys gear, needs rugged equipment
-      root.getElementById('upsellText').textContent = 
-        "Recommended for your style: Titan-Grade Rugged Poles. Keep your balance on rough terrain.";
+      root.getElementById('upsellText').textContent =
+        'Recommended for your style: Titan-Grade Rugged Poles. Keep your balance on rough terrain.';
     } else {
       upsellContainer.classList.add('hidden');
     }
@@ -82,7 +82,9 @@ class OrderPage extends HTMLElement {
 
     qtySelect.onchange = () => {
       const currentQty = parseInt(qtySelect.value);
-      root.getElementById('orderTotal').textContent = (price * currentQty).toFixed(2);
+      root.getElementById('orderTotal').textContent = (
+        price * currentQty
+      ).toFixed(2);
     };
   }
 
@@ -91,9 +93,9 @@ class OrderPage extends HTMLElement {
     const qty = parseInt(root.getElementById('orderQty').value);
     const multiplier = this.getPriceMultiplier(this.selectedItem);
     const price = this.selectedItem.cost * multiplier;
-    
+
     const btn = root.getElementById('btnConfirm');
-    
+
     // UI Feedback for "One-Click" feel
     btn.disabled = true;
     btn.innerHTML = 'Processing Payment...';
@@ -115,10 +117,13 @@ class OrderPage extends HTMLElement {
       if (data.success) {
         // Slight delay to show the "Processing" state to user
         setTimeout(() => {
-            alert('Order Confirmed! ID: ' + data.orderId);
-            this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          alert('Order Confirmed! ID: ' + data.orderId);
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 500);
       } else {
         alert('Error: ' + data.error);
@@ -135,7 +140,7 @@ class OrderPage extends HTMLElement {
 
   render() {
     const isWhistler = this.clientCity === 'Whistler';
-    
+
     this.shadowRoot.innerHTML = `
         <style>
             :host { 
@@ -249,12 +254,16 @@ class OrderPage extends HTMLElement {
         <div class="container">
             <h2>Checkout</h2>
             
-            ${isWhistler ? `
+            ${
+              isWhistler
+                ? `
             <div class="whistler-banner">
                 🏔️ FREE Express Shipping to Whistler 
                 <span class="vip-badge">VIP MEMBER</span>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <div class="card">
                 <h3 id="orderItemName">Loading...</h3>
@@ -289,15 +298,16 @@ class OrderPage extends HTMLElement {
     `;
 
     // Re-attach listeners after render
-    this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })
       );
     };
-    
+
     // If we had an item loaded, ensure data is consistent after re-render
-    if(this.selectedItem) this.loadItem(this.selectedItem);
+    if (this.selectedItem) this.loadItem(this.selectedItem);
   }
 }
 

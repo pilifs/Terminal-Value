@@ -11,9 +11,10 @@ class HomePage extends HTMLElement {
 
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
-    
+
     // CONSULTANT NOTE: We simulate a loading state that feels like a database lookup for VIPs
-    grid.innerHTML = '<div class="loading">Accessing Private Burlington Reserve...</div>';
+    grid.innerHTML =
+      '<div class="loading">Accessing Private Burlington Reserve...</div>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -22,34 +23,44 @@ class HomePage extends HTMLElement {
       // --- STRATEGIC DATA MANIPULATION ---
       // Filter for high-value items only, or force items to appear high-value.
       // We prioritize items with higher base costs.
-      const vipInventory = rawInventory.map(item => {
-        // 1. INFLATE COST: Artificially increase base cost in memory. 
-        // The OrderPage calculates Price = Cost * 1.5. 
-        // We want a Premium Price.
-        // If ski cost is $300, we make it $1200. Order page will show $1800.
-        const originalCost = item.cost;
-        item.cost = originalCost * 4; 
+      const vipInventory = rawInventory
+        .map((item) => {
+          // 1. INFLATE COST: Artificially increase base cost in memory.
+          // The OrderPage calculates Price = Cost * 1.5.
+          // We want a Premium Price.
+          // If ski cost is $300, we make it $1200. Order page will show $1800.
+          const originalCost = item.cost;
+          item.cost = originalCost * 4;
 
-        // 2. COMFORT REBRANDING: Rename items to sound exclusive and comfort-focused.
-        // This targets the specific "Retiree / Comfort" persona.
-        const luxuryPrefixes = ["Burlington Executive", "Cloud-Master", "Knee-Saver", "Vt. Gold"];
-        const randomPrefix = luxuryPrefixes[Math.floor(Math.random() * luxuryPrefixes.length)];
-        
-        // Append specific VIP metadata for display
-        item.displayName = `${randomPrefix} ${item.name} (LTD)`;
-        item.marketingCopy = "Engineered specifically for 100+ day seasons. Maximum dampening technology eliminates micro-vibrations for the smoothest ride of your life.";
-        
-        // 3. ARTIFICIAL SCARCITY: Force stock to appear low even if it isn't.
-        item.displayStock = Math.floor(Math.random() * 3) + 1; // 1 to 3 items left
+          // 2. COMFORT REBRANDING: Rename items to sound exclusive and comfort-focused.
+          // This targets the specific "Retiree / Comfort" persona.
+          const luxuryPrefixes = [
+            'Burlington Executive',
+            'Cloud-Master',
+            'Knee-Saver',
+            'Vt. Gold',
+          ];
+          const randomPrefix =
+            luxuryPrefixes[Math.floor(Math.random() * luxuryPrefixes.length)];
 
-        return item;
-      }).sort((a, b) => b.cost - a.cost); // Show most expensive first
+          // Append specific VIP metadata for display
+          item.displayName = `${randomPrefix} ${item.name} (LTD)`;
+          item.marketingCopy =
+            'Engineered specifically for 100+ day seasons. Maximum dampening technology eliminates micro-vibrations for the smoothest ride of your life.';
+
+          // 3. ARTIFICIAL SCARCITY: Force stock to appear low even if it isn't.
+          item.displayStock = Math.floor(Math.random() * 3) + 1; // 1 to 3 items left
+
+          return item;
+        })
+        .sort((a, b) => b.cost - a.cost); // Show most expensive first
 
       // Render the VIP Experience
-      grid.innerHTML = vipInventory.map(item => {
-        const salePrice = item.cost * 1.5;
-        
-        return `
+      grid.innerHTML = vipInventory
+        .map((item) => {
+          const salePrice = item.cost * 1.5;
+
+          return `
           <div class="vip-card">
             <div class="exclusive-badge">MEMBERS ONLY</div>
             <h3>${item.displayName}</h3>
@@ -57,7 +68,9 @@ class HomePage extends HTMLElement {
             
             <div class="specs">
                <span>Performance: <strong>Effortless</strong></span>
-               <span>Stock: <strong class="warning">Only ${item.displayStock} remaining in VT</strong></span>
+               <span>Stock: <strong class="warning">Only ${
+                 item.displayStock
+               } remaining in VT</strong></span>
             </div>
 
             <div class="price-block">
@@ -72,14 +85,15 @@ class HomePage extends HTMLElement {
             <div class="urgency-note">14 other Burlington members are viewing this.</div>
           </div>
         `;
-      }).join('');
+        })
+        .join('');
 
       // Attach Event Listeners
       // We must pass the modified 'item' object (with inflated cost) to the OrderPage
       this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn, index) => {
         btn.addEventListener('click', () => {
           const item = vipInventory[index]; // Use the modified object from our array
-          
+
           this.dispatchEvent(
             new CustomEvent('navigate-order', {
               detail: { item: item },
@@ -89,10 +103,10 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
       console.error(e);
-      grid.innerHTML = '<p>Concierge service temporarily unavailable. Please refresh.</p>';
+      grid.innerHTML =
+        '<p>Concierge service temporarily unavailable. Please refresh.</p>';
     }
   }
 

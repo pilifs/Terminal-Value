@@ -34,7 +34,7 @@ class OrderPage extends HTMLElement {
         if (this.selectedItem) this.updateDynamicUI();
       }
     } catch (e) {
-      console.error("Failed to fetch client context", e);
+      console.error('Failed to fetch client context', e);
     }
   }
 
@@ -48,14 +48,14 @@ class OrderPage extends HTMLElement {
     if (!this.selectedItem) return;
 
     const root = this.shadowRoot;
-    
+
     // --- PRICING LOGIC ---
     // Constraint: Racing gear (Nordic/Cross-country) @ 120% COGS ("Sales Blowout")
     // Others @ 150% COGS
     const isRacing = this.checkIfRacing(this.selectedItem);
     const markup = isRacing ? 1.2 : 1.5;
     const finalPrice = (this.selectedItem.cost * markup).toFixed(2);
-    
+
     // --- BANNER LOGIC ---
     // Constraint: "Free Express Shipping to Banff"
     const isBanff = this.clientData?.city === 'Banff';
@@ -75,9 +75,9 @@ class OrderPage extends HTMLElement {
 
     // Simple heuristic: If item name contains "Ski", offer upsell
     if (this.selectedItem.name.toLowerCase().includes('ski')) {
-        this.upsellItem = this.determineUpsellItem(isRacing);
-        if (this.upsellItem) {
-            upsellContainer.innerHTML = `
+      this.upsellItem = this.determineUpsellItem(isRacing);
+      if (this.upsellItem) {
+        upsellContainer.innerHTML = `
                 <div class="upsell-box">
                     <label>
                         <input type="checkbox" id="upsellCheck">
@@ -86,28 +86,29 @@ class OrderPage extends HTMLElement {
                     <p class="upsell-note">Selected based on your purchase history.</p>
                 </div>
             `;
-            
-            // Add listener to update total
-            const check = upsellContainer.querySelector('#upsellCheck');
-            check.addEventListener('change', () => {
-                this.updateTotal(finalPrice);
-            });
-        }
+
+        // Add listener to update total
+        const check = upsellContainer.querySelector('#upsellCheck');
+        check.addEventListener('change', () => {
+          this.updateTotal(finalPrice);
+        });
+      }
     }
 
     // --- RENDER DOM ELEMENTS ---
     root.getElementById('orderItemName').textContent = this.selectedItem.name;
     root.getElementById('orderItemSku').textContent = this.selectedItem.sku;
-    
+
     // Highlight Sale Price
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${finalPrice}`;
     if (isRacing) {
-        priceEl.classList.add('sale-price');
-        root.getElementById('priceLabel').innerHTML = '<span class="sale-tag">BLOWOUT SALE</span> Price:';
+      priceEl.classList.add('sale-price');
+      root.getElementById('priceLabel').innerHTML =
+        '<span class="sale-tag">BLOWOUT SALE</span> Price:';
     } else {
-        priceEl.classList.remove('sale-price');
-        root.getElementById('priceLabel').textContent = 'Price:';
+      priceEl.classList.remove('sale-price');
+      root.getElementById('priceLabel').textContent = 'Price:';
     }
 
     // Reset Qty
@@ -117,48 +118,55 @@ class OrderPage extends HTMLElement {
 
   // Heuristic to detect Racing/Nordic gear based on CRM notes
   checkIfRacing(item) {
-      const name = item.name.toLowerCase();
-      // Keywords derived from User Profile "Cross-country" and "lightest possible"
-      return name.includes('race') || name.includes('nordic') || name.includes('carbon') || name.includes('lite');
+    const name = item.name.toLowerCase();
+    // Keywords derived from User Profile "Cross-country" and "lightest possible"
+    return (
+      name.includes('race') ||
+      name.includes('nordic') ||
+      name.includes('carbon') ||
+      name.includes('lite')
+    );
   }
 
   // Select upsell based on past purchase history context
   determineUpsellItem(isRacingItem) {
-      // If current item is a Racing Ski, suggest lightweight poles (CRM requirement)
-      if (isRacingItem) {
-          return { id: 'UP-POLE-01', name: 'Carbon Race Poles', price: 120.00 };
-      }
-      
-      // Fallback: Check past purchases for style
-      const history = this.clientData?.pastPurchases || [];
-      const hasPark = history.some(p => p.includes('Freestyle') || p.includes('Park'));
-      
-      if (hasPark) {
-          return { id: 'UP-BIND-02', name: 'Pivot 15 Bindings', price: 250.00 };
-      }
-      
-      // Default
-      return { id: 'UP-WAX-01', name: 'Performance Wax Kit', price: 45.00 };
+    // If current item is a Racing Ski, suggest lightweight poles (CRM requirement)
+    if (isRacingItem) {
+      return { id: 'UP-POLE-01', name: 'Carbon Race Poles', price: 120.0 };
+    }
+
+    // Fallback: Check past purchases for style
+    const history = this.clientData?.pastPurchases || [];
+    const hasPark = history.some(
+      (p) => p.includes('Freestyle') || p.includes('Park')
+    );
+
+    if (hasPark) {
+      return { id: 'UP-BIND-02', name: 'Pivot 15 Bindings', price: 250.0 };
+    }
+
+    // Default
+    return { id: 'UP-WAX-01', name: 'Performance Wax Kit', price: 45.0 };
   }
 
   updateTotal(baseItemPrice) {
-      const root = this.shadowRoot;
-      const qty = parseInt(root.getElementById('orderQty').value);
-      let total = parseFloat(baseItemPrice) * qty;
+    const root = this.shadowRoot;
+    const qty = parseInt(root.getElementById('orderQty').value);
+    let total = parseFloat(baseItemPrice) * qty;
 
-      // Add upsell price if checked
-      const check = root.getElementById('upsellCheck');
-      if (check && check.checked && this.upsellItem) {
-          total += this.upsellItem.price;
-      }
+    // Add upsell price if checked
+    const check = root.getElementById('upsellCheck');
+    if (check && check.checked && this.upsellItem) {
+      total += this.upsellItem.price;
+    }
 
-      root.getElementById('orderTotal').textContent = total.toFixed(2);
+    root.getElementById('orderTotal').textContent = total.toFixed(2);
   }
 
   async submitOrder() {
     const root = this.shadowRoot;
     const btn = root.getElementById('btnOneClick');
-    
+
     // Visual Feedback
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -170,22 +178,24 @@ class OrderPage extends HTMLElement {
     const qty = parseInt(root.getElementById('orderQty').value);
 
     // Build Items Array
-    const items = [{ 
-        skuId: this.selectedItem.id, 
-        quantity: qty, 
-        price: itemPrice 
-    }];
+    const items = [
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: itemPrice,
+      },
+    ];
 
     // Add upsell if selected
     const check = root.getElementById('upsellCheck');
     if (check && check.checked && this.upsellItem) {
-        // Note: In a real app, upsellItem needs a real ID from inventory. 
-        // We are mocking the ID here as per the presentation logic task.
-        items.push({
-            skuId: this.upsellItem.id,
-            quantity: 1,
-            price: this.upsellItem.price
-        });
+      // Note: In a real app, upsellItem needs a real ID from inventory.
+      // We are mocking the ID here as per the presentation logic task.
+      items.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -206,7 +216,12 @@ class OrderPage extends HTMLElement {
         btn.style.background = '#107c10'; // Windows Success Green
         btn.innerHTML = 'Order Placed!';
         setTimeout(() => {
-            this.dispatchEvent(new CustomEvent('order-completed', { bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Error: ' + data.error);
@@ -369,13 +384,16 @@ class OrderPage extends HTMLElement {
 
     // Event Binding
     this.shadowRoot.getElementById('orderQty').onchange = () => {
-        // Recalculate based on current state (needs correct price reference)
-        const isRacing = this.checkIfRacing(this.selectedItem);
-        const price = (this.selectedItem.cost * (isRacing ? 1.2 : 1.5)).toFixed(2);
-        this.updateTotal(price);
+      // Recalculate based on current state (needs correct price reference)
+      const isRacing = this.checkIfRacing(this.selectedItem);
+      const price = (this.selectedItem.cost * (isRacing ? 1.2 : 1.5)).toFixed(
+        2
+      );
+      this.updateTotal(price);
     };
-    
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

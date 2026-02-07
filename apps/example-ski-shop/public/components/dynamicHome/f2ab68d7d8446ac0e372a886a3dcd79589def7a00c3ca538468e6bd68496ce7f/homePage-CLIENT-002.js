@@ -12,7 +12,7 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
     const bootSection = this.shadowRoot.getElementById('bootSection');
-    
+
     try {
       const res = await fetch('/api/inventory');
       const inventory = await res.json();
@@ -22,16 +22,25 @@ class HomePage extends HTMLElement {
       inventory.sort((a, b) => b.cost - a.cost);
 
       // Segregate Boots for the "Pain Point" section
-      const boots = inventory.filter(i => i.name.toLowerCase().includes('boot'));
-      const otherGear = inventory.filter(i => !i.name.toLowerCase().includes('boot'));
+      const boots = inventory.filter((i) =>
+        i.name.toLowerCase().includes('boot')
+      );
+      const otherGear = inventory.filter(
+        (i) => !i.name.toLowerCase().includes('boot')
+      );
 
       // RENDER BOOTS (The "Wide Fit" Solution)
       // We are dynamically rebranding the boots in the UI to address the client's specific complaint.
-      bootSection.innerHTML = boots.map(item => this.createProductCard(item, true)).join('');
+      bootSection.innerHTML = boots
+        .map((item) => this.createProductCard(item, true))
+        .join('');
 
       // RENDER REMAINING HIGH TICKET ITEMS
       // Limit to top 4 most expensive non-boot items to maintain exclusivity
-      grid.innerHTML = otherGear.slice(0, 4).map(item => this.createProductCard(item, false)).join('');
+      grid.innerHTML = otherGear
+        .slice(0, 4)
+        .map((item) => this.createProductCard(item, false))
+        .join('');
 
       // Add Event Listeners
       this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
@@ -40,7 +49,7 @@ class HomePage extends HTMLElement {
           // We must clone the item to modify the name for the order page to match the personalized marketing
           const originalItem = inventory.find((i) => i.id === itemId);
           const marketingItem = { ...originalItem };
-          
+
           if (marketingItem.name.toLowerCase().includes('boot')) {
             marketingItem.name = `${originalItem.name} (Custom Wide Fit)`;
           }
@@ -54,32 +63,36 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
-      grid.innerHTML = '<p style="color:white; text-align:center;">Checking Vault Availability...</p>';
+      grid.innerHTML =
+        '<p style="color:white; text-align:center;">Checking Vault Availability...</p>';
     }
   }
 
   createProductCard(item, isBoot) {
     // PRICING STRATEGY:
-    // Display the price. The "Value Conscious" client wants durability. 
+    // Display the price. The "Value Conscious" client wants durability.
     // We add marketing copy that justifies the price.
     const price = (item.cost * 1.5).toFixed(2);
-    
+
     // MARKETING COPY GENERATION
     let title = item.name;
     let badge = 'VAIL READY';
     let desc = 'Engineered for durability and performance.';
-    
+
     if (isBoot) {
       title = `${item.name} <span style="color:#f1c40f; font-weight:300;">| Wide-Last Pro</span>`;
       badge = 'COMFORT GUARANTEED';
-      desc = 'Expanded toe-box architecture with zero pressure points. Validated for high-instep profiles.';
+      desc =
+        'Expanded toe-box architecture with zero pressure points. Validated for high-instep profiles.';
     } else {
       desc = ' reinforced composite materials. Lifetime durability rating.';
     }
 
-    const urgency = item.stock < 5 ? `Only ${item.stock} left in Salt Lake City` : 'High Demand';
+    const urgency =
+      item.stock < 5
+        ? `Only ${item.stock} left in Salt Lake City`
+        : 'High Demand';
 
     return `
       <div class="card ${isBoot ? 'featured-card' : ''}">
@@ -94,7 +107,13 @@ class HomePage extends HTMLElement {
             class="buy-btn" 
             data-id="${item.id}"
             ${item.stock <= 0 ? 'disabled' : ''}>
-            ${item.stock > 0 ? (isBoot ? 'RESERVE FOR FITTING' : 'SECURE ITEM') : 'SOLD OUT'}
+            ${
+              item.stock > 0
+                ? isBoot
+                  ? 'RESERVE FOR FITTING'
+                  : 'SECURE ITEM'
+                : 'SOLD OUT'
+            }
         </button>
       </div>
     `;

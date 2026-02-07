@@ -9,7 +9,7 @@ class OrderPage extends HTMLElement {
       id: 'UPSELL-POLES-001',
       name: 'Carbon Telescopic Backcountry Poles',
       cost: 80, // COGS
-      price: 120 // Retail
+      price: 120, // Retail
     };
   }
 
@@ -58,10 +58,11 @@ class OrderPage extends HTMLElement {
     // PRICING STRATEGY:
     // Racing gear = 120% of COGS (Sales Blowout)
     // Standard gear = 150% of COGS (Standard markup per existing app.js logic)
-    
+
     const nameLower = this.selectedItem.name.toLowerCase();
-    const isRacing = nameLower.includes('race') || nameLower.includes('world cup');
-    
+    const isRacing =
+      nameLower.includes('race') || nameLower.includes('world cup');
+
     const markup = isRacing ? 1.2 : 1.5;
     return (this.selectedItem.cost * markup).toFixed(2);
   }
@@ -69,7 +70,7 @@ class OrderPage extends HTMLElement {
   async submitOrder() {
     const root = this.shadowRoot;
     const btn = root.getElementById('btnOneClick');
-    
+
     // UI Feedback
     btn.disabled = true;
     btn.innerHTML = 'Processing...';
@@ -77,23 +78,23 @@ class OrderPage extends HTMLElement {
     // 1. Main Item Data
     const mainItemPrice = this.calculatePrice();
     const qty = 1; // Simplify to 1 for One-Click logic
-    
+
     const itemsPayload = [
-        { 
-            skuId: this.selectedItem.id, 
-            quantity: qty, 
-            price: parseFloat(mainItemPrice) 
-        }
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: parseFloat(mainItemPrice),
+      },
     ];
 
     // 2. Upsell Logic
     const upsellCheckbox = root.getElementById('upsellCheck');
     if (upsellCheckbox && upsellCheckbox.checked) {
-        itemsPayload.push({
-            skuId: this.upsellItem.id,
-            quantity: 1,
-            price: this.upsellItem.price
-        });
+      itemsPayload.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -113,13 +114,15 @@ class OrderPage extends HTMLElement {
         // Visual Success Feedback specific for iPad user experience
         btn.style.backgroundColor = '#27ae60';
         btn.innerHTML = '<span>&#10003;</span> Ordered!';
-        
+
         setTimeout(() => {
-             this.dispatchEvent(
-                new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
-       
       } else {
         alert('Error: ' + data.error);
         btn.disabled = false;
@@ -134,8 +137,8 @@ class OrderPage extends HTMLElement {
 
   render() {
     if (!this.selectedItem) {
-        this.shadowRoot.innerHTML = '';
-        return;
+      this.shadowRoot.innerHTML = '';
+      return;
     }
 
     const finalPrice = this.calculatePrice();
@@ -143,9 +146,9 @@ class OrderPage extends HTMLElement {
 
     // Determining Upsell suitability
     // Requirement: If buying skis, suggest bindings or poles matching past purchases (Deep Powder/Backcountry)
-    // We assume if stock > 0 and it's in this shop, it's likely skis or boots. 
+    // We assume if stock > 0 and it's in this shop, it's likely skis or boots.
     // We offer a high-end backcountry pole to match the "Digital Nomad/Lodge" persona.
-    const showUpsell = true; 
+    const showUpsell = true;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -312,7 +315,9 @@ class OrderPage extends HTMLElement {
             </div>
 
             <!-- Requirement: Upsell Logic (Matches 'Backcountry/Deep Powder' profile) -->
-            ${showUpsell ? `
+            ${
+              showUpsell
+                ? `
             <div class="upsell-box">
                 <input type="checkbox" id="upsellCheck">
                 <div class="upsell-info">
@@ -322,7 +327,9 @@ class OrderPage extends HTMLElement {
                     </span>
                 </div>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <div class="actions">
                 <!-- Requirement: One-Click Buy Button (iPad Styled) -->
@@ -344,9 +351,12 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Bindings
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
-      this.dispatchEvent(new CustomEvent('navigate-home', { bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent('navigate-home', { bubbles: true, composed: true })
+      );
     };
   }
 }

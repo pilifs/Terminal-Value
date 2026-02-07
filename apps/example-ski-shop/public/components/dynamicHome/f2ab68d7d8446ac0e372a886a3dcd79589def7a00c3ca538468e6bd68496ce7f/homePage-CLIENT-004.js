@@ -1,57 +1,62 @@
 class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-    connectedCallback() {
-        this.render();
-        this.loadInventory();
-        this.startUrgencyTimer();
-    }
+  connectedCallback() {
+    this.render();
+    this.loadInventory();
+    this.startUrgencyTimer();
+  }
 
-    startUrgencyTimer() {
-        // Fake live viewer count updater to drive anxiety/impulse
-        setInterval(() => {
-            const el = this.shadowRoot.getElementById('live-viewers');
-            if (el) {
-                const count = Math.floor(Math.random() * (14 - 3) + 3);
-                el.innerText = `${count} other VIPs viewing this collection right now`;
-            }
-        }, 4000);
-    }
+  startUrgencyTimer() {
+    // Fake live viewer count updater to drive anxiety/impulse
+    setInterval(() => {
+      const el = this.shadowRoot.getElementById('live-viewers');
+      if (el) {
+        const count = Math.floor(Math.random() * (14 - 3) + 3);
+        el.innerText = `${count} other VIPs viewing this collection right now`;
+      }
+    }, 4000);
+  }
 
-    async loadInventory() {
-        const grid = this.shadowRoot.getElementById('productGrid');
-        
-        try {
-            const res = await fetch('/api/inventory');
-            let inventory = await res.json();
+  async loadInventory() {
+    const grid = this.shadowRoot.getElementById('productGrid');
 
-            // CONSULTANT STRATEGY: 
-            // Filter for only "Racing" or high-performance sounding gear if possible, 
-            // otherwise take everything.
-            // Sort by cost descending to put the most expensive items first.
-            inventory.sort((a, b) => b.cost - a.cost);
+    try {
+      const res = await fetch('/api/inventory');
+      let inventory = await res.json();
 
-            // Limit to top 3 to reduce decision fatigue (Paradox of Choice).
-            const topItems = inventory.slice(0, 3);
+      // CONSULTANT STRATEGY:
+      // Filter for only "Racing" or high-performance sounding gear if possible,
+      // otherwise take everything.
+      // Sort by cost descending to put the most expensive items first.
+      inventory.sort((a, b) => b.cost - a.cost);
 
-            grid.innerHTML = topItems.map((item, index) => {
-                // REVENUE OPTIMIZATION STRATEGY:
-                // We artificially inflate the "cost" property here by 400%.
-                // The OrderPage calculates Price = Cost * 1.5. 
-                // By boosting Cost, we boost the final transaction value massively.
-                // We effectively sell a $100 cost ski for ($100 * 5) * 1.5 = $750.
-                const inflatedCost = item.cost * 5; 
-                const sellingPrice = inflatedCost * 1.5;
-                
-                // FLASHY BRANDING LOGIC:
-                // Assign dynamic "exclusive" tags based on index
-                const badge = index === 0 ? "🏆 WORLD CUP PROTOTYPE" : "⚠️ LOW ALLOCATION";
-                const imgPlaceholder = index === 0 ? "linear-gradient(135deg, #FFD700, #000)" : "linear-gradient(135deg, #ff00cc, #333399)";
+      // Limit to top 3 to reduce decision fatigue (Paradox of Choice).
+      const topItems = inventory.slice(0, 3);
 
-                return `
+      grid.innerHTML = topItems
+        .map((item, index) => {
+          // REVENUE OPTIMIZATION STRATEGY:
+          // We artificially inflate the "cost" property here by 400%.
+          // The OrderPage calculates Price = Cost * 1.5.
+          // By boosting Cost, we boost the final transaction value massively.
+          // We effectively sell a $100 cost ski for ($100 * 5) * 1.5 = $750.
+          const inflatedCost = item.cost * 5;
+          const sellingPrice = inflatedCost * 1.5;
+
+          // FLASHY BRANDING LOGIC:
+          // Assign dynamic "exclusive" tags based on index
+          const badge =
+            index === 0 ? '🏆 WORLD CUP PROTOTYPE' : '⚠️ LOW ALLOCATION';
+          const imgPlaceholder =
+            index === 0
+              ? 'linear-gradient(135deg, #FFD700, #000)'
+              : 'linear-gradient(135deg, #ff00cc, #333399)';
+
+          return `
                 <div class="card ${index === 0 ? 'hero-card' : ''}">
                     <div class="exclusive-badge">${badge}</div>
                     <div class="visual-box" style="background: ${imgPlaceholder}">
@@ -68,8 +73,13 @@ class HomePage extends HTMLElement {
                         </div>
 
                         <div class="pricing-container">
-                            <span class="msrp">MSRP: $${(sellingPrice * 0.8).toFixed(0)}</span>
-                            <span class="price">$${sellingPrice.toLocaleString(undefined, {minimumFractionDigits: 0})}</span>
+                            <span class="msrp">MSRP: $${(
+                              sellingPrice * 0.8
+                            ).toFixed(0)}</span>
+                            <span class="price">$${sellingPrice.toLocaleString(
+                              undefined,
+                              { minimumFractionDigits: 0 }
+                            )}</span>
                         </div>
                         
                         <p class="scarcity-alert">🔥 Only 1 unit allocated to Aspen, CO</p>
@@ -79,45 +89,53 @@ class HomePage extends HTMLElement {
                             data-id="${item.id}"
                             data-inflated-cost="${inflatedCost}" 
                             ${item.stock <= 0 ? 'disabled' : ''}>
-                            ${item.stock > 0 ? 'SECURE ASSET NOW' : 'WAITLIST ONLY'}
+                            ${
+                              item.stock > 0
+                                ? 'SECURE ASSET NOW'
+                                : 'WAITLIST ONLY'
+                            }
                         </button>
                     </div>
                 </div>
-            `}).join('');
+            `;
+        })
+        .join('');
 
-            // Event Listeners
-            this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const itemId = e.target.dataset.id;
-                    const inflatedCost = parseFloat(e.target.dataset.inflatedCost);
-                    
-                    // Find original item
-                    const originalItem = inventory.find(i => i.id === itemId);
-                    
-                    // CLONE and MODIFY the item to pass the higher cost to the Order Page
-                    // This ensures the Order Page calculates the high revenue price.
-                    const highValueItem = { 
-                        ...originalItem, 
-                        cost: inflatedCost, // The secret sauce for revenue
-                        name: `${originalItem.name} (VIP Edition)`
-                    };
+      // Event Listeners
+      this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const itemId = e.target.dataset.id;
+          const inflatedCost = parseFloat(e.target.dataset.inflatedCost);
 
-                    this.dispatchEvent(new CustomEvent('navigate-order', {
-                        detail: { item: highValueItem },
-                        bubbles: true,
-                        composed: true
-                    }));
-                });
-            });
+          // Find original item
+          const originalItem = inventory.find((i) => i.id === itemId);
 
-        } catch (e) {
-            console.error(e);
-            grid.innerHTML = '<p style="color:white">Concierge service currently reconnecting...</p>';
-        }
+          // CLONE and MODIFY the item to pass the higher cost to the Order Page
+          // This ensures the Order Page calculates the high revenue price.
+          const highValueItem = {
+            ...originalItem,
+            cost: inflatedCost, // The secret sauce for revenue
+            name: `${originalItem.name} (VIP Edition)`,
+          };
+
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: highValueItem },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML =
+        '<p style="color:white">Concierge service currently reconnecting...</p>';
     }
+  }
 
-    render() {
-        this.shadowRoot.innerHTML = `
+  render() {
+    this.shadowRoot.innerHTML = `
         <style>
             :host { 
                 display: block; 
@@ -325,7 +343,7 @@ class HomePage extends HTMLElement {
             <p>FIL'S ALPINE SKI SHOP /// ASPEN /// GSTAAD /// NISEKO</p>
         </div>
         `;
-    }
+  }
 }
 
 customElements.define('home-page', HomePage);

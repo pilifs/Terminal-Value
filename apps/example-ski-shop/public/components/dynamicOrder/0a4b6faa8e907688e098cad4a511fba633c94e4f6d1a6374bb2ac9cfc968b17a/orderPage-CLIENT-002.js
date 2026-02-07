@@ -28,7 +28,8 @@ class OrderPage extends HTMLElement {
     const name = item.name.toLowerCase();
     // Pricing Strategy: Racing gear @ 120% COGS ("Sales Blowout")
     // All other gear @ Standard 150% markup
-    const isRacing = name.includes('race') || name.includes('comp') || name.includes('speed');
+    const isRacing =
+      name.includes('race') || name.includes('comp') || name.includes('speed');
     const markup = isRacing ? 1.2 : 1.5;
     return item.cost * markup;
   }
@@ -37,15 +38,20 @@ class OrderPage extends HTMLElement {
   // User values durability and is high-income.
   generateUpsell(mainItem) {
     const name = mainItem.name.toLowerCase();
-    
+
     // Only upsell if buying Skis
-    if (name.includes('ski') || name.includes('board') || name.includes('freestyle')) {
+    if (
+      name.includes('ski') ||
+      name.includes('board') ||
+      name.includes('freestyle')
+    ) {
       return {
         id: 'UP-POLE-001', // Mock ID
         name: 'Vail Series Carbon Poles (Durability Edt.)',
-        price: 120.00, // Premium price point
-        cost: 60.00,
-        description: 'Ultra-light, shatter-proof carbon. Perfect for your upcoming Vail trip.'
+        price: 120.0, // Premium price point
+        cost: 60.0,
+        description:
+          'Ultra-light, shatter-proof carbon. Perfect for your upcoming Vail trip.',
       };
     }
     return null;
@@ -55,27 +61,29 @@ class OrderPage extends HTMLElement {
     this.selectedItem = item;
     const basePrice = this.calculatePrice(item);
     this.upsellItem = this.generateUpsell(item);
-    
+
     // Reset State
     this.isUpsellSelected = false;
 
     // DOM Elements
     const root = this.shadowRoot;
-    
+
     // 1. Main Product Details
     root.getElementById('productName').textContent = item.name;
     root.getElementById('productSku').textContent = item.sku;
-    root.getElementById('productPrice').textContent = `$${basePrice.toFixed(2)}`;
-    
+    root.getElementById('productPrice').textContent = `$${basePrice.toFixed(
+      2
+    )}`;
+
     // 2. Pricing Logic (Standard vs Racing)
     const isRacing = item.name.toLowerCase().includes('race');
     const badge = root.getElementById('priceBadge');
     if (isRacing) {
-      badge.textContent = "Sales Blowout (Racing Special)";
-      badge.className = "badge badge-sale";
+      badge.textContent = 'Sales Blowout (Racing Special)';
+      badge.className = 'badge badge-sale';
     } else {
-      badge.textContent = "Premium Quality";
-      badge.className = "badge badge-standard";
+      badge.textContent = 'Premium Quality';
+      badge.className = 'badge badge-standard';
     }
 
     // 3. Upsell Section
@@ -83,9 +91,12 @@ class OrderPage extends HTMLElement {
     if (this.upsellItem) {
       upsellContainer.style.display = 'flex';
       root.getElementById('upsellName').textContent = this.upsellItem.name;
-      root.getElementById('upsellPrice').textContent = `+$${this.upsellItem.price.toFixed(2)}`;
-      root.getElementById('upsellDesc').textContent = this.upsellItem.description;
-      
+      root.getElementById(
+        'upsellPrice'
+      ).textContent = `+$${this.upsellItem.price.toFixed(2)}`;
+      root.getElementById('upsellDesc').textContent =
+        this.upsellItem.description;
+
       // Auto-check logic could go here, but we'll leave it unchecked for user consent
       root.getElementById('upsellCheckbox').checked = false;
     } else {
@@ -100,9 +111,9 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
     const basePrice = this.calculatePrice(this.selectedItem);
-    
+
     let total = basePrice * qty;
-    
+
     if (this.isUpsellSelected && this.upsellItem) {
       total += this.upsellItem.price; // Usually 1 pair of poles per order logic for simplicity
     }
@@ -127,11 +138,11 @@ class OrderPage extends HTMLElement {
 
     // Construct Payload
     const items = [
-      { 
-        skuId: this.selectedItem.id, 
-        quantity: qty, 
-        price: basePrice 
-      }
+      {
+        skuId: this.selectedItem.id,
+        quantity: qty,
+        price: basePrice,
+      },
     ];
 
     // Add Upsell if selected
@@ -139,7 +150,7 @@ class OrderPage extends HTMLElement {
       items.push({
         skuId: this.upsellItem.id,
         quantity: 1,
-        price: this.upsellItem.price
+        price: this.upsellItem.price,
       });
     }
 
@@ -164,7 +175,9 @@ class OrderPage extends HTMLElement {
       } else {
         alert('Order Error: ' + data.error);
         btn.disabled = false;
-        btn.innerHTML = `One-Click Buy ($<span id="btnTotal">${(basePrice * qty).toFixed(2)}</span>)`;
+        btn.innerHTML = `One-Click Buy ($<span id="btnTotal">${(
+          basePrice * qty
+        ).toFixed(2)}</span>)`;
         this.updateTotal(); // Restore correct total text
       }
     } catch (e) {
@@ -351,8 +364,10 @@ class OrderPage extends HTMLElement {
         new CustomEvent('navigate-home', { bubbles: true, composed: true })
       );
     };
-    this.shadowRoot.getElementById('orderQty').onchange = () => this.updateTotal();
-    this.shadowRoot.getElementById('upsellCheckbox').onchange = (e) => this.toggleUpsell(e);
+    this.shadowRoot.getElementById('orderQty').onchange = () =>
+      this.updateTotal();
+    this.shadowRoot.getElementById('upsellCheckbox').onchange = (e) =>
+      this.toggleUpsell(e);
   }
 }
 

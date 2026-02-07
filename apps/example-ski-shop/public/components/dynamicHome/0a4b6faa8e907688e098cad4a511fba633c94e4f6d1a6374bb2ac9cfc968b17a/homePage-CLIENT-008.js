@@ -27,7 +27,7 @@ class HomePage extends HTMLElement {
       // 2. Parallel fetch: Client Profile & Inventory
       const [clientRes, invRes] = await Promise.all([
         fetch(`/api/clients/${clientId}`),
-        fetch('/api/inventory')
+        fetch('/api/inventory'),
       ]);
 
       const client = await clientRes.json();
@@ -42,12 +42,13 @@ class HomePage extends HTMLElement {
 
   render(client, inventory) {
     // --- PERSONA LOGIC ---
-    
+
     // Check CRM notes for racing/family interests
     const crmNotes = client.crmNotes || [];
     const notesString = crmNotes.join(' ').toLowerCase();
-    const isRacingFamily = notesString.includes('racing') || notesString.includes('team');
-    
+    const isRacingFamily =
+      notesString.includes('racing') || notesString.includes('team');
+
     // Greeting Logic
     const city = client.city || 'Salt Lake City'; // Default to user profile context
     const greeting = `Welcome back to ${city}! Getting the family ready for the season?`;
@@ -58,20 +59,23 @@ class HomePage extends HTMLElement {
     const racingGear = [];
     const standardGear = [];
 
-    inventory.forEach(item => {
-      const isRacerItem = item.name.includes('World Cup') || item.name.includes('Racer');
-      
+    inventory.forEach((item) => {
+      const isRacerItem =
+        item.name.includes('World Cup') || item.name.includes('Racer');
+
       if (isRacerItem && isRacingFamily) {
         // --- PRICING STRATEGY: SALES BLOWOUT ---
         // Constraint: Random between 0.4 * COGS and 1.0 * COGS
         const min = item.cost * 0.4;
         const max = item.cost * 1.0;
         const dynamicPrice = (Math.random() * (max - min) + min).toFixed(2);
-        
+
         // Add specific visual flag
         item.displayPrice = dynamicPrice;
         item.isBlowout = true;
-        item.savings = Math.floor(((item.cost * 1.5 - dynamicPrice) / (item.cost * 1.5)) * 100);
+        item.savings = Math.floor(
+          ((item.cost * 1.5 - dynamicPrice) / (item.cost * 1.5)) * 100
+        );
         racingGear.push(item);
       } else {
         // Standard Markup
@@ -85,7 +89,7 @@ class HomePage extends HTMLElement {
     const displayList = [...racingGear, ...standardGear];
 
     // --- HTML TEMPLATE ---
-    
+
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; animation: fadeIn 0.4s; }
@@ -177,26 +181,47 @@ class HomePage extends HTMLElement {
 
       <div class="header-banner">
           <h2>${greeting}</h2>
-          ${isRacingFamily ? '<p>We found some bulk racing offers for the team!</p>' : ''}
+          ${
+            isRacingFamily
+              ? '<p>We found some bulk racing offers for the team!</p>'
+              : ''
+          }
       </div>
 
-      ${isRacingFamily && racingGear.length > 0 
-          ? `<h3 class="section-title">🔥 Exclusive Team Blowout (Up to 60% Off)</h3>` 
+      ${
+        isRacingFamily && racingGear.length > 0
+          ? `<h3 class="section-title">🔥 Exclusive Team Blowout (Up to 60% Off)</h3>`
           : `<h3 class="section-title">Shop Inventory</h3>`
       }
       
       <div id="productGrid" class="grid">
-        ${displayList.map(item => `
+        ${displayList
+          .map(
+            (item) => `
             <div class="card ${item.isBlowout ? 'blowout' : ''}">
-                ${item.isBlowout ? `<div class="badge">SAVE ${item.savings}%</div>` : ''}
+                ${
+                  item.isBlowout
+                    ? `<div class="badge">SAVE ${item.savings}%</div>`
+                    : ''
+                }
                 <div class="card-body">
                     <h3>${item.name}</h3>
                     <p class="stock">
-                        ${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}
+                        ${
+                          item.stock > 0
+                            ? 'In Stock: ' + item.stock
+                            : 'Out of Stock'
+                        }
                     </p>
                     
                     <div class="price-container">
-                        ${item.isBlowout ? `<span class="original-price">$${(item.cost * 1.5).toFixed(2)}</span>` : ''}
+                        ${
+                          item.isBlowout
+                            ? `<span class="original-price">$${(
+                                item.cost * 1.5
+                              ).toFixed(2)}</span>`
+                            : ''
+                        }
                         <span class="price">$${item.displayPrice}</span>
                     </div>
                 </div>
@@ -204,18 +229,26 @@ class HomePage extends HTMLElement {
                     class="buy-btn" 
                     data-id="${item.id}"
                     ${item.stock <= 0 ? 'disabled' : ''}>
-                    ${item.stock > 0 ? (item.isBlowout ? 'Claim Deal' : 'Add to Order') : 'Sold Out'}
+                    ${
+                      item.stock > 0
+                        ? item.isBlowout
+                          ? 'Claim Deal'
+                          : 'Add to Order'
+                        : 'Sold Out'
+                    }
                 </button>
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     `;
 
     // Add Event Listeners using delegation matches standard HomePage practice
-    this.shadowRoot.querySelectorAll('.buy-btn').forEach(btn => {
+    this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const itemId = e.target.dataset.id;
-        const item = inventory.find(i => i.id === itemId);
+        const item = inventory.find((i) => i.id === itemId);
 
         this.dispatchEvent(
           new CustomEvent('navigate-order', {

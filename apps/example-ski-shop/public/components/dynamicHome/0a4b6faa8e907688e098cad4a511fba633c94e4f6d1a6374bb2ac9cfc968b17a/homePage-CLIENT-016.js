@@ -12,8 +12,9 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
     const greetingEl = this.shadowRoot.getElementById('personalGreeting');
-    
-    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">Loading personalized gear...</div>';
+
+    grid.innerHTML =
+      '<div style="grid-column: 1/-1; text-align: center;">Loading personalized gear...</div>';
 
     try {
       // 1. Access Global State (client profile)
@@ -24,16 +25,20 @@ class HomePage extends HTMLElement {
       // 2. Fetch Data (Inventory and History to determine preferences)
       const [invRes, orderRes] = await Promise.all([
         fetch('/api/inventory'),
-        fetch(`/api/orders?clientId=${window.state?.clientId}`)
+        fetch(`/api/orders?clientId=${window.state?.clientId}`),
       ]);
-      
+
       const inventory = await invRes.json();
       const orders = await orderRes.json();
 
       // 3. Analyze History for "Racing" Logic
       // Check if user has bought racing gear previously
-      const hasRacingHistory = orders.some(order => 
-        order.items.some(i => i.skuId.toLowerCase().includes('race') || i.skuId.toLowerCase().includes('world cup'))
+      const hasRacingHistory = orders.some((order) =>
+        order.items.some(
+          (i) =>
+            i.skuId.toLowerCase().includes('race') ||
+            i.skuId.toLowerCase().includes('world cup')
+        )
       );
 
       // 4. Personalize Greeting
@@ -48,28 +53,37 @@ class HomePage extends HTMLElement {
       greetingEl.textContent = greeting;
 
       // 5. Process Inventory (Sort & Price)
-      const processedInventory = inventory.map(item => {
-        const isRacing = item.name.toLowerCase().includes('world cup') || item.name.toLowerCase().includes('racer');
-        const isRugged = item.name.toLowerCase().includes('backcountry') || item.name.toLowerCase().includes('mountain') || item.name.toLowerCase().includes('explorer');
-        
+      const processedInventory = inventory.map((item) => {
+        const isRacing =
+          item.name.toLowerCase().includes('world cup') ||
+          item.name.toLowerCase().includes('racer');
+        const isRugged =
+          item.name.toLowerCase().includes('backcountry') ||
+          item.name.toLowerCase().includes('mountain') ||
+          item.name.toLowerCase().includes('explorer');
+
         let price = item.cost * 1.5; // Standard markup
         let isBlowout = false;
-        let note = "";
+        let note = '';
 
         // PRICING LOGIC: Racing Blowout
         if (isRacing && hasRacingHistory) {
           // Dynamic price between 0.4 and 1.0 * COGS
-          const factor = 0.4 + (Math.random() * 0.6);
+          const factor = 0.4 + Math.random() * 0.6;
           price = item.cost * factor;
           isBlowout = true;
-          note = "🏆 WORLD CUP BLOWOUT";
+          note = '🏆 WORLD CUP BLOWOUT';
         }
 
         // RECOMMENDATION LOGIC: Adventure/Rugged
-        if (crmNotes.includes('rugged') || crmNotes.includes('heavy') || crmNotes.includes('photographer')) {
-            if (isRugged) {
-                note = "💪 RUGGED & STABLE CHOICE";
-            }
+        if (
+          crmNotes.includes('rugged') ||
+          crmNotes.includes('heavy') ||
+          crmNotes.includes('photographer')
+        ) {
+          if (isRugged) {
+            note = '💪 RUGGED & STABLE CHOICE';
+          }
         }
 
         return {
@@ -77,32 +91,53 @@ class HomePage extends HTMLElement {
           displayPrice: price.toFixed(2),
           isBlowout,
           isRugged,
-          displayNote: note
+          displayNote: note,
         };
       });
 
       // Sort: Rugged/Recommended first, then Racing Blowouts, then rest
       processedInventory.sort((a, b) => {
         // Prioritize rugged gear for this specific persona
-        if (a.displayNote.includes('RUGGED') && !b.displayNote.includes('RUGGED')) return -1;
-        if (!a.displayNote.includes('RUGGED') && b.displayNote.includes('RUGGED')) return 1;
+        if (
+          a.displayNote.includes('RUGGED') &&
+          !b.displayNote.includes('RUGGED')
+        )
+          return -1;
+        if (
+          !a.displayNote.includes('RUGGED') &&
+          b.displayNote.includes('RUGGED')
+        )
+          return 1;
         return 0;
       });
 
       // 6. Render Grid
       grid.innerHTML = processedInventory
-        .map(item => `
-            <div class="card ${item.isBlowout ? 'blowout-card' : ''} ${item.isRugged ? 'recommended-card' : ''}">
-                ${item.displayNote ? `<div class="badge">${item.displayNote}</div>` : ''}
+        .map(
+          (item) => `
+            <div class="card ${item.isBlowout ? 'blowout-card' : ''} ${
+            item.isRugged ? 'recommended-card' : ''
+          }">
+                ${
+                  item.displayNote
+                    ? `<div class="badge">${item.displayNote}</div>`
+                    : ''
+                }
                 <h3>${item.name}</h3>
                 <p class="sku">SKU: ${item.sku}</p>
-                <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+                <p class="stock">${
+                  item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+                }</p>
                 
                 <p class="price ${item.isBlowout ? 'blowout-price' : ''}">
                   $${item.displayPrice}
                 </p>
                 
-                ${item.isBlowout ? '<p class="urgency">⚠️ Limited Time Offer</p>' : ''}
+                ${
+                  item.isBlowout
+                    ? '<p class="urgency">⚠️ Limited Time Offer</p>'
+                    : ''
+                }
 
                 <button 
                     class="buy-btn" 
@@ -111,7 +146,8 @@ class HomePage extends HTMLElement {
                     ${item.stock > 0 ? 'Add to Kit' : 'Sold Out'}
                 </button>
             </div>
-        `)
+        `
+        )
         .join('');
 
       // Add Event Listeners
@@ -119,11 +155,11 @@ class HomePage extends HTMLElement {
         btn.addEventListener('click', (e) => {
           const itemId = e.target.dataset.id;
           const originalItem = inventory.find((i) => i.id === itemId);
-          
+
           // Determine price used (re-calculate or pull from logic above)
-          // For simplicity in this mock, we pass the object. 
+          // For simplicity in this mock, we pass the object.
           // Note: In a real app, price should be validated server-side.
-          
+
           this.dispatchEvent(
             new CustomEvent('navigate-order', {
               detail: { item: originalItem }, // Passing original item, OrderPage handles base logic
@@ -133,7 +169,6 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
       console.error(e);
       grid.innerHTML = '<p>Unable to load equipment inventory.</p>';

@@ -1,88 +1,95 @@
 // --- FILE: components/dynamicHome/homePage-{clientId}.js ---
 
 class HomePage extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-    }
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
 
-    connectedCallback() {
-        this.render();
-        this.loadInventory();
-        this.startCountdown();
-    }
+  connectedCallback() {
+    this.render();
+    this.loadInventory();
+    this.startCountdown();
+  }
 
-    startCountdown() {
-        // Create artificial urgency: "Allocation expires in..."
-        let minutes = 14;
-        let seconds = 59;
-        const timerEl = this.shadowRoot.getElementById('timer');
-        
-        this.timerInterval = setInterval(() => {
-            seconds--;
-            if (seconds < 0) {
-                minutes--;
-                seconds = 59;
-            }
-            if (minutes < 0) {
-                minutes = 14; // Reset to loop urgency
-            }
-            const m = minutes < 10 ? '0' + minutes : minutes;
-            const s = seconds < 10 ? '0' + seconds : seconds;
-            if(timerEl) timerEl.innerText = `${m}:${s}`;
-        }, 1000);
-    }
+  startCountdown() {
+    // Create artificial urgency: "Allocation expires in..."
+    let minutes = 14;
+    let seconds = 59;
+    const timerEl = this.shadowRoot.getElementById('timer');
 
-    disconnectedCallback() {
-        if (this.timerInterval) clearInterval(this.timerInterval);
-    }
+    this.timerInterval = setInterval(() => {
+      seconds--;
+      if (seconds < 0) {
+        minutes--;
+        seconds = 59;
+      }
+      if (minutes < 0) {
+        minutes = 14; // Reset to loop urgency
+      }
+      const m = minutes < 10 ? '0' + minutes : minutes;
+      const s = seconds < 10 ? '0' + seconds : seconds;
+      if (timerEl) timerEl.innerText = `${m}:${s}`;
+    }, 1000);
+  }
 
-    async loadInventory() {
-        const grid = this.shadowRoot.getElementById('productGrid');
-        
-        try {
-            const res = await fetch('/api/inventory');
-            const rawInventory = await res.json();
+  disconnectedCallback() {
+    if (this.timerInterval) clearInterval(this.timerInterval);
+  }
 
-            // --- STRATEGIC DATA MANIPULATION ---
-            // We transform generic inventory into "Race Room" stock specifically for this user.
-            // We interpret "High Value" as maximizing margin. 
-            
-            const raceStock = rawInventory.map((item, index) => {
-                // 1. Rename items to appeal to a former pro racer
-                let newName = item.name;
-                let description = "Standard retail specs.";
-                let isSki = item.name.toLowerCase().includes('ski');
-                
-                if (isSki) {
-                    const models = ["Lab Stock GS (193cm R30)", "FIS SL World Cup (165cm)", "Master GS Factory Stiffness"];
-                    newName = models[index % models.length] + " // PRO STOCK";
-                    description = "87° side edge, 0.5° base. Structure: Fine Cross (Aspen Cold Snow).";
-                } else {
-                    newName = "Carbon Injected " + item.name + " (150 Flex)";
-                    description = "Plug boot construction. High DIN capability.";
-                }
+  async loadInventory() {
+    const grid = this.shadowRoot.getElementById('productGrid');
 
-                // 2. ARTIFICIAL INFLATION
-                // The generic OrderPage calculates Price = Cost * 1.5. 
-                // We want to sell these for $2,000+. 
-                // So we hack the 'cost' property on the object we pass to the router.
-                // If we want Price = $2400, Cost must be $1600.
-                const inflatedCost = 1600 + (index * 150); 
-                
-                return {
-                    ...item,
-                    originalId: item.id,
-                    name: newName,
-                    description: description,
-                    cost: inflatedCost, // HACK: Inflate cost so OrderPage calculates a massive price
-                    displayPrice: (inflatedCost * 1.5).toLocaleString(),
-                    stock: Math.max(1, Math.min(item.stock, 2)) // Create scarcity: never show more than 2
-                };
-            });
+    try {
+      const res = await fetch('/api/inventory');
+      const rawInventory = await res.json();
 
-            // Render the "Vault"
-            grid.innerHTML = raceStock.map(item => `
+      // --- STRATEGIC DATA MANIPULATION ---
+      // We transform generic inventory into "Race Room" stock specifically for this user.
+      // We interpret "High Value" as maximizing margin.
+
+      const raceStock = rawInventory.map((item, index) => {
+        // 1. Rename items to appeal to a former pro racer
+        let newName = item.name;
+        let description = 'Standard retail specs.';
+        let isSki = item.name.toLowerCase().includes('ski');
+
+        if (isSki) {
+          const models = [
+            'Lab Stock GS (193cm R30)',
+            'FIS SL World Cup (165cm)',
+            'Master GS Factory Stiffness',
+          ];
+          newName = models[index % models.length] + ' // PRO STOCK';
+          description =
+            '87° side edge, 0.5° base. Structure: Fine Cross (Aspen Cold Snow).';
+        } else {
+          newName = 'Carbon Injected ' + item.name + ' (150 Flex)';
+          description = 'Plug boot construction. High DIN capability.';
+        }
+
+        // 2. ARTIFICIAL INFLATION
+        // The generic OrderPage calculates Price = Cost * 1.5.
+        // We want to sell these for $2,000+.
+        // So we hack the 'cost' property on the object we pass to the router.
+        // If we want Price = $2400, Cost must be $1600.
+        const inflatedCost = 1600 + index * 150;
+
+        return {
+          ...item,
+          originalId: item.id,
+          name: newName,
+          description: description,
+          cost: inflatedCost, // HACK: Inflate cost so OrderPage calculates a massive price
+          displayPrice: (inflatedCost * 1.5).toLocaleString(),
+          stock: Math.max(1, Math.min(item.stock, 2)), // Create scarcity: never show more than 2
+        };
+      });
+
+      // Render the "Vault"
+      grid.innerHTML = raceStock
+        .map(
+          (item) => `
                 <div class="tech-card">
                     <div class="badge">RACE ROOM ONLY</div>
                     <div class="card-header">
@@ -109,29 +116,33 @@ class HomePage extends HTMLElement {
                         SECURE ALLOCATION
                     </button>
                 </div>
-            `).join('');
+            `
+        )
+        .join('');
 
-            // Add Event Listeners
-            this.shadowRoot.querySelectorAll('.acquire-btn').forEach((btn, index) => {
-                btn.addEventListener('click', () => {
-                    const item = raceStock[index];
-                    // Dispatch the hacked item object with the inflated cost
-                    this.dispatchEvent(new CustomEvent('navigate-order', {
-                        detail: { item: item },
-                        bubbles: true,
-                        composed: true
-                    }));
-                });
-            });
-
-        } catch (e) {
-            console.error(e);
-            grid.innerHTML = '<p class="error">SECURE CONNECTION TO VAULT FAILED.</p>';
-        }
+      // Add Event Listeners
+      this.shadowRoot.querySelectorAll('.acquire-btn').forEach((btn, index) => {
+        btn.addEventListener('click', () => {
+          const item = raceStock[index];
+          // Dispatch the hacked item object with the inflated cost
+          this.dispatchEvent(
+            new CustomEvent('navigate-order', {
+              detail: { item: item },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML =
+        '<p class="error">SECURE CONNECTION TO VAULT FAILED.</p>';
     }
+  }
 
-    render() {
-        this.shadowRoot.innerHTML = `
+  render() {
+    this.shadowRoot.innerHTML = `
         <style>
             :host { 
                 display: block; 
@@ -317,7 +328,7 @@ class HomePage extends HTMLElement {
             <div style="color: #555; padding: 20px;">Initializing secure connection to inventory...</div>
         </div>
         `;
-    }
+  }
 }
 
 customElements.define('home-page', HomePage);

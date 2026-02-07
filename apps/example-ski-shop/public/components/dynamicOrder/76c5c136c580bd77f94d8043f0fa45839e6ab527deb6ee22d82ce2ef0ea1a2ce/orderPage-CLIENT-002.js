@@ -50,7 +50,10 @@ class OrderPage extends HTMLElement {
   calculatePrice(item) {
     const name = item.name.toLowerCase();
     // Pricing Strategy: Racing gear @ 120% COGS, others @ 150% (Standard)
-    const isRacing = name.includes('race') || name.includes('world cup') || name.includes('speed');
+    const isRacing =
+      name.includes('race') ||
+      name.includes('world cup') ||
+      name.includes('speed');
     const multiplier = isRacing ? 1.2 : 1.5;
     return (item.cost * multiplier).toFixed(2);
   }
@@ -58,33 +61,33 @@ class OrderPage extends HTMLElement {
   // Logic to determine upsell based on item and past purchase context
   getUpsellSuggestion(item) {
     const name = item.name.toLowerCase();
-    
+
     // Default Upsell
     let upsell = {
-        name: "Premium Ski Wax Kit",
-        price: 24.99,
-        id: "UPSELL-WAX"
+      name: 'Premium Ski Wax Kit',
+      price: 24.99,
+      id: 'UPSELL-WAX',
     };
 
     // Contextual Upsell Logic
     if (name.includes('race') || name.includes('world cup')) {
-        upsell = {
-            name: "Carbon Fiber Race Poles",
-            price: 119.99, // High durability value
-            id: "UPSELL-POLE-RACE"
-        };
+      upsell = {
+        name: 'Carbon Fiber Race Poles',
+        price: 119.99, // High durability value
+        id: 'UPSELL-POLE-RACE',
+      };
     } else if (name.includes('powder') || name.includes('big mountain')) {
-        upsell = {
-            name: "Wide-Brake Backcountry Bindings",
-            price: 249.50,
-            id: "UPSELL-BINDING-WIDE"
-        };
+      upsell = {
+        name: 'Wide-Brake Backcountry Bindings',
+        price: 249.5,
+        id: 'UPSELL-BINDING-WIDE',
+      };
     } else if (name.includes('park') || name.includes('freestyle')) {
-        upsell = {
-            name: "Impact Resistant Helmet",
-            price: 89.00,
-            id: "UPSELL-HELMET"
-        };
+      upsell = {
+        name: 'Impact Resistant Helmet',
+        price: 89.0,
+        id: 'UPSELL-HELMET',
+      };
     }
 
     return upsell;
@@ -96,16 +99,17 @@ class OrderPage extends HTMLElement {
     this.upsellItem = this.getUpsellSuggestion(item);
 
     const root = this.shadowRoot;
-    
+
     // Product Details
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
     root.getElementById('orderItemPrice').textContent = `$${finalPrice}`;
-    
+
     // Upsell Details
     root.getElementById('upsellName').textContent = this.upsellItem.name;
-    root.getElementById('upsellPrice').textContent = this.upsellItem.price.toFixed(2);
-    
+    root.getElementById('upsellPrice').textContent =
+      this.upsellItem.price.toFixed(2);
+
     // Pricing Logic
     this.updateTotal(finalPrice);
 
@@ -124,10 +128,10 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
     const hasUpsell = root.getElementById('upsellCheck').checked;
-    
-    let total = (basePrice * qty);
+
+    let total = basePrice * qty;
     if (hasUpsell) {
-        total += this.upsellItem.price;
+      total += this.upsellItem.price;
     }
 
     root.getElementById('orderTotal').textContent = total.toFixed(2);
@@ -146,15 +150,15 @@ class OrderPage extends HTMLElement {
 
     // Construct Payload
     const items = [
-        { skuId: this.selectedItem.id, quantity: qty, price: itemPrice }
+      { skuId: this.selectedItem.id, quantity: qty, price: itemPrice },
     ];
 
     if (hasUpsell) {
-        items.push({ 
-            skuId: this.upsellItem.id, 
-            quantity: 1, 
-            price: this.upsellItem.price 
-        });
+      items.push({
+        skuId: this.upsellItem.id,
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -172,12 +176,15 @@ class OrderPage extends HTMLElement {
 
       if (data.success) {
         // Success Logic
-        btn.style.background = "#27ae60";
-        btn.textContent = "Success!";
+        btn.style.background = '#27ae60';
+        btn.textContent = 'Success!';
         setTimeout(() => {
-            this.dispatchEvent(
-                new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 800);
       } else {
         alert('Error: ' + data.error);
@@ -349,7 +356,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

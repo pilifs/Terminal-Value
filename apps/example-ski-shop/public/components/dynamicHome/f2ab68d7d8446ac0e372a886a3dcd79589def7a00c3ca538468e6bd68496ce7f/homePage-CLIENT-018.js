@@ -12,20 +12,21 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const grid = this.shadowRoot.getElementById('productGrid');
     const heroLoader = this.shadowRoot.getElementById('hero-loader');
-    
+
     // Simulate a "Checking personalized stock" delay for perceived value
-    grid.innerHTML = '<div class="loading-state">Accessing Private Vault...</div>';
+    grid.innerHTML =
+      '<div class="loading-state">Accessing Private Vault...</div>';
 
     try {
       const res = await fetch('/api/inventory');
       let inventory = await res.json();
 
-      // CONSULTING STRATEGY: 
-      // Sort by Price DESC to maximize revenue. 
+      // CONSULTING STRATEGY:
+      // Sort by Price DESC to maximize revenue.
       // The client has money; show them the best gear first.
       inventory.sort((a, b) => b.cost - a.cost);
 
-      if(heroLoader) heroLoader.style.display = 'none';
+      if (heroLoader) heroLoader.style.display = 'none';
 
       grid.innerHTML = inventory
         .map((item) => {
@@ -33,14 +34,14 @@ class HomePage extends HTMLElement {
           const viewers = Math.floor(Math.random() * 14) + 3; // Fake social proof
           const isLowStock = item.stock < 5;
           const urgencyClass = isLowStock ? 'urgent' : '';
-          const urgencyText = isLowStock 
-            ? `⚠️ Only ${item.stock} left in Calgary hub` 
+          const urgencyText = isLowStock
+            ? `⚠️ Only ${item.stock} left in Calgary hub`
             : 'In Stock - Ready for Weekend';
 
           // Personalized Badge based on item attributes (Simulated logic)
-          let badge = "Pro Performance";
-          if (item.name.toLowerCase().includes("race")) badge = "Podium Ready";
-          else if (item.cost > 500) badge = "Ex-Demo Spec";
+          let badge = 'Pro Performance';
+          if (item.name.toLowerCase().includes('race')) badge = 'Podium Ready';
+          else if (item.cost > 500) badge = 'Ex-Demo Spec';
 
           return `
             <div class="card">
@@ -54,7 +55,9 @@ class HomePage extends HTMLElement {
                 
                 <div class="price-block">
                     <span class="label">MEMBER PRICE</span>
-                    <span class="price">$${(item.cost * 1.5).toLocaleString()}</span>
+                    <span class="price">$${(
+                      item.cost * 1.5
+                    ).toLocaleString()}</span>
                 </div>
 
                 <div class="stock-status ${urgencyClass}">
@@ -96,7 +99,8 @@ class HomePage extends HTMLElement {
         });
       });
     } catch (e) {
-      grid.innerHTML = '<p style="color:white">System error loading private inventory.</p>';
+      grid.innerHTML =
+        '<p style="color:white">System error loading private inventory.</p>';
     }
   }
 

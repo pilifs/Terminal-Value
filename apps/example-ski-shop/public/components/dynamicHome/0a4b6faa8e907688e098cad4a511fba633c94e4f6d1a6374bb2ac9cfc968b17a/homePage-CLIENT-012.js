@@ -9,13 +9,13 @@ class HomePage extends HTMLElement {
     // 1. Fetch Client Data specific to this session to personalize the page
     const params = new URLSearchParams(window.location.search);
     const clientId = params.get('clientId');
-    
+
     if (clientId) {
       try {
         const res = await fetch(`/api/clients/${clientId}`);
         this.client = await res.json();
       } catch (e) {
-        console.error("Failed to fetch client profile", e);
+        console.error('Failed to fetch client profile', e);
       }
     }
 
@@ -25,18 +25,20 @@ class HomePage extends HTMLElement {
 
   async loadInventory() {
     const container = this.shadowRoot.getElementById('mainContainer');
-    container.innerHTML = '<p class="loading">Loading your personalized gear selection...</p>';
+    container.innerHTML =
+      '<p class="loading">Loading your personalized gear selection...</p>';
 
     try {
       const res = await fetch('/api/inventory');
       const inventory = await res.json();
-      
+
       // --- PERSONALIZATION LOGIC ---
 
       // 1. Analyze History for Racing Gear
       const pastPurchases = this.client?.pastPurchases || [];
-      const hasRacingHistory = pastPurchases.some(p => 
-        p.includes('Racer') || p.includes('World Cup') || p.includes('Speed')
+      const hasRacingHistory = pastPurchases.some(
+        (p) =>
+          p.includes('Racer') || p.includes('World Cup') || p.includes('Speed')
       );
 
       // 2. Filter Inventory Categories
@@ -44,17 +46,22 @@ class HomePage extends HTMLElement {
       const comfortItems = [];
       const standardItems = [];
 
-      inventory.forEach(item => {
+      inventory.forEach((item) => {
         const lowerName = item.name.toLowerCase();
-        
+
         // Identify Racing Gear
         if (lowerName.includes('racer') || lowerName.includes('world cup')) {
           racingItems.push(item);
-        } 
+        }
         // Identify "Lodge/Apres" gear (Heated items, socks, gloves) based on CRM notes
-        else if (lowerName.includes('heated') || lowerName.includes('glove') || lowerName.includes('sock') || lowerName.includes('boot')) {
+        else if (
+          lowerName.includes('heated') ||
+          lowerName.includes('glove') ||
+          lowerName.includes('sock') ||
+          lowerName.includes('boot')
+        ) {
           comfortItems.push(item);
-        } 
+        }
         // Everything else
         else {
           standardItems.push(item);
@@ -62,14 +69,16 @@ class HomePage extends HTMLElement {
       });
 
       // --- RENDER LOGIC ---
-      
+
       let html = '';
 
       // SECTION 1: SALES BLOWOUT (Only if user has racing history)
       if (hasRacingHistory && racingItems.length > 0) {
         html += `<h2 class="section-title blowout-title">🔥 VIP RACE BLOWOUT</h2>`;
         html += `<div class="grid">`;
-        html += racingItems.map(item => this.createProductCard(item, 'blowout')).join('');
+        html += racingItems
+          .map((item) => this.createProductCard(item, 'blowout'))
+          .join('');
         html += `</div>`;
       }
 
@@ -78,19 +87,22 @@ class HomePage extends HTMLElement {
         html += `<h2 class="section-title">🏔️ Lodge & Apres-Ski Essentials</h2>`;
         html += `<p class="subtitle">Stay warm while you work from the lodge.</p>`;
         html += `<div class="grid">`;
-        html += comfortItems.map(item => this.createProductCard(item, 'standard')).join('');
+        html += comfortItems
+          .map((item) => this.createProductCard(item, 'standard'))
+          .join('');
         html += `</div>`;
       }
 
       // SECTION 3: ALL MOUNTAIN GEAR
       html += `<h2 class="section-title">All Mountain Gear</h2>`;
       html += `<div class="grid">`;
-      html += standardItems.map(item => this.createProductCard(item, 'standard')).join('');
+      html += standardItems
+        .map((item) => this.createProductCard(item, 'standard'))
+        .join('');
       html += `</div>`;
 
       container.innerHTML = html;
       this.attachListeners(inventory);
-
     } catch (e) {
       console.error(e);
       container.innerHTML = '<p>Error loading inventory.</p>';
@@ -107,9 +119,9 @@ class HomePage extends HTMLElement {
     // DYNAMIC PRICING LOGIC FOR BLOWOUT
     if (type === 'blowout') {
       // Logic: Between 0.4 * COGS and 1.0 * COGS
-      const discountFactor = 0.4 + (Math.random() * 0.6); // Random between 0.4 and 1.0
+      const discountFactor = 0.4 + Math.random() * 0.6; // Random between 0.4 and 1.0
       price = item.cost * discountFactor;
-      
+
       // Formatting for the sale look
       priceDisplay = `
         <span class="old-price">$${(item.cost * 1.5).toFixed(2)}</span>
@@ -123,14 +135,22 @@ class HomePage extends HTMLElement {
       <div class="${cardClass}">
           ${badge}
           <h3>${item.name}</h3>
-          <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+          <p class="stock">${
+            item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+          }</p>
           <div class="price-container">${priceDisplay}</div>
           <button 
               class="buy-btn ${type === 'blowout' ? 'btn-urgent' : ''}" 
               data-id="${item.id}"
               data-price="${price}" 
               ${item.stock <= 0 ? 'disabled' : ''}>
-              ${item.stock > 0 ? (type === 'blowout' ? 'Claim Deal' : 'Add to Order') : 'Sold Out'}
+              ${
+                item.stock > 0
+                  ? type === 'blowout'
+                    ? 'Claim Deal'
+                    : 'Add to Order'
+                  : 'Sold Out'
+              }
           </button>
       </div>
     `;
@@ -140,22 +160,22 @@ class HomePage extends HTMLElement {
     this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const itemId = e.target.dataset.id;
-        // Note: We use the calculated price attached to the button or the default logic? 
-        // The App's OrderPage recalculates price usually, but for dynamic pricing, 
+        // Note: We use the calculated price attached to the button or the default logic?
+        // The App's OrderPage recalculates price usually, but for dynamic pricing,
         // we might need to handle it. For this display task, we dispatch the item object.
         // We will modify the item object cost temporarily to reflect the sale price for the order page.
-        
-        let item = {...inventory.find((i) => i.id === itemId)};
-        
+
+        let item = { ...inventory.find((i) => i.id === itemId) };
+
         // If it's a dynamic price, we override the cost calculation expectation
         // Since OrderPage uses (cost * 1.5), we reverse engineer or pass a custom prop if App supported it.
-        // Since we cannot change OrderPage, we update the 'cost' of the object passed 
-        // so that (cost * 1.5) equals our specific sale price, OR we rely on the 
-        // visual presentation here and standard billing there. 
+        // Since we cannot change OrderPage, we update the 'cost' of the object passed
+        // so that (cost * 1.5) equals our specific sale price, OR we rely on the
+        // visual presentation here and standard billing there.
         // *However*, to ensure the OrderPage shows the right price without changing OrderPage code:
-        // We will pass the item as is. The prompt asks to "Highlight Sales Blowout", 
+        // We will pass the item as is. The prompt asks to "Highlight Sales Blowout",
         // strictly speaking presentation.
-        
+
         this.dispatchEvent(
           new CustomEvent('navigate-order', {
             detail: { item: item },
@@ -169,15 +189,18 @@ class HomePage extends HTMLElement {
 
   render() {
     const city = this.client?.city || 'the Slopes';
-    const isNomad = this.client?.crmNotes?.some(n => n.toLowerCase().includes('nomad'));
-    
+    const isNomad = this.client?.crmNotes?.some((n) =>
+      n.toLowerCase().includes('nomad')
+    );
+
     // Personalized Greeting
     let greeting = `Welcome back to ${city}!`;
-    let subGreeting = "Gear up for your next adventure.";
-    
+    let subGreeting = 'Gear up for your next adventure.';
+
     if (isNomad) {
       greeting = `Work Hard, Ski Hard in ${city}.`;
-      subGreeting = "We noticed you're working from the lodge. Check out our heated gear below.";
+      subGreeting =
+        "We noticed you're working from the lodge. Check out our heated gear below.";
     }
 
     this.shadowRoot.innerHTML = `

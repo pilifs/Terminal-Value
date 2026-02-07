@@ -40,12 +40,12 @@ class OrderPage extends HTMLElement {
   calculatePrice(item) {
     const name = item.name.toLowerCase();
     const isRacing = name.includes('race') || name.includes('world cup');
-    
+
     // Racing gear @ 120% COGS ("Sales Blowout"), others @ 150% (Standard)
     const markup = isRacing ? 1.2 : 1.5;
     return {
       finalPrice: item.cost * markup,
-      isSale: isRacing
+      isSale: isRacing,
     };
   }
 
@@ -53,37 +53,39 @@ class OrderPage extends HTMLElement {
   getUpsell(item) {
     // Return a mock object based on the item category
     return {
-      name: "Pro Team Carbon Poles",
+      name: 'Pro Team Carbon Poles',
       price: 129.99,
-      image: "🎿"
+      image: '🎿',
     };
   }
 
   loadItem(item) {
     this.selectedItem = item;
     const { finalPrice, isSale } = this.calculatePrice(item);
-    
+
     // UI References
     const root = this.shadowRoot;
     const container = root.querySelector('.container');
-    
+
     // 1. Text Updates
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     // 2. Pricing & Sale Logic
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${finalPrice.toFixed(2)}`;
-    
+
     if (isSale) {
-        priceEl.classList.add('sale-price');
-        root.getElementById('saleBadge').style.display = 'inline-block';
+      priceEl.classList.add('sale-price');
+      root.getElementById('saleBadge').style.display = 'inline-block';
     } else {
-        priceEl.classList.remove('sale-price');
-        root.getElementById('saleBadge').style.display = 'none';
+      priceEl.classList.remove('sale-price');
+      root.getElementById('saleBadge').style.display = 'none';
     }
 
-    root.getElementById('btnOneClick').textContent = `One-Click Buy ($${finalPrice.toFixed(2)})`;
+    root.getElementById(
+      'btnOneClick'
+    ).textContent = `One-Click Buy ($${finalPrice.toFixed(2)})`;
 
     // 3. Burlington VIP Banner Logic
     const banner = root.getElementById('burlingtonBanner');
@@ -97,14 +99,15 @@ class OrderPage extends HTMLElement {
     const comfortNote = root.getElementById('comfortNote');
     // Simple logic: if profile loaded, show personalized message
     if (this.clientProfile) {
-        comfortNote.textContent = "☕ Welcome back! We've got a fresh coffee waiting for you at the shop pickup.";
+      comfortNote.textContent =
+        "☕ Welcome back! We've got a fresh coffee waiting for you at the shop pickup.";
     }
 
     // 5. Upsell Render
     const upsellItem = this.getUpsell(item);
     root.getElementById('upsellName').textContent = upsellItem.name;
     root.getElementById('upsellPrice').textContent = `$${upsellItem.price}`;
-    
+
     // Show container with animation
     container.classList.add('visible');
   }
@@ -135,7 +138,9 @@ class OrderPage extends HTMLElement {
 
       if (data.success) {
         // Windows Desktop "Toast" style notification simulation
-        alert(`Purchase Successful! \nOrder ID: ${data.orderId}\nEstimated Delivery to Burlington: 2 Days.`);
+        alert(
+          `Purchase Successful! \nOrder ID: ${data.orderId}\nEstimated Delivery to Burlington: 2 Days.`
+        );
         this.dispatchEvent(
           new CustomEvent('order-completed', { bubbles: true, composed: true })
         );
@@ -333,7 +338,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Bindings
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

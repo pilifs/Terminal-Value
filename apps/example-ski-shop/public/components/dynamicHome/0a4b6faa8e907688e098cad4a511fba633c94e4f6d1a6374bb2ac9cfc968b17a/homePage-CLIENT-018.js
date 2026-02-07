@@ -13,15 +13,16 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const container = this.shadowRoot.getElementById('content-area');
     const greetingEl = this.shadowRoot.getElementById('greeting');
-    
-    container.innerHTML = '<div class="loading">Personalizing your shop experience...</div>';
+
+    container.innerHTML =
+      '<div class="loading">Personalizing your shop experience...</div>';
 
     try {
       // 1. Fetch Client Profile & History parallel to Inventory
       const [inventoryRes, clientRes, ordersRes] = await Promise.all([
         fetch('/api/inventory'),
         fetch(`/api/clients/${this.clientId}`),
-        fetch(`/api/orders?clientId=${this.clientId}`)
+        fetch(`/api/orders?clientId=${this.clientId}`),
       ]);
 
       const inventory = await inventoryRes.json();
@@ -30,21 +31,26 @@ class HomePage extends HTMLElement {
 
       // 2. Analyze User Persona
       const city = client.city || 'Skier';
-      
+
       // Flatten order items into a single array of item names for history checking
-      const pastGear = orders.flatMap(o => o.items.map(i => i.name || ''));
-      
+      const pastGear = orders.flatMap((o) => o.items.map((i) => i.name || ''));
+
       // Check for specific personas based on history
-      const hasRacingHistory = pastGear.some(name => 
-        name.toLowerCase().includes('race') || 
-        name.toLowerCase().includes('world cup') ||
-        name.toLowerCase().includes('carver') // Including 'Carver' based on profile context
+      const hasRacingHistory = pastGear.some(
+        (name) =>
+          name.toLowerCase().includes('race') ||
+          name.toLowerCase().includes('world cup') ||
+          name.toLowerCase().includes('carver') // Including 'Carver' based on profile context
       );
 
       // Check CRM notes for keywords
       const crmNotes = client.crmNotes || [];
-      const needsVersatile = crmNotes.some(note => note.toLowerCase().includes('versatile'));
-      const isWeekendWarrior = crmNotes.some(note => note.toLowerCase().includes('weekend'));
+      const needsVersatile = crmNotes.some((note) =>
+        note.toLowerCase().includes('versatile')
+      );
+      const isWeekendWarrior = crmNotes.some((note) =>
+        note.toLowerCase().includes('weekend')
+      );
 
       // 3. Set Personalized Greeting
       // If "Weekend warrior" is in notes, reference the weekend. Otherwise default to City/Trip logic.
@@ -59,10 +65,14 @@ class HomePage extends HTMLElement {
       let primaryList = [];
       let secondaryList = [];
 
-      inventory.forEach(item => {
-        const isRacingSki = item.name.toLowerCase().includes('world cup') || item.name.toLowerCase().includes('racer');
-        const isVersatile = item.name.toLowerCase().includes('all mountain') || item.name.toLowerCase().includes('explorer');
-        
+      inventory.forEach((item) => {
+        const isRacingSki =
+          item.name.toLowerCase().includes('world cup') ||
+          item.name.toLowerCase().includes('racer');
+        const isVersatile =
+          item.name.toLowerCase().includes('all mountain') ||
+          item.name.toLowerCase().includes('explorer');
+
         // --- PRICING LOGIC ---
         let finalPrice;
         let priceLabel = '';
@@ -105,29 +115,43 @@ class HomePage extends HTMLElement {
 
       // 5. Render Grid
       container.innerHTML = sortedInventory
-        .map(item => `
+        .map(
+          (item) => `
           <div class="card ${item.isSale ? 'sale-card' : ''}">
             ${item.isSale ? `<div class="badge">${item.priceLabel}</div>` : ''}
             <h3>${item.name}</h3>
             <p class="sku">SKU: ${item.id}</p>
             
             <div class="price-block">
-              ${item.isSale 
-                ? `<span class="old-price">$${(item.cost * 1.5).toFixed(0)}</span>` 
-                : ''}
+              ${
+                item.isSale
+                  ? `<span class="old-price">$${(item.cost * 1.5).toFixed(
+                      0
+                    )}</span>`
+                  : ''
+              }
               <span class="price">$${item.finalPrice.toFixed(2)}</span>
             </div>
 
-            <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+            <p class="stock">${
+              item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+            }</p>
             
             <button 
               class="buy-btn ${item.isSale ? 'btn-sale' : ''}" 
               data-id="${item.id}"
               ${item.stock <= 0 ? 'disabled' : ''}>
-              ${item.stock > 0 ? (item.isSale ? 'Grab Deal' : 'Buy Now') : 'Sold Out'}
+              ${
+                item.stock > 0
+                  ? item.isSale
+                    ? 'Grab Deal'
+                    : 'Buy Now'
+                  : 'Sold Out'
+              }
             </button>
           </div>
-        `)
+        `
+        )
         .join('');
 
       // Add Event Listeners
@@ -135,7 +159,7 @@ class HomePage extends HTMLElement {
         btn.addEventListener('click', (e) => {
           const itemId = e.target.dataset.id;
           const item = inventory.find((i) => i.id === itemId);
-          
+
           this.dispatchEvent(
             new CustomEvent('navigate-order', {
               detail: { item: item },
@@ -145,10 +169,10 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
       console.error(e);
-      container.innerHTML = '<p class="error">Unable to load your personalized shop. Please try again.</p>';
+      container.innerHTML =
+        '<p class="error">Unable to load your personalized shop. Please try again.</p>';
     }
   }
 

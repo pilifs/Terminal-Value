@@ -28,24 +28,24 @@ class OrderPage extends HTMLElement {
         this.render(); // Re-render to update Banner/Upsells if item is already loaded
       }
     } catch (e) {
-      console.warn("Could not fetch client details for personalization");
+      console.warn('Could not fetch client details for personalization');
     }
   }
 
   // Called by Router in app.js
   loadItem(item) {
     this.selectedItem = item;
-    
+
     // PRICING STRATEGY: Racing Gear (120%) vs Standard (150%)
     // Detecting "Racing" context via keywords in name or description
     const isRacingGear = /race|slalom|speed/i.test(item.name);
-    
+
     if (isRacingGear) {
-        this.calculatedPrice = item.cost * 1.2;
-        this.isBlowout = true;
+      this.calculatedPrice = item.cost * 1.2;
+      this.isBlowout = true;
     } else {
-        this.calculatedPrice = item.cost * 1.5;
-        this.isBlowout = false;
+      this.calculatedPrice = item.cost * 1.5;
+      this.isBlowout = false;
     }
 
     this.render();
@@ -62,11 +62,13 @@ class OrderPage extends HTMLElement {
     // Payload matches backend expectation
     const payload = {
       clientId: this.clientId,
-      items: [{ 
-          skuId: this.selectedItem.id, 
-          quantity: qty, 
-          price: this.calculatedPrice // Send the calculated price (discounted or standard)
-      }],
+      items: [
+        {
+          skuId: this.selectedItem.id,
+          quantity: qty,
+          price: this.calculatedPrice, // Send the calculated price (discounted or standard)
+        },
+      ],
     };
 
     try {
@@ -82,7 +84,12 @@ class OrderPage extends HTMLElement {
         btn.style.backgroundColor = '#107C10'; // Windows Success Green
         btn.textContent = 'Purchase Complete!';
         setTimeout(() => {
-            this.dispatchEvent(new CustomEvent('order-completed', { bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Error: ' + data.error);
@@ -92,7 +99,7 @@ class OrderPage extends HTMLElement {
     } catch (e) {
       alert('Network Error');
       btn.disabled = false;
-    } 
+    }
   }
 
   getUpsellHTML() {
@@ -116,7 +123,7 @@ class OrderPage extends HTMLElement {
 
     const isSLC = this.clientData?.city === 'Salt Lake City';
     const finalPrice = this.calculatedPrice.toFixed(2);
-    
+
     // CSS Variables for Windows Fluent Design
     this.shadowRoot.innerHTML = `
         <style>
@@ -234,25 +241,35 @@ class OrderPage extends HTMLElement {
 
         <div class="card">
             <!-- Dynamic Banner for SLC VIPs -->
-            ${isSLC ? `
+            ${
+              isSLC
+                ? `
                 <div class="vip-banner">
                     <span class="vip-icon">🚛</span>
                     <span><strong>Salt Lake City VIP:</strong> Free Express Shipping included on this order.</span>
                 </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <h3 id="orderItemName">${this.selectedItem.name}</h3>
             <span class="sku">SKU: ${this.selectedItem.sku}</span>
             
             <div style="margin: 15px 0;">
                 <span class="price-tag">$<span id="displayPrice">${finalPrice}</span></span>
-                ${this.isBlowout ? `<span class="blowout-badge">Sales Blowout</span>` : ''}
+                ${
+                  this.isBlowout
+                    ? `<span class="blowout-badge">Sales Blowout</span>`
+                    : ''
+                }
             </div>
 
             <p style="color: #666; font-size: 14px; line-height: 1.5;">
-                ${this.isBlowout 
-                    ? "As part of our racing gear overstock event, you are receiving our family team pricing (~20% markup)." 
-                    : "Standard retail pricing applies."}
+                ${
+                  this.isBlowout
+                    ? 'As part of our racing gear overstock event, you are receiving our family team pricing (~20% markup).'
+                    : 'Standard retail pricing applies.'
+                }
             </p>
 
             ${this.getUpsellHTML()}
@@ -281,9 +298,12 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
-      this.dispatchEvent(new CustomEvent('navigate-home', { bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent('navigate-home', { bubbles: true, composed: true })
+      );
     };
 
     // Dynamic Price Update on Quantity Change
@@ -292,11 +312,11 @@ class OrderPage extends HTMLElement {
     const bulkNote = this.shadowRoot.getElementById('bulkNote');
 
     qtySelect.onchange = () => {
-        const q = parseInt(qtySelect.value);
-        priceDisplay.textContent = (this.calculatedPrice * q).toFixed(2);
-        
-        // Show visual cue for bulk orders (referencing CRM notes about family deals)
-        bulkNote.style.display = q > 2 ? 'block' : 'none';
+      const q = parseInt(qtySelect.value);
+      priceDisplay.textContent = (this.calculatedPrice * q).toFixed(2);
+
+      // Show visual cue for bulk orders (referencing CRM notes about family deals)
+      bulkNote.style.display = q > 2 ? 'block' : 'none';
     };
   }
 }

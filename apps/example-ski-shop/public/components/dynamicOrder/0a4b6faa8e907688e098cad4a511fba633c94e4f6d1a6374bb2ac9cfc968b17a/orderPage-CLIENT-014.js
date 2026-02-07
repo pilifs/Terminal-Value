@@ -41,26 +41,29 @@ class OrderPage extends HTMLElement {
     const name = item.name.toLowerCase();
     // Pricing Strategy: Racing gear (World Cup, Racer) at 120%, others at 150%
     const isRacing = name.includes('race') || name.includes('world cup');
-    
+
     const margin = isRacing ? 1.2 : 1.5;
     const finalPrice = item.cost * margin;
-    
+
     return {
       price: finalPrice,
       isSale: isRacing, // Flag for UI styling
-      originalPrice: item.cost * 1.5 // Compare against standard markup
+      originalPrice: item.cost * 1.5, // Compare against standard markup
     };
   }
 
   // Logic to determine Upsell based on Past Purchases style
   getUpsellItem(item) {
     // If buying skis, suggest accessories
-    if (item.name.toLowerCase().includes('ski') || item.name.toLowerCase().includes('mountain')) {
+    if (
+      item.name.toLowerCase().includes('ski') ||
+      item.name.toLowerCase().includes('mountain')
+    ) {
       return {
         id: 'ACC-BINDING-PRO', // Mock ID
         name: 'Pro Performance Bindings',
-        price: 150.00,
-        img: '🎿'
+        price: 150.0,
+        img: '🎿',
       };
     }
     return null;
@@ -76,10 +79,10 @@ class OrderPage extends HTMLElement {
 
     const root = this.shadowRoot;
     const item = this.selectedItem;
-    
+
     // 1. Calculate Price
     const pricing = this.calculatePrice(item);
-    
+
     // 2. Determine UI Data
     const isVancouver = this.clientProfile?.city === 'Vancouver';
     const upsell = this.getUpsellItem(item);
@@ -94,42 +97,48 @@ class OrderPage extends HTMLElement {
     // Price Display Logic
     const priceContainer = root.getElementById('priceContainer');
     if (priceContainer) {
-        if (pricing.isSale) {
-            priceContainer.innerHTML = `
-                <span class="old-price">$${pricing.originalPrice.toFixed(2)}</span>
+      if (pricing.isSale) {
+        priceContainer.innerHTML = `
+                <span class="old-price">$${pricing.originalPrice.toFixed(
+                  2
+                )}</span>
                 <span class="sale-price">$${pricing.price.toFixed(2)}</span>
                 <span class="badge">BLOWOUT DEAL</span>
             `;
-        } else {
-            priceContainer.innerHTML = `<span class="std-price">$${pricing.price.toFixed(2)}</span>`;
-        }
+      } else {
+        priceContainer.innerHTML = `<span class="std-price">$${pricing.price.toFixed(
+          2
+        )}</span>`;
+      }
     }
 
     // VIP Banner Logic
     const banner = root.getElementById('vipBanner');
     if (banner) {
-        if (isVancouver) {
-            banner.style.display = 'block';
-            banner.innerHTML = `🚚 <strong>VIP Benefit:</strong> Free Express Shipping to Vancouver included.`;
-        } else {
-            banner.style.display = 'none';
-        }
+      if (isVancouver) {
+        banner.style.display = 'block';
+        banner.innerHTML = `🚚 <strong>VIP Benefit:</strong> Free Express Shipping to Vancouver included.`;
+      } else {
+        banner.style.display = 'none';
+      }
     }
 
     // Upsell Logic
     const upsellContainer = root.getElementById('upsellContainer');
     if (upsellContainer && upsell) {
-        upsellContainer.style.display = 'block';
-        root.getElementById('upsellName').textContent = upsell.name;
-        root.getElementById('upsellPrice').textContent = `$${upsell.price.toFixed(2)}`;
-        
-        const checkbox = root.getElementById('upsellCheckbox');
-        checkbox.onclick = (e) => {
-            this.hasUpsell = e.target.checked;
-            this.updateTotalButton(pricing.price, upsell.price);
-        };
+      upsellContainer.style.display = 'block';
+      root.getElementById('upsellName').textContent = upsell.name;
+      root.getElementById('upsellPrice').textContent = `$${upsell.price.toFixed(
+        2
+      )}`;
+
+      const checkbox = root.getElementById('upsellCheckbox');
+      checkbox.onclick = (e) => {
+        this.hasUpsell = e.target.checked;
+        this.updateTotalButton(pricing.price, upsell.price);
+      };
     } else if (upsellContainer) {
-        upsellContainer.style.display = 'none';
+      upsellContainer.style.display = 'none';
     }
 
     // Initial Button State
@@ -139,7 +148,7 @@ class OrderPage extends HTMLElement {
   updateTotalButton(basePrice, upsellPrice) {
     const total = basePrice + (this.hasUpsell ? upsellPrice : 0);
     const btn = this.shadowRoot.getElementById('btnConfirm');
-    if(btn) btn.textContent = `One-Click Buy ($${total.toFixed(2)})`;
+    if (btn) btn.textContent = `One-Click Buy ($${total.toFixed(2)})`;
   }
 
   async submitOrder() {
@@ -152,21 +161,21 @@ class OrderPage extends HTMLElement {
 
     // Construct Payload
     const items = [
-        { 
-            skuId: this.selectedItem.id, 
-            quantity: 1, // Defaulting to 1 based on "One-Click" requirement
-            price: pricing.price 
-        }
+      {
+        skuId: this.selectedItem.id,
+        quantity: 1, // Defaulting to 1 based on "One-Click" requirement
+        price: pricing.price,
+      },
     ];
 
     // Add Upsell if selected
     if (this.hasUpsell) {
-        const upsell = this.getUpsellItem(this.selectedItem);
-        items.push({
-            skuId: upsell.id,
-            quantity: 1,
-            price: upsell.price
-        });
+      const upsell = this.getUpsellItem(this.selectedItem);
+      items.push({
+        skuId: upsell.id,
+        quantity: 1,
+        price: upsell.price,
+      });
     }
 
     const payload = {
@@ -184,8 +193,10 @@ class OrderPage extends HTMLElement {
 
       if (data.success) {
         // Loyalty Note Interaction
-        alert(`Order Confirmed!\n\nWe're prepping your gear. Your coffee is brewing! ☕`);
-        
+        alert(
+          `Order Confirmed!\n\nWe're prepping your gear. Your coffee is brewing! ☕`
+        );
+
         this.dispatchEvent(
           new CustomEvent('order-completed', { bubbles: true, composed: true })
         );
@@ -358,7 +369,8 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnConfirm').onclick = () => this.submitOrder();
+    this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+      this.submitOrder();
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })

@@ -12,28 +12,28 @@ class HomePage extends HTMLElement {
   async loadInventory() {
     const container = this.shadowRoot.getElementById('mainContainer');
     const header = this.shadowRoot.getElementById('personalHeader');
-    
+
     // 1. Get Client Context for Personalization
     const params = new URLSearchParams(window.location.search);
     const clientId = params.get('clientId');
-    let city = "Aspen"; // Default based on user profile context
+    let city = 'Aspen'; // Default based on user profile context
     let isRacer = true; // Based on CRM context
 
     try {
-        if(clientId) {
-            const clientRes = await fetch(`/api/clients/${clientId}`);
-            if(clientRes.ok) {
-                const clientData = await clientRes.json();
-                city = clientData.city || city;
-                // Check for racing keywords in history or CRM
-                const notes = (clientData.crmNotes || []).join(' ').toLowerCase();
-                if(notes.includes('racer') || notes.includes('racing')) {
-                    isRacer = true;
-                }
-            }
+      if (clientId) {
+        const clientRes = await fetch(`/api/clients/${clientId}`);
+        if (clientRes.ok) {
+          const clientData = await clientRes.json();
+          city = clientData.city || city;
+          // Check for racing keywords in history or CRM
+          const notes = (clientData.crmNotes || []).join(' ').toLowerCase();
+          if (notes.includes('racer') || notes.includes('racing')) {
+            isRacer = true;
+          }
         }
-    } catch(e) {
-        console.warn('Could not fetch specific client details, using defaults.');
+      }
+    } catch (e) {
+      console.warn('Could not fetch specific client details, using defaults.');
     }
 
     // Update Greeting
@@ -43,7 +43,8 @@ class HomePage extends HTMLElement {
     `;
 
     // 2. Fetch and Process Inventory
-    container.innerHTML = '<p style="text-align:center">Calibrating inventory...</p>';
+    container.innerHTML =
+      '<p style="text-align:center">Calibrating inventory...</p>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -52,33 +53,32 @@ class HomePage extends HTMLElement {
       // Filter: Sort specifically for "Pro Racer/Hardpack" persona
       // We want World Cup Racer at the top (Blowout), followed by Carvers.
       // We push Big Mountain/Powder skis to the bottom.
-      
+
       const heroItems = [];
       const standardItems = [];
 
-      inventory.forEach(item => {
+      inventory.forEach((item) => {
         const name = item.name.toLowerCase();
-        
+
         // Logic: Identify the World Cup Racer for the Blowout Deal
         if (name.includes('world cup') || name.includes('racer')) {
-            // Requirement: Price between 0.4 * COGS and 1.0 * COGS
-            // We'll give them a steal at 0.7 (70% of cost)
-            item.displayPrice = (item.cost * 0.7).toFixed(2);
-            item.isBlowout = true;
-            item.originalPrice = (item.cost * 1.5).toFixed(2);
-            heroItems.push(item);
-        } 
-        else {
-            // Standard Markup
-            item.displayPrice = (item.cost * 1.5).toFixed(2);
-            item.isBlowout = false;
-            
-            // Sort priority: Carvers first, others last
-            if(name.includes('piste') || name.includes('carver')) {
-                standardItems.unshift(item);
-            } else {
-                standardItems.push(item);
-            }
+          // Requirement: Price between 0.4 * COGS and 1.0 * COGS
+          // We'll give them a steal at 0.7 (70% of cost)
+          item.displayPrice = (item.cost * 0.7).toFixed(2);
+          item.isBlowout = true;
+          item.originalPrice = (item.cost * 1.5).toFixed(2);
+          heroItems.push(item);
+        } else {
+          // Standard Markup
+          item.displayPrice = (item.cost * 1.5).toFixed(2);
+          item.isBlowout = false;
+
+          // Sort priority: Carvers first, others last
+          if (name.includes('piste') || name.includes('carver')) {
+            standardItems.unshift(item);
+          } else {
+            standardItems.push(item);
+          }
         }
       });
 
@@ -88,7 +88,9 @@ class HomePage extends HTMLElement {
       // A. HERO SECTION (Blowout)
       if (heroItems.length > 0) {
         html += `<div class="section-title">⚠️ PRO STOCK BLOWOUT</div>`;
-        html += heroItems.map(item => `
+        html += heroItems
+          .map(
+            (item) => `
             <div class="hero-card">
                 <div class="hero-info">
                     <h3>${item.name}</h3>
@@ -98,7 +100,9 @@ class HomePage extends HTMLElement {
                         <span class="old-price">$${item.originalPrice}</span>
                         <span class="new-price">$${item.displayPrice}</span>
                     </div>
-                    <p class="stock-status">${item.stock > 0 ? '✅ In Stock' : '❌ Sold Out'}</p>
+                    <p class="stock-status">${
+                      item.stock > 0 ? '✅ In Stock' : '❌ Sold Out'
+                    }</p>
                 </div>
                 <div class="hero-action">
                     <button 
@@ -109,16 +113,22 @@ class HomePage extends HTMLElement {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `
+          )
+          .join('');
       }
 
       // B. GRID SECTION (Standard Inventory)
       html += `<div class="section-title">Groomer & Training Quiver</div>`;
       html += `<div class="grid">`;
-      html += standardItems.map(item => `
+      html += standardItems
+        .map(
+          (item) => `
         <div class="card">
             <h3>${item.name}</h3>
-            <p class="stock">${item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'}</p>
+            <p class="stock">${
+              item.stock > 0 ? 'In Stock: ' + item.stock : 'Out of Stock'
+            }</p>
             <p class="price">$${item.displayPrice}</p>
             <button 
                 class="buy-btn" 
@@ -127,7 +137,9 @@ class HomePage extends HTMLElement {
                 ${item.stock > 0 ? 'Add to Cart' : 'Sold Out'}
             </button>
         </div>
-      `).join('');
+      `
+        )
+        .join('');
       html += `</div>`;
 
       container.innerHTML = html;
@@ -147,7 +159,6 @@ class HomePage extends HTMLElement {
           );
         });
       });
-
     } catch (e) {
       console.error(e);
       container.innerHTML = '<p>Error loading pro inventory.</p>';

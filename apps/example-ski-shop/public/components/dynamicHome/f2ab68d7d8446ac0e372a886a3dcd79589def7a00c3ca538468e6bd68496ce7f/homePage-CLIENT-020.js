@@ -14,7 +14,7 @@ class HomePage extends HTMLElement {
   startCountdown() {
     const timerEl = this.shadowRoot.getElementById('timer');
     let duration = 3600 * 2.5; // 2.5 hours remaining
-    
+
     setInterval(() => {
       duration--;
       if (duration < 0) duration = 0;
@@ -30,8 +30,9 @@ class HomePage extends HTMLElement {
   async loadPersonalizedInventory() {
     const container = this.shadowRoot.getElementById('exclusiveContainer');
     const standardGrid = this.shadowRoot.getElementById('standardGrid');
-    
-    container.innerHTML = '<div class="loader">Accessing World Cup Database...</div>';
+
+    container.innerHTML =
+      '<div class="loader">Accessing World Cup Database...</div>';
 
     try {
       const res = await fetch('/api/inventory');
@@ -40,31 +41,31 @@ class HomePage extends HTMLElement {
       // LOGIC: Filter for "Race", "Carbon", or "Nordic" and Sort by Price (Descending)
       // We want to push the most expensive items to the top to maximize revenue.
       const sortedInventory = inventory.sort((a, b) => b.cost - a.cost);
-      
+
       // The "Hero" Item (Most Expensive)
       const heroItem = sortedInventory[0];
-      
+
       // The "Support" Items (Next 2 most expensive)
       const supportItems = sortedInventory.slice(1, 3);
-      
+
       // The Rest (Hidden behind a "Load More" to reduce distraction)
       const standardItems = sortedInventory.slice(3);
 
       // Render The "Hero" Product (The Lightest Setup)
       this.renderHeroProduct(heroItem);
-      
+
       // Render Upsells
       this.renderUpsells(supportItems);
-
     } catch (e) {
-      container.innerHTML = '<p>Connection lost. Please refresh to access reserve stock.</p>';
+      container.innerHTML =
+        '<p>Connection lost. Please refresh to access reserve stock.</p>';
     }
   }
 
   renderHeroProduct(item) {
     const container = this.shadowRoot.getElementById('exclusiveContainer');
     const price = (item.cost * 1.5).toFixed(2); // High margin calculation
-    
+
     container.innerHTML = `
       <div class="hero-card">
         <div class="badge">RESERVED FOR BANFF / ATHLETE ID: 19-XC</div>
@@ -93,15 +94,19 @@ class HomePage extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.getElementById('heroBuyBtn').addEventListener('click', () => {
-      this.triggerPurchase(item);
-    });
+    this.shadowRoot
+      .getElementById('heroBuyBtn')
+      .addEventListener('click', () => {
+        this.triggerPurchase(item);
+      });
   }
 
   renderUpsells(items) {
     const grid = this.shadowRoot.getElementById('upsellGrid');
-    
-    grid.innerHTML = items.map(item => `
+
+    grid.innerHTML = items
+      .map(
+        (item) => `
       <div class="upsell-card">
         <h3>${item.name}</h3>
         <p class="stock-warn">Low Inventory</p>
@@ -110,11 +115,13 @@ class HomePage extends HTMLElement {
             <button class="buy-btn-small" data-id="${item.id}">ADD</button>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
-    grid.querySelectorAll('.buy-btn-small').forEach(btn => {
+    grid.querySelectorAll('.buy-btn-small').forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        const item = items.find(i => i.id === e.target.dataset.id);
+        const item = items.find((i) => i.id === e.target.dataset.id);
         this.triggerPurchase(item);
       });
     });

@@ -4,7 +4,7 @@ class OrderPage extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.selectedItem = null;
     this.clientId = null;
-    
+
     // Bind methods
     this.submitOrder = this.submitOrder.bind(this);
   }
@@ -32,36 +32,36 @@ class OrderPage extends HTMLElement {
    */
   loadItem(item) {
     this.selectedItem = item;
-    
+
     // --- PRICING STRATEGY ---
-    // Context: Racing gear is overstocked ("Sales Blowout"). 
+    // Context: Racing gear is overstocked ("Sales Blowout").
     // Constraint: Racing gear @ 120% COGS, others @ 150% (Standard).
     // Identification: Look for "Racer", "World Cup", "Competition" keywords.
     const isRacingGear = /racer|world cup|competition/i.test(item.name);
     const markup = isRacingGear ? 1.2 : 1.5;
     const finalPrice = (item.cost * markup).toFixed(2);
-    
+
     // Update State
     this.selectedItem.finalPrice = finalPrice;
     this.selectedItem.isRacingGear = isRacingGear;
 
     // --- DOM UPDATES ---
     const root = this.shadowRoot;
-    
+
     // Text Content
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
     root.getElementById('orderItemPrice').textContent = `$${finalPrice}`;
     root.getElementById('orderTotal').textContent = finalPrice;
-    
+
     // Pricing Badge
     const badge = root.getElementById('priceBadge');
     if (isRacingGear) {
-      badge.textContent = "🔥 SALES BLOWOUT";
-      badge.className = "badge sale";
+      badge.textContent = '🔥 SALES BLOWOUT';
+      badge.className = 'badge sale';
     } else {
-      badge.textContent = "Standard Price";
-      badge.className = "badge standard";
+      badge.textContent = 'Standard Price';
+      badge.className = 'badge standard';
     }
 
     // --- UPSELL LOGIC ---
@@ -88,7 +88,9 @@ class OrderPage extends HTMLElement {
     const qtySelect = root.getElementById('orderQty');
     qtySelect.value = '1';
     qtySelect.onchange = () => {
-      root.getElementById('orderTotal').textContent = (finalPrice * qtySelect.value).toFixed(2);
+      root.getElementById('orderTotal').textContent = (
+        finalPrice * qtySelect.value
+      ).toFixed(2);
     };
   }
 
@@ -103,11 +105,13 @@ class OrderPage extends HTMLElement {
 
     const payload = {
       clientId: this.clientId,
-      items: [{ 
-        skuId: this.selectedItem.id, 
-        quantity: qty, 
-        price: parseFloat(this.selectedItem.finalPrice) 
-      }],
+      items: [
+        {
+          skuId: this.selectedItem.id,
+          quantity: qty,
+          price: parseFloat(this.selectedItem.finalPrice),
+        },
+      ],
     };
 
     try {
@@ -122,9 +126,14 @@ class OrderPage extends HTMLElement {
         // Windows-style success state
         btn.style.backgroundColor = '#107C10'; // Windows Success Green
         btn.innerHTML = `<span>✓ Purchase Complete</span>`;
-        
+
         setTimeout(() => {
-            this.dispatchEvent(new CustomEvent('order-completed', { bubbles: true, composed: true }));
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Error: ' + data.error);
@@ -283,12 +292,16 @@ class OrderPage extends HTMLElement {
 
       <div class="order-card">
         <!-- Conditional Banner for Vancouver -->
-        ${isVancouver ? `
+        ${
+          isVancouver
+            ? `
           <div class="banner vip">
             <span>🚛</span>
             <span>Free Express Shipping to Vancouver included for our VIP members.</span>
           </div>
-        ` : ''}
+        `
+            : ''
+        }
 
         <div class="content">
           <h2>Review & Buy</h2>
@@ -331,7 +344,9 @@ class OrderPage extends HTMLElement {
     // Event Listeners
     this.shadowRoot.getElementById('btnOneClick').onclick = this.submitOrder;
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
-      this.dispatchEvent(new CustomEvent('navigate-home', { bubbles: true, composed: true }));
+      this.dispatchEvent(
+        new CustomEvent('navigate-home', { bubbles: true, composed: true })
+      );
     };
   }
 }

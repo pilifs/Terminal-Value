@@ -6,12 +6,12 @@ class OrderPage extends HTMLElement {
     this.clientId = null;
     this.clientCity = null;
     this.upsellActive = false;
-    
+
     // Hardcoded mock item for the upsell requirement
     this.upsellItem = {
       id: 'UPSELL-POLES-001',
       name: 'Neon Carbon Race Poles',
-      price: 150.00
+      price: 150.0,
     };
   }
 
@@ -40,17 +40,19 @@ class OrderPage extends HTMLElement {
         const profile = await res.json();
         this.clientCity = profile.city;
         // Re-render to show/hide Aspen banner based on new data
-        if (this.selectedItem) this.updateView(); 
+        if (this.selectedItem) this.updateView();
       }
     } catch (e) {
-      console.error("Could not fetch client details for customization", e);
+      console.error('Could not fetch client details for customization', e);
     }
   }
 
   // Logic to determine if item is "Racing" gear based on naming conventions
   isRacingGear(item) {
     const name = item.name.toLowerCase();
-    return name.includes('race') || name.includes('cup') || name.includes('pro');
+    return (
+      name.includes('race') || name.includes('cup') || name.includes('pro')
+    );
   }
 
   // Public method called by Router
@@ -65,11 +67,11 @@ class OrderPage extends HTMLElement {
 
     const root = this.shadowRoot;
     const isRacing = this.isRacingGear(this.selectedItem);
-    
+
     // Pricing Strategy: 1.2x for Racing (Blowout), 1.5x for standard
     const markup = isRacing ? 1.2 : 1.5;
     const price = (this.selectedItem.cost * markup).toFixed(2);
-    
+
     // DOM Updates
     const nameEl = root.getElementById('orderItemName');
     const skuEl = root.getElementById('orderItemSku');
@@ -82,45 +84,45 @@ class OrderPage extends HTMLElement {
 
     if (nameEl) nameEl.textContent = this.selectedItem.name;
     if (skuEl) skuEl.textContent = this.selectedItem.sku;
-    
+
     if (priceEl) {
-        priceEl.textContent = `$${price}`;
-        // Create an "Impulse Buy" visual anchor
-        if (isRacing) {
-            // Fake a higher "original" price to make the 1.2x look like a steal
-            const fakeOriginal = (this.selectedItem.cost * 1.8).toFixed(2);
-            oldPriceEl.textContent = `$${fakeOriginal}`;
-            oldPriceEl.style.display = 'inline-block';
-            saleBadge.style.display = 'inline-block';
-            priceEl.style.color = '#e74c3c'; // Urgent Red
-        } else {
-            oldPriceEl.style.display = 'none';
-            saleBadge.style.display = 'none';
-            priceEl.style.color = '#2c3e50';
-        }
+      priceEl.textContent = `$${price}`;
+      // Create an "Impulse Buy" visual anchor
+      if (isRacing) {
+        // Fake a higher "original" price to make the 1.2x look like a steal
+        const fakeOriginal = (this.selectedItem.cost * 1.8).toFixed(2);
+        oldPriceEl.textContent = `$${fakeOriginal}`;
+        oldPriceEl.style.display = 'inline-block';
+        saleBadge.style.display = 'inline-block';
+        priceEl.style.color = '#e74c3c'; // Urgent Red
+      } else {
+        oldPriceEl.style.display = 'none';
+        saleBadge.style.display = 'none';
+        priceEl.style.color = '#2c3e50';
+      }
     }
 
     // Aspen Banner Logic
     if (aspenBanner) {
-        if (this.clientCity === 'Aspen') {
-            aspenBanner.classList.add('visible');
-        } else {
-            aspenBanner.classList.remove('visible');
-        }
+      if (this.clientCity === 'Aspen') {
+        aspenBanner.classList.add('visible');
+      } else {
+        aspenBanner.classList.remove('visible');
+      }
     }
 
     // Upsell Logic (Show for skis/main gear)
     if (upsellSection) {
-        // Reset checkbox
-        const chk = root.getElementById('upsellCheckbox');
-        if (chk) chk.checked = false;
-        
-        // Only show if it matches the "Past Purchase" style (Racing/Pro)
-        if (isRacing) {
-            upsellSection.style.display = 'block';
-        } else {
-            upsellSection.style.display = 'none';
-        }
+      // Reset checkbox
+      const chk = root.getElementById('upsellCheckbox');
+      if (chk) chk.checked = false;
+
+      // Only show if it matches the "Past Purchase" style (Racing/Pro)
+      if (isRacing) {
+        upsellSection.style.display = 'block';
+      } else {
+        upsellSection.style.display = 'none';
+      }
     }
 
     this.calculateTotal();
@@ -129,31 +131,31 @@ class OrderPage extends HTMLElement {
   calculateTotal() {
     if (!this.selectedItem) return;
     const root = this.shadowRoot;
-    
+
     const qty = parseInt(root.getElementById('orderQty').value) || 1;
     const isRacing = this.isRacingGear(this.selectedItem);
     const markup = isRacing ? 1.2 : 1.5;
     let itemPrice = this.selectedItem.cost * markup;
-    
+
     let total = itemPrice * qty;
 
     // Add upsell price if checked
     if (this.upsellActive) {
-        total += this.upsellItem.price;
+      total += this.upsellItem.price;
     }
 
     root.getElementById('orderTotal').textContent = total.toFixed(2);
   }
 
   toggleUpsell(e) {
-      this.upsellActive = e.target.checked;
-      this.calculateTotal();
+    this.upsellActive = e.target.checked;
+    this.calculateTotal();
   }
 
   async submitOrder() {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Recalculate price for payload
     const isRacing = this.isRacingGear(this.selectedItem);
     const markup = isRacing ? 1.2 : 1.5;
@@ -163,23 +165,23 @@ class OrderPage extends HTMLElement {
 
     // Visual feedback for Windows Touch
     btn.style.transform = 'scale(0.98)';
-    setTimeout(() => btn.style.transform = 'scale(1)', 100);
+    setTimeout(() => (btn.style.transform = 'scale(1)'), 100);
 
     btn.disabled = true;
     btn.innerHTML = '<span>Processing...</span>';
 
     // Construct Payload
     const items = [
-        { skuId: this.selectedItem.id, quantity: qty, price: itemPrice }
+      { skuId: this.selectedItem.id, quantity: qty, price: itemPrice },
     ];
 
     // Add Upsell Item to payload if selected
     if (this.upsellActive) {
-        items.push({
-            skuId: this.upsellItem.id, // Note: This might fail on backend if ID doesn't exist in DB, but satisfies UI req
-            quantity: 1,
-            price: this.upsellItem.price
-        });
+      items.push({
+        skuId: this.upsellItem.id, // Note: This might fail on backend if ID doesn't exist in DB, but satisfies UI req
+        quantity: 1,
+        price: this.upsellItem.price,
+      });
     }
 
     const payload = {
@@ -200,9 +202,12 @@ class OrderPage extends HTMLElement {
         btn.style.background = '#27ae60';
         btn.textContent = 'Purchased!';
         setTimeout(() => {
-            this.dispatchEvent(
-                new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 1000);
       } else {
         alert('Order Error: ' + data.error);
@@ -393,20 +398,22 @@ class OrderPage extends HTMLElement {
         `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
-    
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
+
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })
       );
     };
 
-    this.shadowRoot.getElementById('orderQty').onchange = () => this.calculateTotal();
-    
+    this.shadowRoot.getElementById('orderQty').onchange = () =>
+      this.calculateTotal();
+
     // Bind Upsell Checkbox
     const upsellChk = this.shadowRoot.getElementById('upsellCheckbox');
-    if(upsellChk) {
-        upsellChk.onchange = (e) => this.toggleUpsell(e);
+    if (upsellChk) {
+      upsellChk.onchange = (e) => this.toggleUpsell(e);
     }
   }
 }

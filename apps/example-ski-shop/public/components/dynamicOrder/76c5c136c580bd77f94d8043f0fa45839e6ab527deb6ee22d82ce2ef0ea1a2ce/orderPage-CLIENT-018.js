@@ -55,29 +55,52 @@ class OrderPage extends HTMLElement {
     // Mock past purchases if not present in the generic profile structure for this demo
     // In a real scenario, this comes from the profile data.
     // Based on the Prompt Context: "Past Purchases: Backcountry Tour, Park Freestyle..."
-    
-    // We will look for keywords in the item name to match the upsell, 
+
+    // We will look for keywords in the item name to match the upsell,
     // or default to the user's "style".
-    
-    let suggestion = { name: 'All-Day Performance Socks', price: 25.0, id: 'UP-SOCK' };
+
+    let suggestion = {
+      name: 'All-Day Performance Socks',
+      price: 25.0,
+      id: 'UP-SOCK',
+    };
 
     // Simple keyword matching against the User Context provided in the prompt
-    // We assume the profile object has a way to identify these, or we hardcode 
+    // We assume the profile object has a way to identify these, or we hardcode
     // logic based on the prompt's persona description.
-    
+
     const itemName = this.selectedItem?.name.toLowerCase() || '';
 
     if (itemName.includes('ski')) {
       // It's a ski, suggest bindings/poles
       // Check specific style from prompt context (simulated here based on item type)
       if (itemName.includes('park') || itemName.includes('freestyle')) {
-        suggestion = { name: 'Pivot 15 Freestyle Bindings', price: 250.0, id: 'UP-BIND-FREE' };
-      } else if (itemName.includes('backcountry') || itemName.includes('tour')) {
-        suggestion = { name: 'Lightweight Touring Skins', price: 180.0, id: 'UP-SKIN' };
+        suggestion = {
+          name: 'Pivot 15 Freestyle Bindings',
+          price: 250.0,
+          id: 'UP-BIND-FREE',
+        };
+      } else if (
+        itemName.includes('backcountry') ||
+        itemName.includes('tour')
+      ) {
+        suggestion = {
+          name: 'Lightweight Touring Skins',
+          price: 180.0,
+          id: 'UP-SKIN',
+        };
       } else if (itemName.includes('race') || itemName.includes('gs')) {
-        suggestion = { name: 'Carbon Aero Poles', price: 120.0, id: 'UP-POLE-RACE' };
+        suggestion = {
+          name: 'Carbon Aero Poles',
+          price: 120.0,
+          id: 'UP-POLE-RACE',
+        };
       } else {
-        suggestion = { name: 'Adjustable All-Mtn Poles', price: 80.0, id: 'UP-POLE-STD' };
+        suggestion = {
+          name: 'Adjustable All-Mtn Poles',
+          price: 80.0,
+          id: 'UP-POLE-STD',
+        };
       }
     }
 
@@ -89,22 +112,22 @@ class OrderPage extends HTMLElement {
   loadItem(item) {
     this.selectedItem = item;
     const priceData = this.calculatePrice(item);
-    
+
     // Store calculated price for submission
     this.currentBasePrice = priceData.finalPrice;
     this.upsellItem = this.getUpsellSuggestion();
 
     // DOM Updates
     const root = this.shadowRoot;
-    
+
     // 1. Product Info
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    
+
     // 2. Pricing Display
     const priceEl = root.getElementById('orderItemPrice');
     priceEl.textContent = `$${this.currentBasePrice.toFixed(2)}`;
-    
+
     if (priceData.isSale) {
       priceEl.innerHTML += ` <span class="badge sale">BLOWOUT SALE</span>`;
     }
@@ -113,22 +136,22 @@ class OrderPage extends HTMLElement {
     const upsellContainer = root.getElementById('upsellContainer');
     const upsellLabel = root.getElementById('upsellLabel');
     const upsellPrice = root.getElementById('upsellPrice');
-    
+
     if (this.upsellItem) {
-        upsellLabel.textContent = `Add ${this.upsellItem.name}`;
-        upsellPrice.textContent = `+$${this.upsellItem.price.toFixed(2)}`;
-        upsellContainer.classList.remove('hidden');
+      upsellLabel.textContent = `Add ${this.upsellItem.name}`;
+      upsellPrice.textContent = `+$${this.upsellItem.price.toFixed(2)}`;
+      upsellContainer.classList.remove('hidden');
     } else {
-        upsellContainer.classList.add('hidden');
+      upsellContainer.classList.add('hidden');
     }
 
     // 4. Calgary Logic
     const city = window.state?.clientProfile?.city || '';
     const shippingBanner = root.getElementById('shippingBanner');
     if (city.toLowerCase() === 'calgary') {
-        shippingBanner.classList.remove('hidden');
+      shippingBanner.classList.remove('hidden');
     } else {
-        shippingBanner.classList.add('hidden');
+      shippingBanner.classList.add('hidden');
     }
 
     // 5. Reset Form
@@ -140,10 +163,10 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     const qty = parseInt(root.getElementById('orderQty').value) || 1;
     const addUpsell = root.getElementById('upsellCheckbox').checked;
-    
+
     let total = this.currentBasePrice * qty;
     if (addUpsell && this.upsellItem) {
-        total += this.upsellItem.price; // Assuming 1 upsell per order for simplicity
+      total += this.upsellItem.price; // Assuming 1 upsell per order for simplicity
     }
 
     root.getElementById('orderTotal').textContent = total.toFixed(2);
@@ -153,35 +176,37 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     const btn = root.getElementById('btnOneClick');
     const qty = parseInt(root.getElementById('orderQty').value);
-    
+
     // Calculate final payload price (Base + potential upsell averaged into unit price or added)
     // To fit the existing API structure (items array), we will:
     // 1. Add the main item.
     // 2. Ideally add the upsell as a second item, but the API expects 'skuId' from inventory.
-    // For this frontend demo, we will bundle the cost into the price sent to server 
+    // For this frontend demo, we will bundle the cost into the price sent to server
     // to ensure the "Total Revenue" stats update correctly in Admin.
-    
+
     const addUpsell = root.getElementById('upsellCheckbox').checked;
     let finalUnitPrice = this.currentBasePrice;
-    
+
     // Note: This is a hack for the demo because we don't have real inventory IDs for upsells
     // We add the upsell price to the first unit of the main item.
-    let totalOrderValue = (this.currentBasePrice * qty);
+    let totalOrderValue = this.currentBasePrice * qty;
     if (addUpsell) totalOrderValue += this.upsellItem.price;
 
     // We fudge the unit price sent to server so the Total matches
-    const effectivePriceToSend = totalOrderValue / qty; 
+    const effectivePriceToSend = totalOrderValue / qty;
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Processing...';
 
     const payload = {
       clientId: this.clientId,
-      items: [{ 
-          skuId: this.selectedItem.id, 
-          quantity: qty, 
-          price: effectivePriceToSend 
-      }],
+      items: [
+        {
+          skuId: this.selectedItem.id,
+          quantity: qty,
+          price: effectivePriceToSend,
+        },
+      ],
     };
 
     try {
@@ -197,9 +222,12 @@ class OrderPage extends HTMLElement {
         btn.textContent = '✓ Purchased';
         btn.style.background = '#2ecc71';
         setTimeout(() => {
-            this.dispatchEvent(
-            new CustomEvent('order-completed', { bubbles: true, composed: true })
-            );
+          this.dispatchEvent(
+            new CustomEvent('order-completed', {
+              bubbles: true,
+              composed: true,
+            })
+          );
         }, 800);
       } else {
         alert('Error: ' + data.error);
@@ -409,8 +437,9 @@ class OrderPage extends HTMLElement {
     `;
 
     // Event Listeners
-    this.shadowRoot.getElementById('btnOneClick').onclick = () => this.submitOrder();
-    
+    this.shadowRoot.getElementById('btnOneClick').onclick = () =>
+      this.submitOrder();
+
     this.shadowRoot.getElementById('btnCancel').onclick = () => {
       this.dispatchEvent(
         new CustomEvent('navigate-home', { bubbles: true, composed: true })
@@ -418,8 +447,10 @@ class OrderPage extends HTMLElement {
     };
 
     // Recalculate total on interaction
-    this.shadowRoot.getElementById('orderQty').onchange = () => this.updateTotal();
-    this.shadowRoot.getElementById('upsellCheckbox').onchange = () => this.updateTotal();
+    this.shadowRoot.getElementById('orderQty').onchange = () =>
+      this.updateTotal();
+    this.shadowRoot.getElementById('upsellCheckbox').onchange = () =>
+      this.updateTotal();
   }
 }
 
