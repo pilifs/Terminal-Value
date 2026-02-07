@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-// Adjust path if necessary based on where you run this script
-const { results } = require('./terminal-value/gemini-batch/skiShopResults.js');
+// UPDATED: Point to ../apps/gemini-batch/skiShopResults.js
+const { results } = require('../apps/gemini-batch/skiShopResults.js');
 
 /**
  * Extracts JS code from LLM parts and saves them as web component files.
@@ -28,11 +28,11 @@ function saveDynamicComponents(results) {
         pageType.charAt(0).toUpperCase() + pageType.slice(1); // Home or Order
       const fileName = `${pageType}Page-${clientId}.js`;
 
-      // Path: public/components/dynamic{Type}/{hash}/
+      // UPDATED: Path: ../apps/example-ski-shop/public/components/dynamic{Type}/{hash}/
       const baseDir = path.join(
         __dirname,
-        'examples',
-        'ski-shop',
+        '../apps',
+        'example-ski-shop',
         'public',
         'components',
         `dynamic${componentType}`

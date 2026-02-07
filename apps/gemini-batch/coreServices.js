@@ -2,15 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createBatchJob, getGenerateValueHash } from './geminiBatchService.js';
-import { generateValueResults } from '../../examples/ski-shop/memoizedResults/generateValueResults.js';
+// UPDATED: Point to ../../terminal-value/memoizedResults/generateValueResults.js
+import { generateValueResults } from '../../terminal-value/memoizedResults/generateValueResults.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function getSkiShopContext() {
+  // UPDATED: Point to ../example-ski-shop/public (sibling app in apps/ folder)
   const skiShopPublicDir = path.resolve(
     __dirname,
-    '../../examples/ski-shop/public'
+    '../example-ski-shop/public'
   );
 
   if (!fs.existsSync(skiShopPublicDir)) {

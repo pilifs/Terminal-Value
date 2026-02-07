@@ -11,9 +11,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
 const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
+// UPDATED: Point to ../../terminal-value/memoizedResults/generateValueResults.js
 const GENERATE_VALUE_PATH = path.join(
   __dirname,
-  '../../examples/ski-shop/memoizedResults/generateValueResults.js'
+  '../../terminal-value/memoizedResults/generateValueResults.js'
 );
 
 if (!process.env.GEMINI_API_KEY) {

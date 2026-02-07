@@ -13,14 +13,16 @@ const __dirname = path.dirname(__filename);
  */
 function verifyExternalConfidence(hash) {
   // 1. Resolve Paths
+  // UPDATED: Adjusted path to ../apps/example-ski-shop
   const dynamicDir = path.join(
     __dirname,
-    'examples/ski-shop/public/components/dynamicHome',
+    '../apps/example-ski-shop/public/components/dynamicHome',
     hash
   );
+  // UPDATED: Adjusted path to ../apps/example-ski-shop
   const defaultFilePath = path.join(
     __dirname,
-    'examples/ski-shop/public/components/homePage.js'
+    '../apps/example-ski-shop/public/components/homePage.js'
   );
 
   // 2. Read Default Home Page

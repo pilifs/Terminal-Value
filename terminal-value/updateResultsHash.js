@@ -6,9 +6,10 @@ const path = require('path');
 const crypto = require('crypto');
 
 // Paths
+// UPDATED: Point to ../apps/gemini-batch/skiShopResults.js
 const RESULTS_FILE_PATH = path.join(
   __dirname,
-  'terminal-value/gemini-batch/skiShopResults.js'
+  '../apps/gemini-batch/skiShopResults.js'
 );
 const GENERATE_VALUE_PATH = path.join(
   __dirname,

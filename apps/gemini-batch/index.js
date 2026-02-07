@@ -1,4 +1,5 @@
-import verifyExternalConfidence from '../../examples/ski-shop/verifyExternalConfidence.js';
+// UPDATED: Point to ../../terminal-value/verifyExternalConfidence.js
+import verifyExternalConfidence from '../../terminal-value/verifyExternalConfidence.js';
 import {
   getAllJobs,
   getBatchResults,

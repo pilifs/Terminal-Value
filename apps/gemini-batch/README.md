@@ -1,0 +1,3 @@
+This is a set of utilities to make it easier to integrate with the Gemini Batch APIs, as well as effectively polyfill stuff that is not designed to be used the way we are using them. We do this by saving data locally and updating this asynchronously when jobs are done.
+
+NOTE: As of Feb 6, 2026 the Gemini Batch SDK has had a critical bug, open since Nov 22, 2025, preventing you from querying _any_ model results using _any_ language (https://github.com/googleapis/python-genai/issues/1759). This is an example highlighting that these APIs do not seem to be a priority for the Gemini product team, which has necessitated messy workarounds here that have resulted in code that's messier and more complex to grok than it should be.

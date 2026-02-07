@@ -1,7 +1,9 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import db from './examples/ski-shop/store/db.js';
-import { getMemoizedResult } from './examples/ski-shop/utils/memoizer.js';
+// UPDATED: Point to ../apps/example-ski-shop/store/db.js
+import db from '../apps/example-ski-shop/store/db.js';
+// UPDATED: Point to ../apps/example-ski-shop/utils/memoizer.js
+import { getMemoizedResult } from '../apps/example-ski-shop/utils/memoizer.js';
 
 // Setup paths for ESM
 const __filename = fileURLToPath(import.meta.url);
