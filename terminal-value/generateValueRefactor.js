@@ -4,32 +4,172 @@
  * This module avoids global state and focuses on testable prompt composition.
  */
 
+const clientDetailsExample = {
+  profile: {
+    id: 'CLIENT-010',
+    age: 32,
+    city: 'Aspen',
+    totalLifetimeValue: 6650,
+    memberSince: '2026-02-05T04:57:04.207Z',
+    crmNotes: [
+      'Former pro racer, extremely technical about edge tuning.',
+      'Only skis on hardpack groomers.',
+      'Prefers stiff boots and high DIN bindings.',
+    ],
+  },
+  techContext: [
+    {
+      device: 'Pixel 6',
+      browser: 'Safari',
+      screenSize: 1280,
+    },
+  ],
+  shoppingHistory: [
+    {
+      id: 'ORDER-5421882',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 1200,
+      items: [
+        {
+          productName: 'World Cup Racer',
+          sku: 'SKU-RC-002',
+          itemId: 'ITEM-SKU-RC-002',
+          qty: 1,
+          price: 1200,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-9580384',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 950,
+      items: [
+        {
+          productName: 'Deep Powder',
+          sku: 'SKU-PW-006',
+          itemId: 'ITEM-SKU-PW-006',
+          qty: 1,
+          price: 950,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-3759676',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 650,
+      items: [
+        {
+          productName: 'All Mountain Explorer',
+          sku: 'SKU-AM-001',
+          itemId: 'ITEM-SKU-AM-001',
+          qty: 1,
+          price: 650,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-2599986',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 1050,
+      items: [
+        {
+          productName: 'Big Mountain Pro',
+          sku: 'SKU-BM-007',
+          itemId: 'ITEM-SKU-BM-007',
+          qty: 1,
+          price: 1050,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-1427054',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 950,
+      items: [
+        {
+          productName: 'Deep Powder',
+          sku: 'SKU-PW-006',
+          itemId: 'ITEM-SKU-PW-006',
+          qty: 1,
+          price: 950,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-6824139',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 650,
+      items: [
+        {
+          productName: 'All Mountain Explorer',
+          sku: 'SKU-AM-001',
+          itemId: 'ITEM-SKU-AM-001',
+          qty: 1,
+          price: 650,
+        },
+      ],
+    },
+    {
+      id: 'ORDER-4329523',
+      date: undefined,
+      status: 'CONFIRMED',
+      total: 1200,
+      items: [
+        {
+          productName: 'World Cup Racer',
+          sku: 'SKU-RC-002',
+          itemId: 'ITEM-SKU-RC-002',
+          qty: 1,
+          price: 1200,
+        },
+      ],
+    },
+  ],
+};
+
 // ==========================================
 // 1. Internal Generator Definitions
 // ==========================================
 
 /**
  * Generates the foundational context for the LLM.
- * Replaces the previous 'businessStrategy' variable.
- * * @param {Object} clientDetails - The client configuration object.
+ * Updated to utilize the specific shape of clientDetailsExample.
+ * * @param {Object} clientDetails - The client configuration object matching the example structure.
  * @returns {string} The base strategy prompt.
  */
 const generateBasePrompt = (clientDetails) => {
-  // TODO: Insert your original 'businessStrategy' text here.
-  // Use clientDetails properties to make it dynamic if necessary.
+  const { profile, techContext } = clientDetails;
+
+  // Safe access to nested properties
+  const userLocation = profile?.city || 'Unknown Location';
+  const userAge = profile?.age || 'Unknown Age';
+  const notes = profile?.crmNotes
+    ? profile.crmNotes.join(' ')
+    : 'No specific notes.';
+  const primaryDevice =
+    techContext && techContext[0] ? techContext[0].device : 'Generic Device';
+
   return `
 You are an expert web architect and strategist.
-Client Name: ${clientDetails.clientName || 'The Client'}
-Industry: ${clientDetails.industry || 'Technology'}
-Core Value Proposition: ${clientDetails.valueProp || 'Innovation'}
+User Context:
+- ID: ${profile?.id || 'GUEST'}
+- Demographics: ${userAge} years old, located in ${userLocation}.
+- Technical Environment: Browsing via ${primaryDevice}.
+- CRM Notes: ${notes}
 
-Your goal is to generate high-fidelity, production-ready web components based on the specific requirements below.
+Your goal is to generate high-fidelity, production-ready web components tailored specifically to this user's preferences and constraints.
     `.trim();
 };
 
 /**
  * Returns a collection of prompt generating functions.
- * This encapsulates the logic previously found in 'getFooter' and global scope.
+ * Encapsulates logic for generating component-specific prompts based on user data.
  * * @returns {Object} An object containing the base generator and a map of sub-prompt generators.
  */
 const getPromptGenerators = () => {
@@ -38,27 +178,62 @@ const getPromptGenerators = () => {
     subPrompts: {
       /**
        * Generates the prompt for the Home Page component.
+       * Uses profile notes and LTV to determine tone.
        * @param {Object} clientDetails
        */
       homePage: (clientDetails) => {
+        const { profile } = clientDetails;
+        const notesList = profile?.crmNotes
+          ? profile.crmNotes.map((n) => `- ${n}`).join('\n')
+          : '- Standard user';
+
         return `
 ### Component Request: Home Page
-Create a landing page component that highlights the client's core value proposition. 
-Ensure the hero section is impactful and includes a clear Call to Action (CTA).
-Context: ${clientDetails.description || 'Standard corporate landing page.'}
+Create a personalized landing page component.
+Target Audience Profile:
+${notesList}
+
+Key Metrics:
+- Member Since: ${
+          profile?.memberSince
+            ? new Date(profile.memberSince).toLocaleDateString()
+            : 'N/A'
+        }
+- Lifetime Value: $${profile?.totalLifetimeValue || 0}
+
+Requirements:
+- Highlight gear relevant to ${profile?.city || 'their location'}.
+- Ensure the hero section speaks directly to their technical expertise level mentioned in the notes.
                 `.trim();
       },
 
       /**
        * Generates the prompt for the Order Page component.
+       * Uses shopping history to streamline re-ordering.
        * @param {Object} clientDetails
        */
       orderPage: (clientDetails) => {
+        const { shoppingHistory } = clientDetails;
+
+        // Extract unique product names from history for context
+        const purchasedItems = shoppingHistory
+          ? [
+              ...new Set(
+                shoppingHistory.flatMap((o) =>
+                  o.items.map((i) => i.productName)
+                )
+              ),
+            ].join(', ')
+          : 'None';
+
         return `
 ### Component Request: Order Page
 Create a secure, streamlined order page component.
-Focus on user trust, clear pricing tables, and a frictionless checkout form.
-Context: ${clientDetails.productDetails || 'Standard checkout flow.'}
+Contextual Awareness:
+- The user has previously purchased: ${purchasedItems}.
+- Suggest a "Buy It Again" section if relevant.
+
+Focus on user trust and a frictionless checkout flow suitable for high-value transactions.
                 `.trim();
       },
 
