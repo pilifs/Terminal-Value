@@ -1,4 +1,4 @@
-const parseValueResults = [
+export const parseValueResults = [
   {
     profile: {
       id: 'CLIENT-010',
@@ -1025,5 +1025,3 @@ const parseValueResults = [
     ],
   },
 ];
-
-export default parseValueResults;
