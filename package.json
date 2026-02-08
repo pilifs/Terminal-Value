@@ -6,6 +6,7 @@
   "scripts": {
     "start:gemini": "node ./apps/gemini-batch/server.js",
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
+    "package-code": "node packageCodeForLlm.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\""
   },
