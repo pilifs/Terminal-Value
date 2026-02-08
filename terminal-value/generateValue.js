@@ -120,6 +120,6 @@ function generateValue(clientData) {
   });
 }
 
-const results = generateValue(clients);
+// const results = generateValue(clients);
 
 export default generateValue;

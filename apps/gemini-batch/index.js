@@ -1,5 +1,3 @@
-// UPDATED: Point to ../../terminal-value/verifyExternalConfidence.js
-import verifyExternalConfidence from '../../terminal-value/verifyExternalConfidence.js';
 import {
   getAllJobs,
   getBatchResults,
@@ -8,12 +6,7 @@ import {
   getRawJob,
   getJobInput,
   populateFileOutputResult,
-  verifyExternalConfidenceMethod,
 } from './geminiBatchService.js';
-import {
-  generateAllHomePageComponents,
-  generateAllOrderPageComponents,
-} from './coreServices.js';
 
 const command = process.argv[2];
 const argument = process.argv[3];
@@ -21,8 +14,8 @@ const argument = process.argv[3];
 async function main() {
   if (!command) {
     console.log(`
-🤖 Gemini Batch Smoke Test CLI
-=============================
+🤖 Gemini Batch CLI
+===================
 Usage: node index.js <command> <argument>
 
 Commands:
@@ -32,8 +25,6 @@ Commands:
   rawjob <jobId>        - Get raw details of a specific job (REST API method)
   input <jobId>         - Get the input file content for a job (Locally stored)
   results <fileId>      - Get the output results for a specific file or job ID
-  generate-home         - Generate Home Page components for all clients in mock data
-  generate-order        - Generate Order Page components for all clients in mock data
   populate-results      - Populate output files for successfully completed jobs
 `);
     return;
@@ -88,30 +79,9 @@ Commands:
         console.log(JSON.stringify(results, null, 2));
         break;
 
-      case 'generate-home':
-        console.log(
-          '🚀 Initiating batch generation for Ski Shop Home Pages...'
-        );
-        await generateAllHomePageComponents();
-        break;
-
-      case 'generate-order':
-        console.log(
-          '🚀 Initiating batch generation for Ski Shop ORDER Pages...'
-        );
-        await generateAllOrderPageComponents();
-        break;
-
       case 'populate-results':
         console.log('🚀 Populating missing results for existing jobs...');
         await populateFileOutputResult();
-        break;
-
-      case 'verify-external-confidence':
-        console.log(
-          '🚀 Verifying external confidence for generated Home page components...'
-        );
-        await verifyExternalConfidenceMethod(argument);
         break;
 
       default:
