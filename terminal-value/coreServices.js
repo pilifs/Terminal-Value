@@ -8,8 +8,6 @@ import { createBatchJob } from '../apps/gemini-batch/geminiBatchService.js';
 import { generateValueResults as generateValueResultsMock } from './memoizedResults/generateValueResults.js';
 import { parseValueResults as parseValueResultsMock } from './memoizedResults/parseValueResults.js';
 
-parseValueResultsMock;
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
