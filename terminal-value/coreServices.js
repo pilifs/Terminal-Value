@@ -13,8 +13,9 @@ const __dirname = path.dirname(__filename);
 export async function executeValueChain() {
   // parseValue(db)
   // generateValue(parseValueResults)
-  // generateAllHomePageComponents(generateValueResults)
-  // submitBatchJobs (TODO: this is currently done in the generateAllHomePageComponents function, but should be abstracted out to a separate step)
+  // const homePageJobs = generateAllHomePageComponents(generateValueResults)
+  // const orderPageJobs = generateAllOrderPageComponents(generateValueResults)
+  // await submitBatchJobs([...homePageJobs, ...orderPageJobs])
   // poll / pull results (TODO)
   // verify confidence (TODO)
 }
@@ -77,7 +78,7 @@ function getSkiShopContext() {
   return fileContents.join('\n');
 }
 
-export async function createSkiShopWebComponentPrompt(
+export function createSkiShopWebComponentPrompt(
   promptText,
   customId,
   pageType,
@@ -94,69 +95,47 @@ BELOW IS THE EXISTING CODEBASE FOR THE SKI SHOP SITE (excluding dynamic folders)
 ${fileContext}
 `;
 
-  console.log(
-    `🚀 Creating Ski Shop Component Job (Client: ${
-      customId || 'Unknown'
-    }, Type: ${pageType})...`
-  );
-  return createBatchJob(combinedPrompt, customId, pageType, valueInputHash);
+  return {
+    combinedPrompt,
+    customId,
+    pageType,
+    valueInputHash,
+  };
 }
 
-export async function generateAllHomePageComponents(generateValueResults) {
+export function generateAllHomePageComponents(generateValueResultsMock) {
   console.log(
-    `🚀 Starting batch generation for ${generateValueResults.length} Home Pages...`
+    `🚀 Preparing batch configuration for ${generateValueResultsMock.length} Home Pages...`
   );
 
-  // Calculate hash once for this batch run
   const valueInputHash = getGenerateValueHash();
+  const jobConfigs = [];
 
-  const jobs = [];
-
-  for (const clientData of generateValueResults) {
+  for (const clientData of generateValueResultsMock) {
     const clientId = clientData.clientId;
     const promptText = clientData.prompts?.webComponentHome;
 
     if (!promptText) continue;
 
-    console.log(`\n▶️ Processing Home Page for: ${clientId}`);
-    try {
-      const job = await createSkiShopWebComponentPrompt(
-        promptText,
-        clientId,
-        'home',
-        valueInputHash // Pass Hash
-      );
-      jobs.push({
-        clientId,
-        type: 'HOME',
-        jobId: job.name,
-        status: 'SUBMITTED',
-      });
-      console.log(`✅ Job created: ${job.name.split('/').pop()}`);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } catch (err) {
-      console.error(`❌ Failed for ${clientId}:`, err.message);
-      jobs.push({
-        clientId,
-        type: 'HOME',
-        status: 'FAILED',
-        error: err.message,
-      });
-    }
+    const config = createSkiShopWebComponentPrompt(
+      promptText,
+      clientId,
+      'home',
+      valueInputHash
+    );
+    jobConfigs.push(config);
   }
-  console.table(jobs);
-  return jobs;
+
+  return jobConfigs;
 }
 
-export async function generateAllOrderPageComponents(generateValueResults) {
+export function generateAllOrderPageComponents(generateValueResults) {
   console.log(
-    `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
+    `🚀 Preparing batch configuration for ${generateValueResults.length} Order Pages...`
   );
 
-  // Calculate hash once for this batch run
   const valueInputHash = getGenerateValueHash();
-
-  const jobs = [];
+  const jobConfigs = [];
 
   for (const clientData of generateValueResults) {
     const clientId = clientData.clientId;
@@ -169,17 +148,39 @@ export async function generateAllOrderPageComponents(generateValueResults) {
       continue;
     }
 
-    console.log(`\n▶️ Processing Order Page for: ${clientId}`);
+    const config = createSkiShopWebComponentPrompt(
+      promptText,
+      clientId,
+      'order',
+      valueInputHash
+    );
+    jobConfigs.push(config);
+  }
+
+  return jobConfigs;
+}
+
+export async function submitBatchJobs(jobConfigs) {
+  console.log(`🚀 Submitting ${jobConfigs.length} batch jobs...`);
+
+  const jobs = [];
+
+  for (const config of jobConfigs) {
+    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+    const clientId = customId; // Assuming customId maps to clientId for logging
+
+    console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
-      const job = await createSkiShopWebComponentPrompt(
-        promptText,
-        clientId,
-        'order',
-        valueInputHash // Pass Hash
+      const job = await createBatchJob(
+        combinedPrompt,
+        customId,
+        pageType,
+        valueInputHash
       );
+
       jobs.push({
         clientId,
-        type: 'ORDER',
+        type: pageType.toUpperCase(),
         jobId: job.name,
         status: 'SUBMITTED',
       });
@@ -189,12 +190,13 @@ export async function generateAllOrderPageComponents(generateValueResults) {
       console.error(`❌ Failed for ${clientId}:`, err.message);
       jobs.push({
         clientId,
-        type: 'ORDER',
+        type: pageType.toUpperCase(),
         status: 'FAILED',
         error: err.message,
       });
     }
   }
+
   console.table(jobs);
   return jobs;
 }
