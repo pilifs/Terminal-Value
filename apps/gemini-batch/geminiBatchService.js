@@ -11,11 +11,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
 const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
-// UPDATED: Point to ../../terminal-value/memoizedResults/generateValueResults.js
-const GENERATE_VALUE_PATH = path.join(
-  __dirname,
-  '../../terminal-value/memoizedResults/generateValueResults.js'
-);
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
@@ -26,19 +21,6 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 // Ensure local storage directory exists
 if (!fs.existsSync(LOCAL_INPUTS_DIR)) {
   fs.mkdirSync(LOCAL_INPUTS_DIR, { recursive: true });
-}
-
-// --- Helper: Get Hash of Generate Value Input ---
-export function getGenerateValueHash() {
-  try {
-    if (fs.existsSync(GENERATE_VALUE_PATH)) {
-      const content = fs.readFileSync(GENERATE_VALUE_PATH, 'utf-8');
-      return crypto.createHash('sha256').update(content).digest('hex');
-    }
-  } catch (e) {
-    console.warn('⚠️ Could not calculate hash for generateValueResults.js', e);
-  }
-  return null;
 }
 
 // --- Helper: Ski Shop Results Persistence ---
@@ -407,10 +389,4 @@ export async function populateFileOutputResult() {
   } else {
     console.log(`🎉 Successfully fetched results for ${fetchCount} jobs.`);
   }
-}
-
-export async function verifyExternalConfidenceMethod(hash) {
-  // Implement logic to verify external confidence for generated components based on the provided hash
-  // This function can read the generated components for the given hash, compare them to the default implementation,
-  // and use a Gemini model to assess confidence and safety. The results can be logged or stored as needed.
 }

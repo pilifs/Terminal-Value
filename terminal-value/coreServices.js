@@ -1,18 +1,50 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { createBatchJob, getGenerateValueHash } from './geminiBatchService.js';
-// UPDATED: Point to ../../terminal-value/memoizedResults/generateValueResults.js
-import { generateValueResults } from '../../terminal-value/memoizedResults/generateValueResults.js';
+import { createBatchJob } from '../apps/gemini-batch/geminiBatchService.js';
+
+// TODO: implement generateValue method for real, mock only used in hash logic for now
+import { generateValueResults as generateValueResultsMock } from './memoizedResults/generateValueResults.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export async function executeValueChain() {
+  // parseValue(db)
+  // generateValue(parseValueResults)
+  // generateAllHomePageComponents(generateValueResults)
+  // submitBatchJobs (TODO: this is currently done in the generateAllHomePageComponents function, but should be abstracted out to a separate step)
+  // poll / pull results (TODO)
+  // verify confidence (TODO)
+}
+
+export function getGenerateValueResults() {
+  return generateValueResultsMock;
+}
+
+// TODO: update this to hash actual result from getGenerateValueResults
+export function getGenerateValueHash() {
+  const GENERATE_VALUE_PATH = path.join(
+    __dirname,
+    'memoizedResults/generateValueResults.js'
+  );
+
+  try {
+    if (fs.existsSync(GENERATE_VALUE_PATH)) {
+      const content = fs.readFileSync(GENERATE_VALUE_PATH, 'utf-8');
+      return crypto.createHash('sha256').update(content).digest('hex');
+    }
+  } catch (e) {
+    console.warn('⚠️ Could not calculate hash for generateValueResults.js', e);
+  }
+  return null;
+}
+
 function getSkiShopContext() {
-  // UPDATED: Point to ../example-ski-shop/public (sibling app in apps/ folder)
   const skiShopPublicDir = path.resolve(
     __dirname,
-    '../example-ski-shop/public'
+    '../apps/example-ski-shop/public'
   );
 
   if (!fs.existsSync(skiShopPublicDir)) {
@@ -70,7 +102,7 @@ ${fileContext}
   return createBatchJob(combinedPrompt, customId, pageType, valueInputHash);
 }
 
-export async function generateAllHomePageComponents() {
+export async function generateAllHomePageComponents(generateValueResults) {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Home Pages...`
   );
@@ -116,7 +148,7 @@ export async function generateAllHomePageComponents() {
   return jobs;
 }
 
-export async function generateAllOrderPageComponents() {
+export async function generateAllOrderPageComponents(generateValueResults) {
   console.log(
     `🚀 Starting batch generation for ${generateValueResults.length} Order Pages...`
   );
@@ -165,4 +197,10 @@ export async function generateAllOrderPageComponents() {
   }
   console.table(jobs);
   return jobs;
+}
+
+export async function verifyExternalConfidenceMethod(hash) {
+  // Implement logic to verify external confidence for generated components based on the provided hash
+  // This function can read the generated components for the given hash, compare them to the default implementation,
+  // and use a Gemini model to assess confidence and safety. The results can be logged or stored as needed.
 }
