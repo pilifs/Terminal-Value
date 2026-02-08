@@ -103,62 +103,55 @@ ${fileContext}
   };
 }
 
-export function generateAllHomePageComponents(generateValueResultsMock) {
-  console.log(
-    `🚀 Preparing batch configuration for ${generateValueResultsMock.length} Home Pages...`
-  );
-
-  const valueInputHash = getGenerateValueHash();
-  const jobConfigs = [];
-
-  for (const clientData of generateValueResultsMock) {
-    const clientId = clientData.clientId;
-    const promptText = clientData.prompts?.webComponentHome;
-
-    if (!promptText) continue;
-
-    const config = createSkiShopWebComponentPrompt(
-      promptText,
-      clientId,
-      'home',
-      valueInputHash
+/**
+ * Higher Order Function to create page component generators.
+ * @param {string} pageType - 'home' or 'order'
+ * @returns {function} Function that accepts results and returns job configs
+ */
+function createPageGenerator(pageType) {
+  return (generateValueResults) => {
+    console.log(
+      `🚀 Preparing batch configuration for ${generateValueResults.length} ${
+        pageType.charAt(0).toUpperCase() + pageType.slice(1)
+      } Pages...`
     );
-    jobConfigs.push(config);
-  }
 
-  return jobConfigs;
-}
+    const valueInputHash = getGenerateValueHash();
+    const jobConfigs = [];
 
-export function generateAllOrderPageComponents(generateValueResults) {
-  console.log(
-    `🚀 Preparing batch configuration for ${generateValueResults.length} Order Pages...`
-  );
+    // Map 'home' -> 'webComponentHome', 'order' -> 'webComponentOrder'
+    const promptKey = `webComponent${
+      pageType.charAt(0).toUpperCase() + pageType.slice(1)
+    }`;
 
-  const valueInputHash = getGenerateValueHash();
-  const jobConfigs = [];
+    for (const clientData of generateValueResults) {
+      const clientId = clientData.clientId;
+      const promptText = clientData.prompts?.[promptKey];
 
-  for (const clientData of generateValueResults) {
-    const clientId = clientData.clientId;
-    const promptText = clientData.prompts?.webComponentOrder;
+      if (!promptText) {
+        if (pageType === 'order') {
+          console.warn(
+            `⚠️ Skipping ${clientId}: No '${promptKey}' prompt found.`
+          );
+        }
+        continue;
+      }
 
-    if (!promptText) {
-      console.warn(
-        `⚠️ Skipping ${clientId}: No 'webComponentOrder' prompt found.`
+      const config = createSkiShopWebComponentPrompt(
+        promptText,
+        clientId,
+        pageType,
+        valueInputHash
       );
-      continue;
+      jobConfigs.push(config);
     }
 
-    const config = createSkiShopWebComponentPrompt(
-      promptText,
-      clientId,
-      'order',
-      valueInputHash
-    );
-    jobConfigs.push(config);
-  }
-
-  return jobConfigs;
+    return jobConfigs;
+  };
 }
+
+export const generateAllHomePageComponents = createPageGenerator('home');
+export const generateAllOrderPageComponents = createPageGenerator('order');
 
 export async function submitBatchJobs(jobConfigs) {
   console.log(`🚀 Submitting ${jobConfigs.length} batch jobs...`);
@@ -167,7 +160,7 @@ export async function submitBatchJobs(jobConfigs) {
 
   for (const config of jobConfigs) {
     const { combinedPrompt, customId, pageType, valueInputHash } = config;
-    const clientId = customId; // Assuming customId maps to clientId for logging
+    const clientId = customId;
 
     console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
@@ -202,7 +195,5 @@ export async function submitBatchJobs(jobConfigs) {
 }
 
 export async function verifyExternalConfidenceMethod(hash) {
-  // Implement logic to verify external confidence for generated components based on the provided hash
-  // This function can read the generated components for the given hash, compare them to the default implementation,
-  // and use a Gemini model to assess confidence and safety. The results can be logged or stored as needed.
+  // Implement logic to verify external confidence
 }
