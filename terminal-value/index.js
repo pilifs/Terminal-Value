@@ -2,9 +2,10 @@ import {
   generateAllHomePageComponents,
   generateAllOrderPageComponents,
   verifyExternalConfidenceMethod,
+  generateValueMetadata,
 } from './coreServices.js';
 
-const command = process.argv[2];
+const command = 'generate-metadata'; // process.argv[2];
 const argument = process.argv[3];
 
 async function main() {
@@ -43,6 +44,12 @@ Commands:
           '🚀 Verifying external confidence for generated Home page components...'
         );
         await verifyExternalConfidenceMethod(argument);
+        break;
+
+      case 'generate-metadata':
+        console.log('🚀 Generating metadata input into batch job');
+        let metadata = generateValueMetadata();
+        console.log('Metadata generation complete');
         break;
 
       default:
