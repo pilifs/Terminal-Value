@@ -11,14 +11,16 @@ import { parseValueResults as parseValueResultsMock } from './memoizedResults/pa
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function executeValueChain() {
+export function prepValueChain() {
   // parseValue(db)
   // generateValue(parseValueResults)
   // const homePageJobs = generateAllHomePageComponents(generateValueResults)
   // const orderPageJobs = generateAllOrderPageComponents(generateValueResults)
-  // await submitBatchJobs([...homePageJobs, ...orderPageJobs])
-  // poll / pull results (TODO)
-  // verify confidence (TODO)
+  // return
+}
+
+export async function executeValueChain() {
+  // Future implementation will execute the pure function prepValueChain, submit batch jobs based on results, then poll for completion in an intelligent way
 }
 
 export function getGenerateValueResults() {
