@@ -1,11 +1,14 @@
 import fs from 'fs';
-import path from 'path';
+import path, { parse } from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createBatchJob } from '../apps/gemini-batch/geminiBatchService.js';
 
-// TODO: implement generateValue method for real, mock only used in hash logic for now
+// TODO: implement parseValue and generateValue methods for real, mock only used in hash logic for now
 import { generateValueResults as generateValueResultsMock } from './memoizedResults/generateValueResults.js';
+import { parseValueResults as parseValueResultsMock } from './memoizedResults/parseValueResults.js';
+
+parseValueResultsMock;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +25,10 @@ export async function executeValueChain() {
 
 export function getGenerateValueResults() {
   return generateValueResultsMock;
+}
+
+export function getParseValueResults() {
+  return parseValueResultsMock;
 }
 
 // TODO: update this to hash actual result from getGenerateValueResults

@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import clients from './memoizedResults/parseValueResults.js';
+import { parseValueResults as clients } from './memoizedResults/parseValueResults.js';
 // UPDATED: Point to ../apps/example-ski-shop instead of ./examples/ski-shop
 import { getMemoizedResult } from '../apps/example-ski-shop/utils/memoizer.js';
 
