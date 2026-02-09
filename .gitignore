@@ -1,4 +1,5 @@
 node_modules/
 .vscode/
+.env
 requests.jsonl
 tmp-llm-input/**
