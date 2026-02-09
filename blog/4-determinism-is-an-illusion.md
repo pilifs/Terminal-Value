@@ -1,0 +1,1 @@
+Placeholder for a future post that examines the role of determinism in problem solving today, and how LLMs relate to this. I believe that lack of determinism is a design constraint for engineers to solve, not an absolute law, with parallels to how the CAP theorem and modern distributed system-based solutions intersect.
