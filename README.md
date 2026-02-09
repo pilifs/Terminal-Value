@@ -1,9 +1,9 @@
 # Terminal Value: A Pipeline That Renders Personalized Web Components Via LLM
 
-This repository takes a Base Home Page Web Component from an eCommerce web app:
+This repository takes a **Base Home Page Web Component** from an eCommerce web app:
 [<img src="./blog/images/base-common-thumbnail.png" alt="Base Thumbnail">](./blog/images/base-home-page-example.png)
 
-Then feeds it into an LLM, along with user-specific context (i.e., notes from a CRTM system) through a fully programmatic pipeline, to render a Custom Client-Specific Home Page Web Component:
+Then feeds it into an LLM, along with user-specific context (i.e., notes from a CRM system) through a fully programmatic pipeline, to render a **Custom Client-Specific Home Page Web Component:**
 [<img src="./blog/images/client-specific-thumbnail.png" alt="Client-Specific Thumbnail">](./blog/images/client-specific-home-page-example.png)
 
 Each custom web component is rendered in one-shot using about 10,000 tokens, averaging around ~4kb unminified size. Sample raw responses from Gemini Batch APIs that show raw prompt input, raw LLM response and detailed token usage metadata can be found in `./apps/gemini-batch/local-inputs`.
@@ -20,21 +20,23 @@ Before continuing, I encourage you to start with [Approaching LLMs Like an Engin
 
 Run `npm install` then `npm run start:ski-shop` to start the example eCommerce app. Here are some links to custom rendered components you can check out after running the app:
 
-[CLIENT-006: backcountry adventurer](http://localhost:3000/?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-[CLIENT-012: digital nomad](http://localhost:3000/?clientId=CLIENT-012&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-[CLIENT-004: trust-fund elite](http://localhost:3000/?clientId=CLIENT-004&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-[CLIENT-012: ski racer parent](http://localhost:3000/?clientId=CLIENT-008&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-[CLIENT-014: retired enthusiast](http://localhost:3000/?clientId=CLIENT-014&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
+- [CLIENT-006: backcountry adventurer](http://localhost:3000/?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
+- [CLIENT-012: digital nomad](http://localhost:3000/?clientId=CLIENT-012&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
+- [CLIENT-004: trust-fund elite](http://localhost:3000/?clientId=CLIENT-004&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
+- [CLIENT-012: ski racer parent](http://localhost:3000/?clientId=CLIENT-008&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
+- [CLIENT-014: retired enthusiast](http://localhost:3000/?clientId=CLIENT-014&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
-Compare and contrast them with the [base home page experience](http://localhost:3000/index.html), which is used in the prompt. Visit the [<img src="./blog/images/ski-shop-admin-page-thumbnail.png" alt="Admin Thumbnail"](./blog/images/ski-shop-admin-page.png) to view all client details and open other custom LLM-rendered pages.
+Compare and contrast them with the [base home page experience](http://localhost:3000/index.html), which is used in the prompt. Visit the [admin page](http://localhost:3000/admin.html) to view all client details and open other custom LLM-rendered pages.
+
+[<img src="./blog/images/ski-shop-admin-page-thumbnail.png" alt="Admin Thumbnail">](./blog/images/ski-shop-admin-page.png)
 
 ## Overall Structure
 
 There are three apps in this repo.
 
 - Ski Shop: detailed above.
-- Gemini Batch: an app you can start by executing `npm run start:gemini`. It has a [crude front-end][http://localhost:3001/] to help keep track of Gemini Batch API requests to render components, along with other methods to interact with this API.
-- Terminal Value: a pipeline to render custom views for Ski Shop by extracting relevant user info, along with key files, and programatically passing them to an LLM.
+- Gemini Batch: an app you can start by executing `npm run start:gemini`. It has a [crude front-end](http://localhost:3001/) to help keep track of Gemini Batch API requests to render components, along with other methods to interact with this API.
+- Terminal Value: a pipeline to render custom views for Ski Shop by extracting relevant user info, along with key files, by programatically passing them to an LLM then dynamically serving the results.
 
 ## Terminal Value Architecture
 
@@ -46,15 +48,15 @@ You can see additional details by browsing the repository. For now, rather than 
 
 ## Ski Shop Architecture
 
-The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. It was written this way because, in theory, it allows us to easily implement features like re-render a new custom view based on an event that changes some context specific to one or more users efficiently. LLMs also seem to do well with functional codebases.
-
 The mock eCommerce application architecture looks something like this, at a high-level:
 
 [Events](./terminal-value//memoizedResults/generateEventsResults.js) -> [Projections](./apps/example-ski-shop/store/projections.js) -> [Database](./apps/example-ski-shop/store/db.js)
 
+The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. It was written this way because, in theory, it allows us to easily implement features like re-render a new custom view based on an event that changes some context specific to one or more users efficiently. LLMs also seem to do well with functional codebases.
+
 ## Feature Ideas
 
-Here are some feature ideas on my mind. If you'd like to work on these, or submit any of your own, please read the [contributing guidelines](./CONTRIBUTING.md) first, then feel free to jump in!
+Here are some feature ideas on my mind.
 
 - Refactor Terminal Value Pipeline
 
@@ -72,8 +74,10 @@ Update so dynamic pricing is set by a back-end config, and allow the LLM to rend
 
 Render for 10,000 users. Analyze the prompt much more carefully to tune performance. Publish token utilization metrics.
 
+If you'd like to work on these, or submit any of your own, please read the [contributing guidelines](./CONTRIBUTING.md) first, then feel free to jump in.
+
 ## Conclusion
 
-This is meant to be a thought provoking example, not a startup or polished final product. Your feedback and contribution is strongly encouraged!
+This is meant to be a thought provoking example, not a startup or polished final product. Your participation is strongly encouraged!
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
