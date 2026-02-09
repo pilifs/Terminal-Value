@@ -81,7 +81,9 @@ const packageCodeForLlm = async () => {
           if (basename === '.env') return false;
           if (basename === '.vscode') return false;
           if (basename === 'node_modules') return false;
-          if (source.includes(path.join('gemini-batch', 'local-inputs')))
+          if (
+            source.includes(path.join('gemini-batch', 'local-inputs', 'blog'))
+          )
             return false;
 
           return true;
