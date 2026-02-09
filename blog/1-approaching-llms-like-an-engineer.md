@@ -61,7 +61,7 @@ This error is indicative of a Gemini confidence threshold check failing, however
 
 [Prompt Logic Error](./images/gemini-ex-2.png)
 
-This worked. Gemini produced the exact refactor I needed (TODO: link to commit).
+This worked. Gemini produced [the exact refactor I needed](36f936097317baab42ea2ad71285012df5113713).
 
 However, the next interaction in this context window highlights the importance of **Context Hygiene.** I followed up with a simple request to update method arguments, a task I have executed many times before. It didn't work in this case because the previous turn of the conversation had started with a failure (the confidence error), and the context window was now compromised. Gemini completely misinterpreted my request and hallucinated a need for Google Workspace integration.
 
@@ -77,27 +77,21 @@ I started with the surprising case above because we often learn more when experi
 
 Refactor of a major data structure input.
 https://gemini.google.com/share/e394d1e6c1a2
-TODO: Add commit link
 
 Refactor of the core service method.
 https://gemini.google.com/share/eb623065066f
-TODO: Add commit link
 
 Create the helper script used in root to interact with LLM (previously, I was manually pasting).
 https://gemini.google.com/share/71041e15531e
-TODO: Add commit link
 
 Feature to generate web component files that are served to users from prompts.
 https://gemini.google.com/share/7fa5ed003d78
-TODO: Add commit link
 
 Feature to generate prompts from the operational DB state.
 https://gemini.google.com/share/e63f086ac0f8
-TODO: Add commit link
 
 Multiple complex front-end features generated in a single, chained context window.
 https://gemini.google.com/share/816018a113b9
-TODO: Add commit link
 
 ## Conclusion
 

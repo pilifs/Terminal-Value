@@ -17,7 +17,6 @@ Do not overwrite a file if it exists and use the same naming format that exists 
 ```
 
 [Full chat](https://gemini.google.com/share/816018a113b9)
-[Related commit](TODO)
 
 You don't have to follow my workflow, as long as the results follow the contribution guidelines below. If you find a way to improve on my workflow, please share your methodology!
 

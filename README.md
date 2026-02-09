@@ -1,13 +1,14 @@
-# Terminal Value: A Working Example of Rendering Personalized User Views With an LLM-enabled Pipeline
+# Terminal Value: A Pipeline That Renders Personalized Web Components Via LLM
 
 This repository takes a Base Home Page Web Component from an eCommerce web app:
 [<img src="./blog/images/base-common-thumbnail.png" alt="Base Thumbnail">](./blog/images/base-home-page-example.png)
-Then feeds it into an LLM, fully programatically through a pipeline, to render a Custom Client-Specific Home Page Web Component:
+
+Then feeds it into an LLM, along with user-specific context (i.e., notes from a CRTM system) through a fully programmatic pipeline, to render a Custom Client-Specific Home Page Web Component:
 [<img src="./blog/images/client-specific-thumbnail.png" alt="Client-Specific Thumbnail">](./blog/images/client-specific-home-page-example.png)
 
 Each custom web component is rendered in one-shot using about 10,000 tokens, averaging around ~4kb unminified size. Sample raw responses from Gemini Batch APIs that show raw prompt input, raw LLM response and detailed token usage metadata can be found in `./apps/gemini-batch/local-inputs`.
 
-The framework and architecture behind this approach is the namesake of this repository, Terminal Value. It's not quite using an LLM as a compiler, but it's also not quite like agentic AI, MCP, vibe coding, or other LLM-related vernacular that I have come across. Therefore, I have been somewhat ironically referring to it as **HOTAI ("Higher-Order Transactional AI")**, which seems semantic to me.
+The framework and architecture behind this approach is the namesake of this repository, Terminal Value. It's not quite using an LLM as a compiler, but it's also not quite like agentic AI, MCP, vibe coding, or other LLM-related vernacular that I have come across. It seems more like transational AI, invoking an LLM with a higher-order transaction to invoke a structured reasoning response.
 
 Before continuing, I encourage you to start with [Approaching LLMs Like an Engineer](./blog/1-approaching-llms-like-an-engineer.md), a blog post embedded in this repo that details the philosophy applied here, along with bite-sized examples.
 
@@ -37,19 +38,19 @@ There are three apps in this repo.
 
 ## Terminal Value Architecture
 
-The architecture behind the Terminal Value pipeline looks something like this, at a high-level.
+The architecture behind the Terminal Value pipeline looks something like this, at a high-level:
 
-Database -> Parse Data -> Construct Base Prompts -> Append Code Context -> Invoke LLMs -> Serve Pages Dynamically
+[Database](./apps/example-ski-shop/store/db.js) -> [Parse Data](./terminal-value/parseValue.js) -> [Construct Base Prompts](./terminal-value/generateValueRefactor.js) -> [Append Code Context](./apps/gemini-batch/skiShopResults.js) -> [Invoke LLM](./terminal-value/coreServices.js) -> [Serve Result Dynamically](./terminal-value/generateDynamicFiles.js)
 
-You can find all this by browsing the repository. For now, rather than spend more time documenting, I will refactor this code in coming days to be much cleaner, then update this README.
+You can see additional details by browsing the repository. For now, rather than spend more time documenting, I will refactor this code in coming days to be much cleaner, then update this README.
 
 ## Ski Shop Architecture
 
-The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. It was written this way because, in theory, it allows us to easily implement features like re-render a new custom view based on an event that changes some context specific to one or more users efficiently.
+The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. It was written this way because, in theory, it allows us to easily implement features like re-render a new custom view based on an event that changes some context specific to one or more users efficiently. LLMs also seem to do well with functional codebases.
 
 The mock eCommerce application architecture looks something like this, at a high-level:
 
-Event Journal -> Projection Handlers -> Normalized Database
+[Events](./terminal-value//memoizedResults/generateEventsResults.js) -> [Projections](./apps/example-ski-shop/store/projections.js) -> [Database](./apps/example-ski-shop/store/db.js)
 
 ## Feature Ideas
 
