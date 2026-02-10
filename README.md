@@ -1,20 +1,26 @@
-# Terminal Value: A Pipeline That Renders Personalized Web Components Via LLM
+# Terminal Value: A Pipeline That Generates Contextual Web Components Via LLM
 
-This repository takes a **Base Home Page Web Component** from an eCommerce web app:
+This repo is a sandbox rooted in an architecture concept I summarize as "probabilistic core, deterministic shell." The hypothesis is that by treating LLMs as probabilistic software systems, and applying engineering principles to mitigate their inherent downsides, we can invoke them transactionally to serve higher-order logic in a predictable way.
+
+For example, the pipeline currently references a **Base Home Page Web Component** from an mock e-commerce web app:
+
 [<img src="./blog/images/base-common-thumbnail.png" alt="Base Thumbnail">](./blog/images/base-home-page-example.png)
 
-Then feeds it into an LLM, along with user-specific context (i.e., notes from a CRM system) through a fully programmatic pipeline, to render a **Custom Client-Specific Home Page Web Component:**
+It combines this base component with user-specific context (i.e., notes from a CRM system) then feeds it to an LLM, in a fully automated way, to generate a **Client-Specific Home Page Web Component:**
+
 [<img src="./blog/images/client-specific-thumbnail.png" alt="Client-Specific Thumbnail">](./blog/images/client-specific-home-page-example.png)
 
-Each custom web component is rendered in one-shot using about 10,000 tokens, averaging around ~4kb unminified size. Sample raw responses from Gemini Batch APIs that show raw prompt input, raw LLM response and detailed token usage metadata can be found in `./apps/gemini-batch/local-inputs`.
+This user-specific component is then served and rendered dynamically for the appropriate user through the original mock e-commerce web app.
 
-The framework and architecture behind this approach is the namesake of this repository, Terminal Value. It's not quite using an LLM as a compiler, but it's also not quite like agentic AI, MCP, vibe coding, or other LLM-related vernacular that I have come across. It seems more like transational AI, invoking an LLM with a higher-order transaction to invoke a structured reasoning response.
+Each custom web component is generated in one-shot using about 10,000 tokens, averaging around ~4kb unminified size. Sample raw responses from Gemini Batch APIs that show raw prompt input, raw LLM response and detailed token usage metadata can be found in `./apps/gemini-batch/local-inputs`.
+
+The framework and architecture behind this approach is the namesake of this repository, Terminal Value. The result is not quite MCP, vibe coding, LLM as a compiler, or agentic AI, but something in between -- more along the lines of "transactional AI."
 
 Before continuing, I encourage you to start with [Approaching LLMs Like an Engineer](./blog/1-approaching-llms-like-an-engineer.md), a blog post embedded in this repo that details the philosophy applied here, some key principles to ground yourself with, and bite-sized examples.
 
 ## Run Locally Fast
 
-Run `npm install` then `npm run start:ski-shop` to start the example eCommerce app. Here are some links to custom rendered components you can check out after running the app:
+Run `npm install` then `npm run start:ski-shop` to start the example e-commerce app. Here are some links to custom rendered components you can check out after running the app:
 
 - [CLIENT-006: backcountry adventurer (shown above)](http://localhost:3000/?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
@@ -60,7 +66,7 @@ You can see additional details by browsing the repository. For now, rather than 
 
 ## Ski Shop Architecture
 
-The mock eCommerce application architecture looks something like this, at a high-level:
+The mock e-commerce application architecture looks something like this, at a high-level:
 
 [Events](./terminal-value//memoizedResults/generateEventsResults.js) -> [Projections](./apps/example-ski-shop/store/projections.js) -> [Database](./apps/example-ski-shop/store/db.js)
 
@@ -77,6 +83,10 @@ The current approach is rife with side effects as I have not finished extra all 
 - Add Additional User-Specific Render Prompts
 
 The obvious ones are marketing prompts, such as reddit or twitter copy. It would also be interesting to show example marketing images with the same look and feel as the web components and marketing copy.
+
+- External Confidence Test Framework
+
+In order to effectively test probabilistic output, we must validate external confidence. Create an external confidence verification system designed to verify changes in base prompts used by the LLM to generate contextual components.
 
 - Harden Web App and Make Context More Realistic
 
