@@ -19,6 +19,7 @@ Commands:
   generate-home              - Generate Home Page components for all clients
   generate-order             - Generate Order Page components for all clients
   verify-external-confidence - Verify external confidence for generated components
+  generate-metadata          - Generate metadata for batch jobs (no submission)
 `);
     return;
   }

@@ -1,5 +1,10 @@
 import express from 'express';
-import { createBatchJob, getAllJobs, getBatchResults, getJobInput } from './geminiBatchService.js';
+import {
+  createBatchJob,
+  getAllJobs,
+  getBatchResults,
+  getJobInput,
+} from './geminiBatchService.js';
 import path from 'path';
 import morgan from 'morgan';
 import { fileURLToPath } from 'url';
@@ -51,11 +56,11 @@ app.get('/api/jobs/results/:fileId', async (req, res) => {
 // GET: Fetch input prompt for a specific job
 app.get('/api/jobs/:jobId/input', async (req, res) => {
   try {
-    const {XH} = req.params;
+    const { XH } = req.params;
     const inputs = await getJobInput(req.params.jobId);
     if (inputs === null) {
       // Not found (probably old job without local file)
-      return res.status(404).json({ error: "Input file not found locally" });
+      return res.status(404).json({ error: 'Input file not found locally' });
     }
     res.json(inputs);
   } catch (error) {

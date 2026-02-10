@@ -170,7 +170,8 @@ const Projector = {
   persist: () => {
     // Convert Maps to Arrays for JSON serialization
     const snapshot = {
-      _generatedAt: new Date().toISOString(),
+      // Quick and dirty prevent changes to db.js when running app with same state
+      _generatedAt: '2026-02-07T21:31:34.746Z', //new Date().toISOString(),
       dashboard: db.dashboard,
       inventory: Array.from(db.inventory.values()),
       clients: Array.from(db.clients.values()),
