@@ -28,15 +28,15 @@ Run `npm install` then `npm run start:ski-shop` to start the example e-commerce 
 
 - [CLIENT-012: digital nomad](http://localhost:3000/?clientId=CLIENT-012&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
-[<img src="./blog/images/aspen-private-example-thumb.png" alt="Base Thumbnail">](./blog/images/aspen-private-example-thumb.png)
+[<img src="./blog/images/aspen-private-example-thumb.png" alt="Base Thumbnail">](./blog/images/aspen-private-example.png)
 
 - [CLIENT-004: trust-fund elite](http://localhost:3000/?clientId=CLIENT-004&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
-[<img src="./blog/images/calgary-race-example-thumb.png" alt="Base Thumbnail">](./blog/images/calgary-race-example-thumb.png)
+[<img src="./blog/images/calgary-race-example-thumb.png" alt="Base Thumbnail">](./blog/images/calgary-race-example.png)
 
 - [CLIENT-012: ski racer parent](http://localhost:3000/?clientId=CLIENT-008&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
-[<img src="./blog/images/retired-reserve-example-thumb.png" alt="Base Thumbnail">](./blog/images/retired-reserve-example-thumb.png)
+[<img src="./blog/images/retired-reserve-example-thumb.png" alt="Base Thumbnail">](./blog/images/retired-reserve-example.png)
 
 - [CLIENT-014: retired enthusiast](http://localhost:3000/?clientId=CLIENT-014&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
