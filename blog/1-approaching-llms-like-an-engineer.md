@@ -39,7 +39,7 @@ Consider the CAP theorem in cloud computing, which mathematically dictates that 
 
 Similarly, perhaps we must treat LLMs as systems with **"Eventual Accuracy."** We don't trust the probabilistic output blindly, so we carefully apply deterministic checks (the "mental linter") as our guardrail. State of the art LLM-products (like Gemini 3 Pro or Claude 4.6 Opus) seem to handle confidence thresholds exceptionally well, to the point where it's hard to get it to write code that doesn't work. This forces the user to debug their prompt (the input) rather than wasting cycles debugging the hallucination (the output).
 
-See [first-hand examples](#gemini-3-pro-chat-examples:-a-case-study-in-experimentation) from my results using Gemini 3 Pro to develop this codebase.
+See [first-hand examples](#gemini-3-pro-chat-examples-a-case-study-in-experimentation) from my results using Gemini 3 Pro to develop this codebase.
 
 # The Recursion of Technical Debt
 
@@ -55,17 +55,17 @@ The principles above were not derived from a textbook. They were learned through
 
 I set out to refactor `generateValue.js`, a critical domain file. I had a specific architectural vision, but I made the mistake of making the prompt too verbose with some logical flaws. Instead of bad code, Gemini returned a generic error:
 
-[Gemini Confidence Error](./images/gemini-ex-1.png)
+![Gemini Confidence Error](./images/gemini-ex-1.png)
 
 This error is indicative of a Gemini confidence threshold check failing, however it is very strange to get it on an initial prompt that is not malicious in any way. I hypothesized that this may be caused by a logic error in my prompt. I replaced three words in my prompt to correct the logical rabbit hole I had sent Gemini down and tried again.
 
-[Prompt Logic Error](./images/gemini-ex-2.png)
+![Prompt Logic Error](./images/gemini-ex-2.png)
 
 This worked. Gemini produced [the exact refactor I needed](36f936097317baab42ea2ad71285012df5113713).
 
 However, the next interaction in this context window highlights the importance of **Context Hygiene.** I followed up with a simple request to update method arguments, a task I have executed many times before. It didn't work in this case because the previous turn of the conversation had started with a failure (the confidence error), and the context window was now compromised. Gemini completely misinterpreted my request and hallucinated a need for Google Workspace integration.
 
-[Gemini Unable to Parse Input](./images/gemini-ex-3.png)
+![Gemini Unable to Parse Input](./images/gemini-ex-3.png)
 
 I didn't try to argue with the model. I recognized that the context window was degraded, so I cleared the chat and started a fresh session with a one-shot prompt [that worked perfectly](https://gemini.google.com/share/1a1fdb177658). You can see the full chat detailed above here: https://gemini.google.com/share/1a1fdb177658.
 
