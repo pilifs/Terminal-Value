@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ski Shop Admin</title>
     <style>
-      /* Existing Styles ... */
       body {
         font-family: 'Segoe UI', sans-serif;
         background: #2c3e50;
@@ -177,24 +176,46 @@
       ul.version-list li {
         margin-bottom: 10px;
       }
-      ul.version-list a {
+      /* Updated styles for labels to act like the previous links */
+      ul.version-list label {
         display: block;
         padding: 8px 12px;
         background: #ecf0f1;
         color: #2c3e50;
-        text-decoration: none;
+        cursor: pointer;
         border-radius: 4px;
         border-left: 5px solid #bdc3c7;
         transition: 0.2s;
       }
-      ul.version-list a:hover {
+      ul.version-list label:hover {
         background: #dfe6e9;
         border-left-color: #2980b9;
       }
+      /* Ensure radio buttons have spacing */
+      ul.version-list input[type='radio'] {
+        margin-right: 10px;
+        cursor: pointer;
+      }
+
       .version-tag {
         font-family: monospace;
         font-weight: bold;
         color: #e67e22;
+      }
+
+      /* Navigation Button Style */
+      .nav-custom-btn {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .nav-custom-btn:hover {
+        background: #2ecc71;
       }
 
       @keyframes fadeIn {
@@ -260,7 +281,7 @@
         <span class="close-btn" onclick="closeModal('uxModal')">&times;</span>
         <h3 id="uxModalTitle">Custom Interface Versions</h3>
         <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 15px">
-          Select a version to launch the store for this client.
+          Select a version configuration to launch.
         </p>
 
         <h4 style="margin: 10px 0 5px 0; border-bottom: 1px solid #eee">
@@ -272,11 +293,25 @@
           Order Page Variants
         </h4>
         <ul id="orderVersionList" class="version-list"></ul>
+
+        <div
+          style="
+            margin-top: 25px;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+          "
+        >
+          <button onclick="navigateCustom()" class="nav-custom-btn">
+            Navigate to custom page ↗
+          </button>
+        </div>
       </div>
     </div>
 
     <script>
       window.clientsMap = new Map();
+      let currentUxClientId = null;
 
       async function init() {
         const statsRes = await fetch('/api/dashboard');
@@ -309,7 +344,6 @@
               notesButton = `<button class="notes-btn" onclick="openNoteModal('${c.id}')">View (${c.crmNotes.length})</button>`;
             }
 
-            // UX Badges Logic
             let uxBadges = '';
             const hasHome =
               c.customHomeVersions && c.customHomeVersions.length > 0;
@@ -366,6 +400,7 @@
       }
 
       function openUxModal(clientId) {
+        currentUxClientId = clientId;
         const client = window.clientsMap.get(clientId);
         if (!client) return;
 
@@ -373,42 +408,72 @@
           'uxModalTitle'
         ).textContent = `UX Versions: ${client.id}`;
 
-        const createLink = (hash, type) => {
-          // type is 'homeHash' or 'orderHash'
+        // Function to create radio button HTML
+        const createRadio = (hash, group, isDefault = false) => {
+          const val = isDefault ? '' : hash;
+          const display = isDefault
+            ? 'Standard / Default'
+            : `Version: <span class="version-tag">${hash.substring(
+                0,
+                8
+              )}...</span>`;
+          const checked = isDefault ? 'checked' : '';
+
           return `
              <li>
-               <a href="/?clientId=${
-                 client.id
-               }&${type}=${hash}" target="_blank">
-                 Version: <span class="version-tag">${hash.substring(
-                   0,
-                   8
-                 )}...</span>
-               </a>
+               <label>
+                 <input type="radio" name="${group}" value="${val}" ${checked}>
+                 ${display}
+               </label>
              </li>`;
         };
 
+        // Render Home Options
         const homeList = document.getElementById('homeVersionList');
+        let homeHtml = createRadio(null, 'homeHash', true); // Default option
         if (client.customHomeVersions && client.customHomeVersions.length) {
-          homeList.innerHTML = client.customHomeVersions
-            .map((h) => createLink(h, 'homeHash'))
+          homeHtml += client.customHomeVersions
+            .map((h) => createRadio(h, 'homeHash'))
             .join('');
-        } else {
-          homeList.innerHTML =
-            '<li style="color:#aaa; font-style:italic;">No custom home pages found.</li>';
         }
+        homeList.innerHTML = homeHtml;
 
+        // Render Order Options
         const orderList = document.getElementById('orderVersionList');
+        let orderHtml = createRadio(null, 'orderHash', true); // Default option
         if (client.customOrderVersions && client.customOrderVersions.length) {
-          orderList.innerHTML = client.customOrderVersions
-            .map((h) => createLink(h, 'orderHash'))
+          orderHtml += client.customOrderVersions
+            .map((h) => createRadio(h, 'orderHash'))
             .join('');
-        } else {
-          orderList.innerHTML =
-            '<li style="color:#aaa; font-style:italic;">No custom order pages found.</li>';
         }
+        orderList.innerHTML = orderHtml;
 
         document.getElementById('uxModal').classList.add('visible');
+      }
+
+      function navigateCustom() {
+        if (!currentUxClientId) return;
+
+        // Helper to get checked value
+        const getSelected = (name) => {
+          const el = document.querySelector(`input[name="${name}"]:checked`);
+          return el ? el.value : '';
+        };
+
+        const homeHash = getSelected('homeHash');
+        const orderHash = getSelected('orderHash');
+
+        let url = `/?clientId=${currentUxClientId}`;
+
+        if (homeHash) {
+          url += `&homeHash=${homeHash}`;
+        }
+
+        if (orderHash) {
+          url += `&orderHash=${orderHash}`;
+        }
+
+        window.open(url, '_blank');
       }
 
       function closeModal(id) {
