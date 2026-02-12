@@ -107,7 +107,7 @@ async function fetchAllPages() {
 }
 
 export async function createBatchJob(
-  promptText,
+  batchData, // Changed from promptText to batchData array
   customId = null,
   pageType = 'generic',
   valueInputHash = null // New Parameter
@@ -115,12 +115,13 @@ export async function createBatchJob(
   const tempFileName = `temp-${Date.now()}.jsonl`;
   const modelName = GOOGLE_AI_MODELS.PREVIEW.GEMINI_3_PRO;
 
+  // Attempt to extract prompt text for logging/hashing purposes
+  const promptText =
+    batchData[0]?.request?.contents?.[0]?.parts?.[0]?.text || 'UNKNOWN_PROMPT';
+
   try {
-    const batchData = [
-      {
-        request: { contents: [{ parts: [{ text: promptText }] }] },
-      },
-    ];
+    // Note: batchData construction logic has been moved out (e.g., to createBatchJobMetadata)
+    // We now just write the provided structure to the JSONL file.
 
     fs.writeFileSync(
       tempFileName,

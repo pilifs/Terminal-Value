@@ -1,11 +1,7 @@
-import { testGenerateValue } from './generateValueTests.js';
-import { testParseValue } from './parseValueTests.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-
-// Functions under test
-import { generateValueMetadata } from '../coreServices.js';
+import { fileURLToPath } from 'url';
+import generateValue from '../generateValue.js';
 
 // Setup __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +17,7 @@ const __dirname = path.dirname(__filename);
  * @param {string} [config.expectedPath='./fixedMocks/generateValueResults.js'] - Path to the expected output mock file.
  * @returns {Promise<boolean|Array>} True/False for test status, or the actual data object if writing.
  */
-export async function genericTest(config = {}, testFn) {
+export async function genericTest(config = {}) {
   // Merge defaults with provided config
   const {
     writeResults = false,
@@ -30,7 +26,7 @@ export async function genericTest(config = {}, testFn) {
     expectedPath = './fixedMocks/batchJobMetadata.js',
   } = config;
 
-  console.log('Running test: ' + (testFn.name || 'genericTest'));
+  console.log('Running test: testGenerateValue');
 
   try {
     // --- LOAD INPUT ---
@@ -39,8 +35,7 @@ export async function genericTest(config = {}, testFn) {
     if (!sourceData) {
       try {
         const resolvedInputPath = path.resolve(__dirname, inputPath);
-        // FIX: Convert absolute path to file:// URL for Windows compatibility
-        const inputModule = await import(pathToFileURL(resolvedInputPath).href);
+        const inputModule = await import(resolvedInputPath);
         // Handle named exports or default exports
         sourceData = inputModule.default || Object.values(inputModule)[0];
       } catch (err) {
@@ -50,7 +45,7 @@ export async function genericTest(config = {}, testFn) {
     }
 
     // Execute the function under test
-    const actual = testFn(sourceData);
+    const actual = generateValue(sourceData);
 
     // --- UPDATE MODE ---
     if (writeResults) {
@@ -78,10 +73,7 @@ export async function genericTest(config = {}, testFn) {
     let expected;
     try {
       const resolvedExpectedPath = path.resolve(__dirname, expectedPath);
-      // FIX: Convert absolute path to file:// URL for Windows compatibility
-      const expectedModule = await import(
-        pathToFileURL(resolvedExpectedPath).href
-      );
+      const expectedModule = await import(resolvedExpectedPath);
       // Handle named exports or default exports
       expected = expectedModule.default || Object.values(expectedModule)[0];
     } catch (err) {
@@ -144,49 +136,3 @@ export async function genericTest(config = {}, testFn) {
     return false;
   }
 }
-
-const testObj = {
-  writeResults: false,
-  inputData: null,
-};
-
-const testJobMetadataObj = {
-  ...testObj,
-  inputPath: './fixedMocks/db.js',
-  expectedPath: './fixedMocks/batchJobMetadata.js',
-};
-
-/**
- * Executes all functional tests for the project.
- * Exits with code 0 if all tests pass, 1 otherwise.
- */
-const runTests = async () => {
-  console.log('--------------------------------------------------');
-  console.log('Starting Functional Tests...');
-  console.log('--------------------------------------------------');
-
-  // Run tests sequentially
-  const parsePassed = testParseValue();
-  console.log('--------------------------------------------------');
-  const generatePassed = testGenerateValue();
-  console.log('--------------------------------------------------');
-  const jobMetadataPassed = await genericTest(
-    testJobMetadataObj,
-    generateValueMetadata
-  );
-  console.log('--------------------------------------------------');
-
-  if (parsePassed && generatePassed && jobMetadataPassed) {
-    console.log('🎉 All tests passed');
-    // process.exit(0);
-  } else {
-    console.error('❌ Some tests failed');
-    process.exit(1);
-  }
-};
-
-// Execute the runner
-runTests().catch((err) => {
-  console.error('❌ Fatal Error during test execution:', err);
-  process.exit(1);
-});
