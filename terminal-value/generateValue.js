@@ -1,64 +1,44 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { parseValueResults as clients } from './memoizedResults/parseValueResults.js';
-import { getMemoizedResult } from './utils/memoizer.js';
-
-// Setup paths for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const MEMO_FILE_PATH = path.join(
-  __dirname,
-  'memoizedResults/generateValueResults.js'
-);
-
 /**
  * Generates tailored LLM prompts for high-value clients to drive sales.
- * Uses memoization utility to cache results.
  * @param {Array} clientData - The output from parseValue()
  * @returns {Array} List of prompt sets for each client
  */
 function generateValue(clientData) {
-  return getMemoizedResult({
-    filePath: MEMO_FILE_PATH,
-    inputData: clientData,
-    variableName: 'generateValueResults',
-    useDefaultExport: false, // Output uses named export only
-    computeFn: () => {
-      const getFooter = (promptKey) => {
-        let promptFooter;
-        switch (promptKey) {
-          case 'webComponentHome':
-            promptFooter = `Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'Home' for this particular high value client that we will serve instead of the regular home page when they visit the site.`;
-            break;
-          case 'webComponentOrder':
-            promptFooter = `Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'Order' for this particular high value client that we will serve instead of the regular order page when they visit the site.`;
-            break;
-          case 'marketingImage':
-          case 'redditPost':
-          default:
-            promptFooter = 'no-op';
-        }
+  const getFooter = (promptKey) => {
+    let promptFooter;
+    switch (promptKey) {
+      case 'webComponentHome':
+        promptFooter = `Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'Home' for this particular high value client that we will serve instead of the regular home page when they visit the site.`;
+        break;
+      case 'webComponentOrder':
+        promptFooter = `Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'Order' for this particular high value client that we will serve instead of the regular order page when they visit the site.`;
+        break;
+      case 'marketingImage':
+      case 'redditPost':
+      default:
+        promptFooter = 'no-op';
+    }
 
-        return promptFooter;
-      };
+    return promptFooter;
+  };
 
-      return clientData.map((client) => {
-        const { profile, shoppingHistory, techContext } = client;
-        const notes = profile.crmNotes.join(' ');
+  return clientData.map((client) => {
+    const { profile, shoppingHistory, techContext } = client;
+    const notes = profile.crmNotes.join(' ');
 
-        // Unused for now
-        // const device = techContext[0] || {
-        //   device: 'Unknown',
-        //   browser: 'Unknown',
-        // };
+    // Unused for now
+    // const device = techContext[0] || {
+    //   device: 'Unknown',
+    //   browser: 'Unknown',
+    // };
 
-        // const purchasedCategories = [
-        //   ...new Set(
-        //     shoppingHistory.flatMap((o) => o.items.map((i) => i.productName))
-        //   ),
-        // ];
+    // const purchasedCategories = [
+    //   ...new Set(
+    //     shoppingHistory.flatMap((o) => o.items.map((i) => i.productName))
+    //   ),
+    // ];
 
-        const businessStrategy = `You are a partner at a big 4 consulting firm hired by the world's leading ski shop (Fil's Alpine Ski Shop) to increase sales among their highest-value customers. Your task is to create personalized web components, marketing images, and ad copy that will resonate with each client's unique profile and shopping behavior. It is critical that this campaign do whatever it takes to boost sales. 
+    const businessStrategy = `You are a partner at a big 4 consulting firm hired by the world's leading ski shop (Fil's Alpine Ski Shop) to increase sales among their highest-value customers. Your task is to create personalized web components, marketing images, and ad copy that will resonate with each client's unique profile and shopping behavior. It is critical that this campaign do whatever it takes to boost sales. 
     You have a full team at your disposal (analyst, graphic designer, copywriter, web developer, marketing specialist, domain subject matter expert, etc.) to help with this.
     Supply is limited on high-demand racing ski gear, so focus on driving urgency and exclusivity where possible. The price should be as high as possible to drive revenue. Focus on capturing the user's emotions and generating perceived value via a hyper-personalized digital experience.
     
@@ -66,26 +46,24 @@ function generateValue(clientData) {
     
     It is critical that you do not break the base experience. The client must be able to purchase products as normal, but make whatever presentation changes it takes to drive more revenue.`;
 
-        const createPrompt = (key) =>
-          `
+    const createPrompt = (key) =>
+      `
           ${businessStrategy}
           ${getFooter(key)}
         `.trim();
 
-        return {
-          clientId: profile.id,
-          prompts: {
-            webComponentHome: createPrompt('webComponentHome'),
-            webComponentOrder: createPrompt('webComponentOrder'),
-            marketingImage: createPrompt('marketingImage'),
-            redditPost: createPrompt('redditPost'),
-          },
-        };
-      });
-    },
+    return {
+      clientId: profile.id,
+      prompts: {
+        webComponentHome: createPrompt('webComponentHome'),
+        webComponentOrder: createPrompt('webComponentOrder'),
+        marketingImage: createPrompt('marketingImage'),
+        redditPost: createPrompt('redditPost'),
+      },
+    };
   });
 }
 
-const results = generateValue(clients);
+// const results = generateValue(clients);
 
 export default generateValue;

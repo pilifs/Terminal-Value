@@ -9,7 +9,7 @@
     "package-code": "node packageCodeForLlm.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
-    "test": "node terminal-value/runTests.js"
+    "test": "node terminal-value/functionalTests/runTests.js"
   },
   "engines": {
     "node": "24.13.0"
