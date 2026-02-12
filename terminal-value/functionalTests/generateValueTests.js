@@ -1,17 +1,47 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import generateValue from '../generateValue.js';
 import { parseValueResults } from './fixedMocks/parseValueResults.js';
 import { generateValueResults } from './fixedMocks/generateValueResults.js';
 
+// Setup __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /**
  * Tests the generateValue function by comparing its output
  * against the expected memoized results.
- * @returns {boolean} True if test passes, False otherwise.
+ * @param {boolean} writeResults - If true, writes actual output to mock file instead of testing.
+ * @param {Array} inputData - Optional input data (e.g. from fresh parseValue run) to use instead of imported mock.
+ * @returns {boolean|Array} True/False for test status, or the actual data object if writing.
  */
-export function testGenerateValue() {
+export function testGenerateValue(writeResults = false, inputData = null) {
   console.log('Running test: testGenerateValue');
 
   try {
-    const actual = generateValue(parseValueResults);
+    // Use injected input data if available, otherwise fall back to imported mock
+    const sourceData = inputData || parseValueResults;
+    const actual = generateValue(sourceData);
+
+    // --- UPDATE MODE ---
+    if (writeResults) {
+      const outputPath = path.join(
+        __dirname,
+        'fixedMocks/generateValueResults.js'
+      );
+      const fileContent = `export const generateValueResults = ${JSON.stringify(
+        actual,
+        null,
+        2
+      )};\n`;
+
+      fs.writeFileSync(outputPath, fileContent, 'utf8');
+      console.log(`✅ Updated mock file: ${outputPath}`);
+      return actual;
+    }
+
+    // --- TEST MODE ---
     const expected = generateValueResults;
 
     const actualStr = JSON.stringify(actual);
@@ -19,7 +49,7 @@ export function testGenerateValue() {
 
     if (actualStr === expectedStr) {
       console.log(
-        '✅ PASS: Output matches ./memoizedResults/generateValueResults.js'
+        '✅ PASS: Output matches ./fixedMocks/generateValueResults.js'
       );
       return true;
     } else {
