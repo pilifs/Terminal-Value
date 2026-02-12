@@ -2,10 +2,11 @@
   "name": "terminal-value",
   "version": "1.0.0",
   "description": "Example showcasing Terminal Value (or 'Higher-Order Transactional AI', HOTAI) Architecture",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start:gemini": "node ./apps/gemini-batch/server.js",
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
+    "start:ticketing": "node ./apps/example-ticketing/server.js",
     "package-code": "node packageCodeForLlm.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
@@ -22,6 +23,7 @@
   },
   "dependencies": {
     "@google/genai": "1.39.0",
+    "body-parser": "2.2.2",
     "cors": "2.8.6",
     "dotenv": "17.2.3",
     "express": "5.2.1",

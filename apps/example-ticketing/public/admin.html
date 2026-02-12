@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+    <style>
+      :root {
+        --bg-dark: #121212;
+        --bg-card: #1e1e1e;
+        --accent: #bb86fc;
+        --text: #e0e0e0;
+        --success: #03dac6;
+      }
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: var(--bg-dark);
+        color: var(--text);
+      }
+      h1,
+      h2,
+      h3 {
+        color: var(--accent);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+      }
+
+      .card {
+        background: var(--bg-card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #333;
+      }
+      th {
+        background-color: #252525;
+        color: var(--accent);
+      }
+      tr:hover {
+        background-color: #2a2a2a;
+      }
+
+      /* Form Styles */
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #888;
+        font-size: 0.9em;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        background: #252525;
+        border: 1px solid #444;
+        color: white;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+        font-family: monospace;
+      }
+      button {
+        background: var(--accent);
+        color: black;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+      .money {
+        color: var(--success);
+        font-family: monospace;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 0.8em;
+        width: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="margin-bottom: 20px">
+      <a href="index.html">← Back to Club</a> |
+      <a href="customer-management.html" style="color: #03dac6"
+        >🏢 SaaS Admin</a
+      >
+    </div>
+
+    <div
+      style="display: flex; justify-content: space-between; align-items: center"
+    >
+      <h1>🕶️ Manager's Office</h1>
+      <button onclick="loadAllData()" style="width: auto">Refresh Data</button>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>🎭 Manage Comedians</h3>
+          <label>Name</label>
+          <input type="text" id="com-name" placeholder="e.g. Jerry Seinfeld" />
+          <label>Bio</label>
+          <textarea id="com-bio" placeholder="Short bio..."></textarea>
+          <label>Image URL</label>
+          <input type="text" id="com-img" placeholder="http://..." />
+          <button onclick="createComedian()">Add Comedian</button>
+        </div>
+
+        <div class="card">
+          <h3>✨ Create New Show</h3>
+          <label>Artist / Show Name</label>
+          <input
+            type="text"
+            id="new-artist"
+            placeholder="e.g. Open Mic Night"
+          />
+
+          <label>Link Comedian (Optional)</label>
+          <select id="new-show-comedian">
+            <option value="">None (Generic Show)</option>
+          </select>
+
+          <label>Description</label>
+          <input type="text" id="new-desc" placeholder="Brief tagline..." />
+
+          <label>Venue</label>
+          <select id="new-venue">
+            <option>Loading...</option>
+          </select>
+
+          <label>Date & Time</label>
+          <input type="datetime-local" id="new-date" />
+
+          <label>Base Ticket Price ($)</label>
+          <input type="number" id="new-price" value="25" />
+
+          <button onclick="createShow()">Publish Show</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="border-left: 4px solid #03dac6">
+          <h3>🏗️ Add New Venue</h3>
+
+          <label>Owner (Customer)</label>
+          <select id="venue-owner">
+            <option value="">Loading...</option>
+          </select>
+
+          <label>Venue Name</label>
+          <input
+            type="text"
+            id="venue-name"
+            placeholder="e.g. The Laugh Factory"
+          />
+          <label>Seating Layout Map</label>
+          <textarea
+            id="venue-layout"
+            rows="6"
+            placeholder="VV..VV&#10;SS..SS"
+          ></textarea>
+          <button onclick="createVenue()" style="background: #03dac6">
+            Save Venue
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>📊 Revenue Analytics & Door</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Show</th>
+                <th>Sold</th>
+                <th>Revenue</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-table">
+              <tr>
+                <td colspan="4">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      async function loadAllData() {
+        loadAnalytics();
+        loadVenues();
+        loadComediansForSelect();
+        loadCustomersForSelect();
+      }
+
+      async function loadVenues() {
+        const venues = await executeQuery('GetVenues');
+        document.getElementById('new-venue').innerHTML = venues
+          .map(
+            (v) => `<option value="${v.id}">${v.name} (${v.ownerName})</option>`
+          )
+          .join('');
+      }
+
+      async function loadComediansForSelect() {
+        const comedians = await executeQuery('GetComedians');
+        const opts = comedians
+          .map((c) => `<option value="${c.id}">${c.name}</option>`)
+          .join('');
+        document.getElementById('new-show-comedian').innerHTML =
+          `<option value="">None</option>` + opts;
+      }
+
+      async function loadCustomersForSelect() {
+        const customers = await executeQuery('GetCustomers');
+        document.getElementById('venue-owner').innerHTML = customers
+          .map((c) => `<option value="${c.id}">${c.name}</option>`)
+          .join('');
+      }
+
+      async function createVenue() {
+        const name = document.getElementById('venue-name').value;
+        const layoutStr = document.getElementById('venue-layout').value;
+        const customerId = document.getElementById('venue-owner').value;
+
+        if (!name || !layoutStr) return alert('Missing fields');
+
+        const res = await executeCommand('CreateVenue', {
+          name,
+          layoutStr,
+          customerId,
+        });
+        if (res.success) {
+          alert('Venue Created!');
+          loadVenues();
+        }
+      }
+
+      async function createComedian() {
+        const name = document.getElementById('com-name').value;
+        const bio = document.getElementById('com-bio').value;
+        const image = document.getElementById('com-img').value;
+        if (!name) return alert('Name required');
+
+        await executeCommand('CreateComedian', { name, bio, image });
+        alert('Comedian Added');
+        document.getElementById('com-name').value = '';
+        loadComediansForSelect();
+      }
+
+      async function createShow() {
+        const artist = document.getElementById('new-artist').value;
+        const venueId = document.getElementById('new-venue').value;
+        const comedianId = document.getElementById('new-show-comedian').value;
+        const date = document.getElementById('new-date').value;
+        const price = document.getElementById('new-price').value;
+        const desc = document.getElementById('new-desc').value;
+
+        if (!artist || !date) return alert('Please fill in all fields');
+
+        const res = await executeCommand('CreateShow', {
+          artist,
+          venueId,
+          comedianId,
+          date,
+          basePrice: price,
+          description: desc,
+        });
+
+        if (res.success) {
+          alert('Show Created Successfully!');
+          loadAllData();
+        }
+      }
+
+      async function loadAnalytics() {
+        const data = await executeQuery('GetShowAnalytics');
+        document.getElementById('analytics-table').innerHTML = data
+          .map(
+            (row) => `
+            <tr>
+                <td><strong>${row.artist}</strong></td>
+                <td>${row.soldSeats} / ${row.totalSeats}</td>
+                <td class="money">$${row.revenue}</td>
+                <td>
+                    <button class="btn-sm" onclick="openDoorList('${
+                      row.id
+                    }', '${row.artist.replace(/'/g, "\\'")}')">
+                        🖨️ Door List
+                    </button>
+                </td>
+            </tr>
+        `
+          )
+          .join('');
+      }
+
+      async function openDoorList(showId, showName) {
+        const attendees = await executeQuery('GetShowAttendees', { showId });
+        if (attendees.length === 0) {
+          return alert('No confirmed guests yet.');
+        }
+
+        const win = window.open('', '_blank');
+        const rows = attendees
+          .map(
+            (a) => `
+            <div style="border-bottom: 1px solid #ccc; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin:0">${a.userName}</h3>
+                    <p style="margin:0; color: #555">Seats: ${a.seats}</p>
+                </div>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${a.reservationId}" />
+            </div>
+        `
+          )
+          .join('');
+
+        win.document.write(`
+            <html>
+                <head><title>Door List - ${showName}</title></head>
+                <body style="font-family: sans-serif; padding: 20px;">
+                    <h1>Guests: ${showName}</h1>
+                    <p>${new Date().toLocaleString()}</p>
+                    <hr/>
+                    ${rows}
+                    <script>window.print();<\/script>
+                </body>
+            </html>
+        `);
+        win.document.close();
+      }
+
+      loadAllData();
+    </script>
+  </body>
+</html>

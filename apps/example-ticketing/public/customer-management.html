@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SaaS Customer Management</title>
+    <style>
+      :root {
+        --bg-dark: #121212;
+        --bg-card: #1e1e1e;
+        --accent: #03dac6; /* Different accent for SaaS Admin */
+        --text: #e0e0e0;
+      }
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: var(--bg-dark);
+        color: var(--text);
+      }
+      h1,
+      h2,
+      h3 {
+        color: var(--accent);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .card {
+        background: var(--bg-card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #333;
+      }
+      th {
+        background-color: #252525;
+        color: var(--accent);
+      }
+      tr:hover {
+        background-color: #2a2a2a;
+      }
+
+      input {
+        width: 100%;
+        padding: 8px;
+        background: #252525;
+        border: 1px solid #444;
+        color: white;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+      button {
+        background: var(--accent);
+        color: black;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #888;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="margin-bottom: 20px">
+      <a href="admin.html">← Venue Manager</a> |
+      <a href="index.html">Live Site</a>
+    </div>
+
+    <h1>🏢 SaaS Customer Management</h1>
+
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px">
+      <div>
+        <div class="card">
+          <h3>Add New Customer</h3>
+          <label>Company Name</label>
+          <input type="text" id="cust-name" placeholder="e.g. Comedy Inc." />
+
+          <label>Billing Email</label>
+          <input
+            type="email"
+            id="cust-email"
+            placeholder="billing@comedy.inc"
+          />
+
+          <button onclick="createCustomer()" style="width: 100%">
+            Register Customer
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>System Status</h3>
+          <p>Status: <span style="color: #03dac6">Operational</span></p>
+          <p>Version: v2.1.0</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <h3>Customer Overview</h3>
+          <button
+            onclick="loadCustomers()"
+            style="width: auto; padding: 5px 10px; font-size: 0.8em"
+          >
+            Refresh
+          </button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Venues</th>
+              <th>Shows</th>
+              <th>Sold</th>
+              <th>Total Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="customer-table">
+            <tr>
+              <td colspan="5">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      async function loadCustomers() {
+        const data = await executeQuery('GetCustomerAnalytics');
+        const tbody = document.getElementById('customer-table');
+
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5">No customers found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data
+          .map(
+            (c) => `
+                <tr>
+                    <td>
+                        
+                        <strong>
+                            <a href="index.html?customerId=${
+                              c.id
+                            }" target="_blank" style="color: var(--text); text-decoration: underline; text-decoration-color: var(--accent);">
+                                ${c.name}
+                            </a></strong><br/>
+                        <small style="color:#777">${c.email}</small>
+                    </td>
+                    <td>${c.venueCount}</td>
+                    <td>${c.showCount}</td>
+                    <td>${c.ticketsSold}</td>
+                    <td style="color: #03dac6; font-weight:bold;">$${c.totalRevenue.toLocaleString()}</td>
+                </tr>
+            `
+          )
+          .join('');
+      }
+
+      async function createCustomer() {
+        const name = document.getElementById('cust-name').value;
+        const email = document.getElementById('cust-email').value;
+
+        if (!name || !email) return alert('All fields required');
+
+        const res = await executeCommand('CreateCustomer', { name, email });
+        if (res.success) {
+          alert('Customer Created!');
+          document.getElementById('cust-name').value = '';
+          document.getElementById('cust-email').value = '';
+          loadCustomers();
+        }
+      }
+
+      // Init
+      loadCustomers();
+    </script>
+  </body>
+</html>
