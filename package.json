@@ -8,7 +8,9 @@
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
     "package-code": "node packageCodeForLlm.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
-    "format:check": "prettier --check \"**/*.{js,json,md,html,css}\""
+    "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
+    "test": "node terminal-value/functionalTests/runTests.js",
+    "update-mocks": "node terminal-value/functionalTests/updateFunctionalTestData.js"
   },
   "engines": {
     "node": "24.13.0"

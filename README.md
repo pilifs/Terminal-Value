@@ -48,23 +48,15 @@ All input prompts, output prompts, client data and Gemini metadata is stored in 
 
 ![Result Data Structure](./blog/images/ski-shop-results-object-example.png)
 
-The `text` field under fileOutputResult is the LLM response. It contains code that renders the dynamically generated user-specific home page web component that you see screnshots of above.
+The `text` field under fileOutputResult is the LLM response. It contains code that renders the dynamically generated user-specific home page web component in screnshots above.
 
 ## Overall Structure
 
 There are three apps in this repo.
 
 - Ski Shop: detailed above.
-- Gemini Batch: an app you can start by executing `npm run start:gemini`. It has a [crude front-end](http://localhost:3001/) to help keep track of Gemini Batch API requests to render components, along with other methods to interact with this API.
+- Gemini Batch: an app you can start by executing `npm run start:gemini` then access at `http://localhost:3001`. It has a crude front-end to help keep track of Gemini Batch API requests to render components, along with other methods to interact with this API.
 - Terminal Value: a pipeline to render custom views for Ski Shop by extracting relevant user info, along with key files, by programatically passing them to an LLM then dynamically serving the results.
-
-## Terminal Value Architecture
-
-The architecture behind the Terminal Value pipeline looks something like this, at a high-level:
-
-[Database](./apps/example-ski-shop/store/db.js) -> [Parse Data](./terminal-value/parseValue.js) -> [Construct Base Prompts](./terminal-value/generateValueRefactor.js) -> [Append Code Context](./apps/gemini-batch/skiShopResults.js) -> [Invoke LLM](./terminal-value/coreServices.js) -> [Serve Result Dynamically](./terminal-value/generateDynamicFiles.js)
-
-You can see additional details by browsing the repository. For now, rather than spend more time documenting, I will refactor this code in coming days to be much cleaner, then update this README.
 
 ## Ski Shop Architecture
 
@@ -72,9 +64,17 @@ The mock ski shop e-commerce application architecture looks something like this,
 
 [Events](./terminal-value//memoizedResults/generateEventsResults.js) -> [Projections](./apps/example-ski-shop/store/projections.js) -> [Database](./apps/example-ski-shop/store/db.js)
 
-The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. This allows us to easily, in theory, implement features that observe relevant changes then re-generate the relevant custom views acccordingly.
+The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. This allows us to easily, in theory, implement features that observe relevant changes then re-generate any associated custom views acccordingly.
 
-This is a robust, production-grade pattern as it uses server resources efficiently and scales horizontally. It is designed to mimic what is frequently implemented by large online retailers and other high throughput transaction processing digital apps. It's also a functional architecture that LLMs seem to do well with.
+This is a robust, production-grade design that uses server resources efficiently and scales horizontally. It is intended to mimic what is frequently implemented by large online retailers and other high-throughput apps. It's also a functional architecture pattern that LLMs seem to do well with.
+
+## Terminal Value Architecture
+
+The architecture behind the Terminal Value pipeline looks something like this, at a high-level:
+
+[Database](./apps/example-ski-shop/store/db.js) -> [Parse Data](./terminal-value/parseValue.js) -> [Construct Base Prompts](./terminal-value/generateValueRefactor.js) -> [Append Code Context](./apps/gemini-batch/skiShopResults.js) -> [Generate Contextual Components](./terminal-value/coreServices.js) -> [Serve Dynamically](./terminal-value/generateDynamicFiles.js)
+
+You can see additional details by browsing the repository. For now, rather than spend more time documenting, I will refactor this code in coming days to be much cleaner, then update this README.
 
 ## Feature Ideas
 

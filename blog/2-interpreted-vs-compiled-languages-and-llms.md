@@ -1,1 +1,0 @@
-Placeholder for a future post that dissects the differences between interprted and compiled languages when applying LLMs to them.

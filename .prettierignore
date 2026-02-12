@@ -11,5 +11,6 @@ package-lock.json
 yarn.lock
 **/public/*.js
 skiShopResults.js
+geminiResults.js
 **/devMocks
 **/memoizedResults

@@ -10,7 +10,8 @@ import GOOGLE_AI_MODELS from './constants/geminiModels.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_INPUTS_DIR = path.join(__dirname, 'local-inputs');
-const RESULTS_FILE_PATH = path.join(__dirname, 'skiShopResults.js');
+
+const RESULTS_FILE_PATH = path.join(__dirname, 'results/skiShopResults.js');
 
 if (!process.env.GEMINI_API_KEY) {
   throw new Error('❌ GEMINI_API_KEY is missing. Please check your .env file.');
@@ -36,7 +37,7 @@ function readResultsFile() {
     return new Function('return ' + objectLiteral)();
   } catch (err) {
     console.error(
-      '⚠️ Error parsing skiShopResults.js. Ensure it is valid JavaScript syntax.',
+      `⚠️ Error parsing results file ${RESULTS_FILE_PATH}. Ensure it is valid JavaScript syntax.`,
       err
     );
     return {};
@@ -50,7 +51,7 @@ function saveResultsFile(data) {
     2
   )};`;
   fs.writeFileSync(RESULTS_FILE_PATH, fileContent);
-  console.log('📝 Updated skiShopResults.js');
+  console.log(`📝 Updated ${RESULTS_FILE_PATH}`);
 }
 
 function logJobToHistory(
@@ -107,7 +108,7 @@ async function fetchAllPages() {
 }
 
 export async function createBatchJob(
-  promptText,
+  batchData, // Changed from promptText to batchData array
   customId = null,
   pageType = 'generic',
   valueInputHash = null // New Parameter
@@ -115,12 +116,13 @@ export async function createBatchJob(
   const tempFileName = `temp-${Date.now()}.jsonl`;
   const modelName = GOOGLE_AI_MODELS.PREVIEW.GEMINI_3_PRO;
 
+  // Attempt to extract prompt text for logging/hashing purposes
+  const promptText =
+    batchData[0]?.request?.contents?.[0]?.parts?.[0]?.text || 'UNKNOWN_PROMPT';
+
   try {
-    const batchData = [
-      {
-        request: { contents: [{ parts: [{ text: promptText }] }] },
-      },
-    ];
+    // Note: batchData construction logic has been moved out (e.g., to createBatchJobMetadata)
+    // We now just write the provided structure to the JSONL file.
 
     fs.writeFileSync(
       tempFileName,
@@ -172,7 +174,7 @@ export async function getAllJobs() {
   try {
     const allJobs = await fetchAllPages();
 
-    // --- Sync with skiShopResults.js ---
+    // --- Sync with results file ---
     const results = readResultsFile();
     let hasUpdates = false;
 
@@ -268,7 +270,7 @@ export async function getBatchResults(fileId) {
       })
       .filter((item) => item !== null);
 
-    // --- Sync with skiShopResults.js ---
+    // --- Sync with results file ---
     const results = readResultsFile();
     const cleanFileId = fileId.replace('files/', '');
     let foundBatchId = null;

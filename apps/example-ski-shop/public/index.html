@@ -178,13 +178,13 @@
 
         const [homeSrc, orderSrc] = await Promise.all([
           getComponentSrc(
-            './components/HomePage.js',
+            './components/homePage.js',
             './components/dynamicHome',
             `homePage-${clientId}.js`,
             HOME_COMPONENT_HASH
           ),
           getComponentSrc(
-            './components/OrderPage.js',
+            './components/orderPage.js',
             './components/dynamicOrder',
             `orderPage-${clientId}.js`,
             ORDER_COMPONENT_HASH

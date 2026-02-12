@@ -4,9 +4,9 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createBatchJob } from '../apps/gemini-batch/geminiBatchService.js';
 
-// TODO: implement parseValue and generateValue methods for real, mock only used in hash logic for now
-import { generateValueResults as generateValueResultsMock } from './memoizedResults/generateValueResults.js';
-import { parseValueResults as parseValueResultsMock } from './memoizedResults/parseValueResults.js';
+import db from './functionalTests/fixedMocks/db.js';
+import generateValue from './generateValue.js';
+import parseValue from './parseValue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,15 +19,13 @@ const __dirname = path.dirname(__filename);
  * Orchestrates the entire value creation chain for the project.
  *
  * This method serves as the high-level roadmap. It delegates the creation of
- * domain metadata and job configurations to `generateValueMetadata` and then
- * handles the side-effect of submitting those jobs to the external service.
+ * domain metadata and fully prepared job configurations to `generateValueMetadata`
+ * and then handles the side-effect of submitting those jobs to the external service.
  */
-export async function executeValueChain() {
-  // 1-4. Generate all metadata and batch job configurations (Pure extraction)
-  const batchJobs = generateValueMetadata();
+export async function executeValueChain(metadata) {
+  metadata = metadata || generateValueMetadata(db);
 
-  // 5. Submit all prepared jobs to the Gemini Batch API
-  await submitBatchJobs(batchJobs);
+  await submitBatchJobs(metadata);
 
   // 6. Poll results and verify (Future Implementation)
   // await verifyExternalConfidence(results);
@@ -41,16 +39,16 @@ export async function executeValueChain() {
  * 2. Generating enriched value results.
  * 3. Creating job configs for Home Page components.
  * 4. Creating job configs for Order Page components.
+ * 5. Transforming configs into Batch API Metadata.
  *
- * @returns {Array<Object>} A combined list of all batch job configurations.
+ * @returns {Array<Object>} A combined list of all batch job metadata ready for submission.
  */
-export function generateValueMetadata() {
+export function generateValueMetadata(fullDb) {
   // 1. Parse raw data source into domain entities (Mocked)
-  // const db = getParseValueResults();
-  // (Note: parseValueResults is not currently used by the generators, skipping for now)
+  const parsedData = getParseValueResults(fullDb);
 
   // 2. Generate enriched content/prompts based on domain entities (Mocked)
-  const generateValueResults = getGenerateValueResults();
+  const generateValueResults = getGenerateValueResults(parsedData);
 
   // 3. Prepare batch jobs for Home Page web components
   const homePageJobs = generateAllHomePageComponents(generateValueResults);
@@ -58,7 +56,37 @@ export function generateValueMetadata() {
   // 4. Prepare batch jobs for Order Page web components
   const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
 
-  return [...homePageJobs, ...orderPageJobs];
+  const rawConfigs = [...homePageJobs, ...orderPageJobs];
+
+  // 5. Convert raw configs into Batch API metadata
+  return createBatchJobMetadata(rawConfigs);
+}
+
+/**
+ * Creates the batch job metadata required for execution.
+ * This is a pure function that formats the request body for the Gemini Batch API.
+ *
+ * @param {Array<Object>} jobConfigs - The list of job configuration objects.
+ * @returns {Array<Object>} A list of metadata objects ready for submission.
+ */
+export function createBatchJobMetadata(jobConfigs) {
+  return jobConfigs.map((config) => {
+    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+
+    // Logic extracted from geminiBatchService.js
+    const batchData = [
+      {
+        request: { contents: [{ parts: [{ text: combinedPrompt }] }] },
+      },
+    ];
+
+    return {
+      batchData,
+      customId,
+      pageType,
+      valueInputHash,
+    };
+  });
 }
 
 /**
@@ -76,22 +104,22 @@ export const generateAllOrderPageComponents = createPageGenerator('order');
 /**
  * Submits a list of configured jobs to the batch processing service.
  *
- * @param {Array<Object>} jobConfigs - A list of prepared job configuration objects.
+ * @param {Array<Object>} jobMetadataList - A list of prepared job metadata objects.
  * @returns {Promise<Array<Object>>} A summary of submitted jobs and their statuses.
  */
-export async function submitBatchJobs(jobConfigs) {
-  console.log(`🚀 Submitting ${jobConfigs.length} batch jobs...`);
+export async function submitBatchJobs(jobMetadataList) {
+  console.log(`🚀 Submitting ${jobMetadataList.length} batch jobs...`);
 
   const jobs = [];
 
-  for (const config of jobConfigs) {
-    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+  for (const meta of jobMetadataList) {
+    const { batchData, customId, pageType, valueInputHash } = meta;
     const clientId = customId;
 
     console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
       const job = await createBatchJob(
-        combinedPrompt,
+        batchData,
         customId,
         pageType,
         valueInputHash
@@ -253,12 +281,12 @@ export function getGenerateValueHash() {
   return null;
 }
 
-export function getGenerateValueResults() {
-  return generateValueResultsMock;
+export function getGenerateValueResults(parsedData) {
+  return generateValue(parsedData);
 }
 
-export function getParseValueResults() {
-  return parseValueResultsMock;
+export function getParseValueResults(rawData) {
+  return parseValue(rawData);
 }
 
 export async function verifyExternalConfidenceMethod(hash) {
