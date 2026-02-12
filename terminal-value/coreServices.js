@@ -24,10 +24,13 @@ const __dirname = path.dirname(__filename);
  */
 export async function executeValueChain() {
   // 1-4. Generate all metadata and batch job configurations (Pure extraction)
-  const batchJobs = generateValueMetadata();
+  const batchJobsConfig = generateValueMetadata();
+
+  // 4b. Create Batch Job Metadata (Pure transformation)
+  const batchJobMetadata = createBatchJobMetadata(batchJobsConfig);
 
   // 5. Submit all prepared jobs to the Gemini Batch API
-  await submitBatchJobs(batchJobs);
+  await submitBatchJobs(batchJobMetadata);
 
   // 6. Poll results and verify (Future Implementation)
   // await verifyExternalConfidence(results);
@@ -62,6 +65,33 @@ export function generateValueMetadata() {
 }
 
 /**
+ * Creates the batch job metadata required for execution.
+ * This is a pure function that formats the request body for the Gemini Batch API.
+ *
+ * @param {Array<Object>} jobConfigs - The list of job configuration objects.
+ * @returns {Array<Object>} A list of metadata objects ready for submission.
+ */
+export function createBatchJobMetadata(jobConfigs) {
+  return jobConfigs.map((config) => {
+    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+
+    // Logic extracted from geminiBatchService.js
+    const batchData = [
+      {
+        request: { contents: [{ parts: [{ text: combinedPrompt }] }] },
+      },
+    ];
+
+    return {
+      batchData,
+      customId,
+      pageType,
+      valueInputHash,
+    };
+  });
+}
+
+/**
  * Generates batch job configurations specifically for the "Home Page" web components.
  * @type {function(Array): Array<Object>}
  */
@@ -76,22 +106,22 @@ export const generateAllOrderPageComponents = createPageGenerator('order');
 /**
  * Submits a list of configured jobs to the batch processing service.
  *
- * @param {Array<Object>} jobConfigs - A list of prepared job configuration objects.
+ * @param {Array<Object>} jobMetadataList - A list of prepared job metadata objects (from createBatchJobMetadata).
  * @returns {Promise<Array<Object>>} A summary of submitted jobs and their statuses.
  */
-export async function submitBatchJobs(jobConfigs) {
-  console.log(`🚀 Submitting ${jobConfigs.length} batch jobs...`);
+export async function submitBatchJobs(jobMetadataList) {
+  console.log(`🚀 Submitting ${jobMetadataList.length} batch jobs...`);
 
   const jobs = [];
 
-  for (const config of jobConfigs) {
-    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+  for (const meta of jobMetadataList) {
+    const { batchData, customId, pageType, valueInputHash } = meta;
     const clientId = customId;
 
     console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
       const job = await createBatchJob(
-        combinedPrompt,
+        batchData,
         customId,
         pageType,
         valueInputHash
