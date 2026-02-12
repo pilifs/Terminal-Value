@@ -8,10 +8,6 @@ import db from './functionalTests/fixedMocks/db.js';
 import generateValue from './generateValue.js';
 import parseValue from './parseValue.js';
 
-// TODO: implement parseValue and generateValue methods for real, mock only used in hash logic for now
-// import { generateValueResults as generateValueResultsMock } from './memoizedResults/generateValueResults.js';
-// import { parseValueResults as parseValueResultsMock } from './memoizedResults/parseValueResults.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,6 +23,8 @@ const __dirname = path.dirname(__filename);
  * and then handles the side-effect of submitting those jobs to the external service.
  */
 export async function executeValueChain(metadata) {
+  metadata = metadata || generateValueMetadata(db);
+
   await submitBatchJobs(metadata);
 
   // 6. Poll results and verify (Future Implementation)
@@ -45,9 +43,9 @@ export async function executeValueChain(metadata) {
  *
  * @returns {Array<Object>} A combined list of all batch job metadata ready for submission.
  */
-export function generateValueMetadata(db) {
+export function generateValueMetadata(fullDb) {
   // 1. Parse raw data source into domain entities (Mocked)
-  const parsedData = getParseValueResults(db);
+  const parsedData = getParseValueResults(fullDb);
 
   // 2. Generate enriched content/prompts based on domain entities (Mocked)
   const generateValueResults = getGenerateValueResults(parsedData);
@@ -294,5 +292,3 @@ export function getParseValueResults(rawData) {
 export async function verifyExternalConfidenceMethod(hash) {
   // Implement logic to verify external confidence
 }
-
-generateValueMetadata(db);
