@@ -3,3 +3,4 @@ node_modules/
 .env
 requests.jsonl
 tmp-llm-input/**
+dist/
