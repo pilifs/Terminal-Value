@@ -65,5 +65,5 @@ app.post('/api/orders/:id/checkout', (req, res) => {
 });
 
 app.listen(4001, () =>
-  console.log('CQRS Shop running on http://localhost:3000')
+  console.log('CQRS Shop running on http://localhost:4001')
 );
