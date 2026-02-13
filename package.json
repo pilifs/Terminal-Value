@@ -1,12 +1,12 @@
 {
   "name": "terminal-value",
   "version": "1.0.0",
-  "description": "Example showcasing Terminal Value (or 'Higher-Order Transactional AI', HOTAI) Architecture",
+  "description": "A sandbox designed to help engineers pragmatically ramp up on Large Language Models.",
   "type": "commonjs",
   "scripts": {
     "start:gemini": "node ./apps/gemini-batch/server.js",
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
-    "start:ticketing": "node ./apps/example-ticketing/server.js",
+    "start:e-comm-base": "node ./small-biz-app-generator/base/e-comm/src/server.js",
     "package-code": "node packageCodeForLlm.js",
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
@@ -19,7 +19,7 @@
   "author": "Filip Stankovic",
   "license": "MIT",
   "devDependencies": {
-    "prettier": "^2.8.8"
+    "prettier": "2.8.8"
   },
   "dependencies": {
     "@google/genai": "1.39.0",
