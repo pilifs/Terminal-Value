@@ -1,3 +1,14 @@
+export const mockSingleClientObjectForPrompt = {
+  promptText: `
+You are a partner at a big 4 consulting firm hired by the world's leading ski shop (Fil's Alpine Ski Shop) to increase sales among their highest-value customers. Your task is to create personalized web components, marketing images, and ad copy that will resonate with each client's unique profile and shopping behavior. It is critical that this campaign do whatever it takes to boost sales. 
+    You have a full team at your disposal (analyst, graphic designer, copywriter, web developer, marketing specialist, domain subject matter expert, etc.) to help with this.
+    Supply is limited on high-demand racing ski gear, so focus on driving urgency and exclusivity where possible. The price should be as high as possible to drive revenue. Focus on capturing the user's emotions and generating perceived value via a hyper-personalized digital experience.
+    
+    The high value client we are targeting is 32 years old and based in Aspen. Our executive sales team has made the following notes in the internal ski shop CRM database: "Former pro racer, extremely technical about edge tuning. Only skis on hardpack groomers. Prefers stiff boots and high DIN bindings.". These are the backbone of our sales strategy that should be reflected in the end result digital experience.
+    
+    It is critical that you do not break the base experience. The client must be able to purchase products as normal, but make whatever presentation changes it takes to drive more revenue.
+          Deliver an output of a custom LitElement/HTMLElement JavaScript class named 'Home' for this particular high value client that we will serve instead of the regular home page when they visit the site.
+
 <file name="admin.html">
 <!DOCTYPE html>
 <html lang="en">
@@ -343,12 +354,12 @@
           .map((c) => {
             const actionButton =
               c.id && c.id !== 'undefined'
-                ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
-                : `<span style="color:#ccc">N/A</span>`;
+                ? \`<a href="/?clientId=\${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>\`
+                : \`<span style="color:#ccc">N/A</span>\`;
 
-            let notesButton = `<span style="color:#ccc">-</span>`;
+            let notesButton = \`<span style="color:#ccc">-</span>\`;
             if (c.crmNotes && c.crmNotes.length > 0) {
-              notesButton = `<button class="notes-btn" onclick="openNoteModal('${c.id}')">View (${c.crmNotes.length})</button>`;
+              notesButton = \`<button class="notes-btn" onclick="openNoteModal('\${c.id}')">View (\${c.crmNotes.length})</button>\`;
             }
 
             let uxBadges = '';
@@ -358,28 +369,28 @@
               c.customOrderVersions && c.customOrderVersions.length > 0;
 
             if (hasHome) {
-              uxBadges += `<button class="ux-btn ux-home" onclick="openUxModal('${c.id}')">Home (${c.customHomeVersions.length})</button>`;
+              uxBadges += \`<button class="ux-btn ux-home" onclick="openUxModal('\${c.id}')">Home (\${c.customHomeVersions.length})</button>\`;
             }
             if (hasOrder) {
-              uxBadges += `<button class="ux-btn ux-order" onclick="openUxModal('${c.id}')">Order (${c.customOrderVersions.length})</button>`;
+              uxBadges += \`<button class="ux-btn ux-order" onclick="openUxModal('\${c.id}')">Order (\${c.customOrderVersions.length})</button>\`;
             }
             if (!hasHome && !hasOrder)
-              uxBadges = `<span class="ux-none">-</span>`;
+              uxBadges = \`<span class="ux-none">-</span>\`;
 
-            return `
+            return \`
                 <tr>
-                    <td>${c.id || 'Unknown'}</td>
-                    <td class="${c.isRegistered ? 'registered' : 'guest'}">${
+                    <td>\${c.id || 'Unknown'}</td>
+                    <td class="\${c.isRegistered ? 'registered' : 'guest'}">\${
               c.isRegistered ? 'MEMBER' : 'GUEST'
             }</td>
-                    <td>${c.city || '-'}</td>
-                    <td>${c.age || '-'}</td>
-                    <td class="money">${formatMoney(c.totalSpent)}</td>
-                    <td>${notesButton}</td>
-                    <td>${uxBadges}</td>
-                    <td>${actionButton}</td>
+                    <td>\${c.city || '-'}</td>
+                    <td>\${c.age || '-'}</td>
+                    <td class="money">\${formatMoney(c.totalSpent)}</td>
+                    <td>\${notesButton}</td>
+                    <td>\${uxBadges}</td>
+                    <td>\${actionButton}</td>
                 </tr>
-            `;
+            \`;
           })
           .join('');
       }
@@ -401,9 +412,9 @@
         if (!client) return;
         document.getElementById(
           'noteModalTitle'
-        ).textContent = `Notes for ${client.id}`;
+        ).textContent = \`Notes for \${client.id}\`;
         document.getElementById('noteList').innerHTML = client.crmNotes
-          .map((n) => `<li>${n}</li>`)
+          .map((n) => \`<li>\${n}</li>\`)
           .join('');
         document.getElementById('noteModal').classList.add('visible');
       };
@@ -415,26 +426,26 @@
 
         document.getElementById(
           'uxModalTitle'
-        ).textContent = `UX Versions: ${client.id}`;
+        ).textContent = \`UX Versions: \${client.id}\`;
 
         // Function to create radio button HTML
         const createRadio = (hash, group, isDefault = false) => {
           const val = isDefault ? '' : hash;
           const display = isDefault
             ? 'Standard / Default'
-            : `Version: <span class="version-tag">${hash.substring(
+            : \`Version: <span class="version-tag">\${hash.substring(
                 0,
                 8
-              )}...</span>`;
+              )}...</span>\`;
           const checked = isDefault ? 'checked' : '';
 
-          return `
+          return \`
              <li>
                <label>
-                 <input type="radio" name="${group}" value="${val}" ${checked}>
-                 ${display}
+                 <input type="radio" name="\${group}" value="\${val}" \${checked}>
+                 \${display}
                </label>
-             </li>`;
+             </li>\`;
         };
 
         // Render Home Options
@@ -465,21 +476,21 @@
 
         // Helper to get checked value
         const getSelected = (name) => {
-          const el = document.querySelector(`input[name="${name}"]:checked`);
+          const el = document.querySelector(\`input[name="\${name}"]:checked\`);
           return el ? el.value : '';
         };
 
         const homeHash = getSelected('homeHash');
         const orderHash = getSelected('orderHash');
 
-        let url = `/?clientId=${currentUxClientId}`;
+        let url = \`/?clientId=\${currentUxClientId}\`;
 
         if (homeHash) {
-          url += `&homeHash=${homeHash}`;
+          url += \`&homeHash=\${homeHash}\`;
         }
 
         if (orderHash) {
-          url += `&orderHash=${orderHash}`;
+          url += \`&orderHash=\${orderHash}\`;
         }
 
         window.open(url, '_blank');
@@ -530,7 +541,7 @@ async function init() {
 
   // 2. Fetch Client Profile Info
   try {
-    const res = await fetch(`/api/clients/${state.clientId}`);
+    const res = await fetch(\`/api/clients/\${state.clientId}\`);
     if (res.ok) {
       state.clientProfile = await res.json();
       state.deviceId = state.clientProfile.devices?.[0] || generateDeviceId();
@@ -543,7 +554,7 @@ async function init() {
 
   // 3. Fetch Device Profile Info
   try {
-    const devRes = await fetch(`/api/devices/${state.deviceId}`);
+    const devRes = await fetch(\`/api/devices/\${state.deviceId}\`);
     if (devRes.ok) {
       state.deviceProfile = await devRes.json();
     } else {
@@ -560,13 +571,13 @@ async function init() {
   // 4. Update UI Header
   document.getElementById(
     'displayClient'
-  ).textContent = `Client: ${state.clientId}`;
+  ).textContent = \`Client: \${state.clientId}\`;
   document.getElementById(
     'displayDevice'
-  ).textContent = `Device: ${state.deviceId}`;
-  document.getElementById('displayLocation').textContent = `Location: ${
+  ).textContent = \`Device: \${state.deviceId}\`;
+  document.getElementById('displayLocation').textContent = \`Location: \${
     state.clientProfile ? state.clientProfile.city : 'Unknown (Guest)'
-  }`;
+  }\`;
 
   // 5. Pass Client ID to Order Component
   const orderPage = document.getElementById('orderPage');
@@ -652,7 +663,7 @@ function updateUrl(pageId, itemId = null, replace = false) {
     params.delete('itemId');
   }
 
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  const newUrl = \`\${window.location.pathname}?\${params.toString()}\`;
   
   replace
     ? window.history.replaceState({ pageId, itemId }, '', newUrl)
@@ -699,7 +710,7 @@ async function loadHistory() {
   
   tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
   try {
-    const res = await fetch(`/api/orders?clientId=${state.clientId}`);
+    const res = await fetch(\`/api/orders?clientId=\${state.clientId}\`);
     const orders = await res.json();
     if (!orders || orders.length === 0) {
       tbody.innerHTML =
@@ -710,17 +721,17 @@ async function loadHistory() {
     orders.reverse();
     tbody.innerHTML = orders
       .map(
-        (order) => `
+        (order) => \`
           <tr>
-              <td>${order.id}</td>
-              <td>${new Date().toLocaleDateString()}</td>
-              <td>${order.items.map((i) => `${i.qty}x`).join(', ')}</td>
-              <td>$${(order.orderTotal || 0).toFixed(2)}</td>
-              <td class="status-${(order.status || '').toLowerCase()}">${
+              <td>\${order.id}</td>
+              <td>\${new Date().toLocaleDateString()}</td>
+              <td>\${order.items.map((i) => \`\${i.qty}x\`).join(', ')}</td>
+              <td>$\${(order.orderTotal || 0).toFixed(2)}</td>
+              <td class="status-\${(order.status || '').toLowerCase()}">\${
           order.status
         }</td>
           </tr>
-      `
+      \`
       )
       .join('');
   } catch (err) {
@@ -753,23 +764,23 @@ class HomePage extends HTMLElement {
 
       grid.innerHTML = inventory
         .map(
-          (item) => `
+          (item) => \`
                 <div class="card">
-                    <h3>${item.name}</h3>
-                    <p class="stock">${
+                    <h3>\${item.name}</h3>
+                    <p class="stock">\${
                       item.stock > 0
                         ? 'In Stock: ' + item.stock
                         : 'Out of Stock'
                     }</p>
-                    <p class="price">$${item.cost * 1.5}</p>
+                    <p class="price">$\${item.cost * 1.5}</p>
                     <button 
                         class="buy-btn" 
-                        data-id="${item.id}"
-                        ${item.stock <= 0 ? 'disabled' : ''}>
-                        ${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
+                        data-id="\${item.id}"
+                        \${item.stock <= 0 ? 'disabled' : ''}>
+                        \${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
                     </button>
                 </div>
-            `
+            \`
         )
         .join('');
 
@@ -795,7 +806,7 @@ class HomePage extends HTMLElement {
   }
 
   render() {
-    this.shadowRoot.innerHTML = `
+    this.shadowRoot.innerHTML = \`
         <style>
             :host { display: block; animation: fadeIn 0.3s; }
             .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
@@ -811,7 +822,7 @@ class HomePage extends HTMLElement {
 
         <h2>Featured Skis</h2>
         <div id="productGrid" class="grid"></div>
-        `;
+        \`;
   }
 }
 
@@ -850,7 +861,7 @@ class OrderPage extends HTMLElement {
     const root = this.shadowRoot;
     root.getElementById('orderItemName').textContent = item.name;
     root.getElementById('orderItemSku').textContent = item.sku;
-    root.getElementById('orderItemPrice').textContent = `$${price}`;
+    root.getElementById('orderItemPrice').textContent = \`$\${price}\`;
     root.getElementById('orderTotal').textContent = price;
 
     const qtySelect = root.getElementById('orderQty');
@@ -902,7 +913,7 @@ class OrderPage extends HTMLElement {
   }
 
   render() {
-    this.shadowRoot.innerHTML = `
+    this.shadowRoot.innerHTML = \`
         <style>
             :host { display: block; animation: fadeIn 0.3s; font-family: 'Segoe UI', sans-serif; }
             .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; margin: 0 auto; text-align: left; }
@@ -933,7 +944,7 @@ class OrderPage extends HTMLElement {
             <button id="btnConfirm">Confirm Purchase ($<span id="orderTotal"></span>)</button>
             <button class="cancel-btn" id="btnCancel">Cancel</button>
         </div>
-        `;
+        \`;
 
     this.shadowRoot.getElementById('btnConfirm').onclick = () =>
       this.submitOrder();
@@ -1144,23 +1155,23 @@ customElements.define('order-page', OrderPage);
 
             grid.innerHTML = inventory
               .map(
-                (item) => `
+                (item) => \`
                       <div class="card">
-                          <h3>${item.name}</h3>
-                          <p class="stock">${
+                          <h3>\${item.name}</h3>
+                          <p class="stock">\${
                             item.stock > 0
                               ? 'In Stock: ' + item.stock
                               : 'Out of Stock'
                           }</p>
-                          <p class="price">$${(item.cost * 1.5).toFixed(2)}</p>
+                          <p class="price">$\${(item.cost * 1.5).toFixed(2)}</p>
                           <button 
                               class="buy-btn" 
-                              data-id="${item.id}"
-                              ${item.stock <= 0 ? 'disabled' : ''}>
-                              ${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
+                              data-id="\${item.id}"
+                              \${item.stock <= 0 ? 'disabled' : ''}>
+                              \${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
                           </button>
                       </div>
-                  `
+                  \`
               )
               .join('');
 
@@ -1183,7 +1194,7 @@ customElements.define('order-page', OrderPage);
         }
 
         render() {
-          this.shadowRoot.innerHTML = `
+          this.shadowRoot.innerHTML = \`
               <style>
                   :host { display: block; animation: fadeIn 0.3s; }
                   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
@@ -1198,7 +1209,7 @@ customElements.define('order-page', OrderPage);
               </style>
               <h2>Featured Skis</h2>
               <div id="productGrid" class="grid"></div>
-              `;
+              \`;
         }
       }
 
@@ -1235,9 +1246,9 @@ customElements.define('order-page', OrderPage);
 
           root.getElementById('orderItemName').textContent = item.name;
           root.getElementById('orderItemSku').textContent = item.sku;
-          root.getElementById('orderItemPrice').textContent = `$${price.toFixed(
+          root.getElementById('orderItemPrice').textContent = \`$\${price.toFixed(
             2
-          )}`;
+          )}\`;
           root.getElementById('orderTotal').textContent = price.toFixed(2);
 
           const qtySelect = root.getElementById('orderQty');
@@ -1293,7 +1304,7 @@ customElements.define('order-page', OrderPage);
         }
 
         render() {
-          this.shadowRoot.innerHTML = `
+          this.shadowRoot.innerHTML = \`
               <style>
                   :host { display: block; animation: fadeIn 0.3s; font-family: 'Segoe UI', sans-serif; }
                   .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; margin: 0 auto; text-align: left; }
@@ -1323,7 +1334,7 @@ customElements.define('order-page', OrderPage);
                   <button id="btnConfirm">Confirm Purchase ($<span id="orderTotal"></span>)</button>
                   <button class="cancel-btn" id="btnCancel">Cancel</button>
               </div>
-              `;
+              \`;
 
           this.shadowRoot.getElementById('btnConfirm').onclick = () =>
             this.submitOrder();
@@ -1366,7 +1377,7 @@ customElements.define('order-page', OrderPage);
 
         // 2. Fetch Client Profile
         try {
-          const res = await fetch(`/api/clients/${state.clientId}`);
+          const res = await fetch(\`/api/clients/\${state.clientId}\`);
           if (res.ok) {
             state.clientProfile = await res.json();
             state.deviceId =
@@ -1380,7 +1391,7 @@ customElements.define('order-page', OrderPage);
 
         // 3. Fetch Device Profile
         try {
-          const devRes = await fetch(`/api/devices/${state.deviceId}`);
+          const devRes = await fetch(\`/api/devices/\${state.deviceId}\`);
           if (devRes.ok) {
             state.deviceProfile = await devRes.json();
           } else {
@@ -1397,13 +1408,13 @@ customElements.define('order-page', OrderPage);
         // 4. Update UI Header
         document.getElementById(
           'displayClient'
-        ).textContent = `Client: ${state.clientId}`;
+        ).textContent = \`Client: \${state.clientId}\`;
         document.getElementById(
           'displayDevice'
-        ).textContent = `Device: ${state.deviceId}`;
-        document.getElementById('displayLocation').textContent = `Location: ${
+        ).textContent = \`Device: \${state.deviceId}\`;
+        document.getElementById('displayLocation').textContent = \`Location: \${
           state.clientProfile ? state.clientProfile.city : 'Unknown (Guest)'
-        }`;
+        }\`;
 
         // 5. Component Registration Logic (Dynamic vs Base)
         // Check URL for specific version override, default to 'legacy' (base) if not found
@@ -1456,27 +1467,27 @@ customElements.define('order-page', OrderPage);
             ? 'dynamicHome'
             : 'dynamicOrder';
 
-          const src = `./components/${folder}/${targetHash}/${fileNamePrefix}-${state.clientId}.js`;
+          const src = \`./components/\${folder}/\${targetHash}/\${fileNamePrefix}-\${state.clientId}.js\`;
 
           try {
             // Attempt to load directly. If 404 or CORS fail, it throws to catch block.
             await import(src);
 
             console.log(
-              `%c [${tagName}] Loading Dynamic Version: ${targetHash}`,
+              \`%c [\${tagName}] Loading Dynamic Version: \${targetHash}\`,
               'color:green'
             );
             useDynamic = true;
           } catch (e) {
             console.warn(
-              `Dynamic component not found or failed to load: ${src}`
+              \`Dynamic component not found or failed to load: \${src}\`
             );
           }
         }
 
         if (!useDynamic) {
           console.log(
-            `%c [${tagName}] Using Base Embedded Version`,
+            \`%c [\${tagName}] Using Base Embedded Version\`,
             'color:gray'
           );
           // Check if already defined to avoid collision
@@ -1531,7 +1542,7 @@ customElements.define('order-page', OrderPage);
         if (pageId) params.set('page', pageId);
         if (itemId) params.set('itemId', itemId);
         else params.delete('itemId');
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        const newUrl = \`\${window.location.pathname}?\${params.toString()}\`;
         replace
           ? window.history.replaceState({ pageId, itemId }, '', newUrl)
           : window.history.pushState({ pageId, itemId }, '', newUrl);
@@ -1573,7 +1584,7 @@ customElements.define('order-page', OrderPage);
         const tbody = document.getElementById('historyBody');
         tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
         try {
-          const res = await fetch(`/api/orders?clientId=${state.clientId}`);
+          const res = await fetch(\`/api/orders?clientId=\${state.clientId}\`);
           const orders = await res.json();
           if (!orders || orders.length === 0) {
             tbody.innerHTML =
@@ -1583,17 +1594,17 @@ customElements.define('order-page', OrderPage);
           orders.reverse();
           tbody.innerHTML = orders
             .map(
-              (order) => `
+              (order) => \`
               <tr>
-                  <td>${order.id}</td>
-                  <td>${new Date().toLocaleDateString()}</td>
-                  <td>${order.items.map((i) => `${i.qty}x`).join(', ')}</td>
-                  <td>$${(order.orderTotal || 0).toFixed(2)}</td>
-                  <td class="status-${(order.status || '').toLowerCase()}">${
+                  <td>\${order.id}</td>
+                  <td>\${new Date().toLocaleDateString()}</td>
+                  <td>\${order.items.map((i) => \`\${i.qty}x\`).join(', ')}</td>
+                  <td>$\${(order.orderTotal || 0).toFixed(2)}</td>
+                  <td class="status-\${(order.status || '').toLowerCase()}">\${
                 order.status
               }</td>
               </tr>
-          `
+          \`
             )
             .join('');
         } catch (e) {
@@ -1745,7 +1756,7 @@ const handlers = {
       if (!dbItem) {
         return {
           status: 400,
-          body: { error: `Invalid SKU ID: ${orderItem.skuId}` },
+          body: { error: \`Invalid SKU ID: \${orderItem.skuId}\` },
         };
       }
 
@@ -1755,19 +1766,19 @@ const handlers = {
       // Validate
       if (rule && orderItem.price > rule.price) {
         console.warn(
-          `[Pricing Guard] Rejected order for ${rule.name}. Price ${orderItem.price} exceeds limit ${rule.price}.`
+          \`[Pricing Guard] Rejected order for \${rule.name}. Price \${orderItem.price} exceeds limit \${rule.price}.\`
         );
         return {
           status: 400,
           body: {
-            error: `Price Verification Failed: ${rule.name} cannot exceed $${rule.price}.`,
+            error: \`Price Verification Failed: \${rule.name} cannot exceed $\${rule.price}.\`,
           },
         };
       }
     }
 
     // --- 2. Create Order ---
-    const orderId = `ORDER-${Math.floor(Math.random() * 10000000)}`;
+    const orderId = \`ORDER-\${Math.floor(Math.random() * 10000000)}\`;
     let orderTotal = 0;
     const orderItems = items.map((i) => {
       orderTotal += i.price * i.quantity;
@@ -1823,7 +1834,7 @@ function server() {
     const method = init?.method || 'GET';
     const path = url.pathname;
 
-    let handlerKey = `${method} ${path}`;
+    let handlerKey = \`\${method} \${path}\`;
     let handler = handlers[handlerKey];
     let idParam = null;
 
@@ -1832,7 +1843,7 @@ function server() {
       const lastSegment = segments.pop();
       const baseRoute = segments.join('/');
 
-      const genericKey = `${method} ${baseRoute}/:id`;
+      const genericKey = \`\${method} \${baseRoute}/:id\`;
       if (handlers[genericKey]) {
         handler = handlers[genericKey];
         idParam = lastSegment;
@@ -1846,7 +1857,7 @@ function server() {
       });
     }
 
-    console.log(`[MockServer] Intercepted: ${method} ${path}`);
+    console.log(\`[MockServer] Intercepted: \${method} \${path}\`);
 
     try {
       const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -1871,3 +1882,10 @@ function server() {
 
 export default server;
 </file>
+
+`,
+  customId: 'CLIENT-010',
+  pageType: 'home',
+  valueInputHash:
+    'f8af608f0b801eff59985c5417470099c7407825628494402b3621c69f4a1412',
+};
