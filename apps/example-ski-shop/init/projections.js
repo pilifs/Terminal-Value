@@ -184,7 +184,7 @@ const Projector = {
 const db = ${JSON.stringify(snapshot, null, 4)};
 export default db;`;
 
-    fs.writeFileSync(path.join(__dirname, 'db.js'), fileContent);
+    fs.writeFileSync(path.join(__dirname, 'local-db.js'), fileContent);
     console.log('✅ Projections persisted to db.js');
   },
 };
