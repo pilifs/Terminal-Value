@@ -20,7 +20,11 @@ Before continuing, I encourage you to start with [Approaching LLMs Like an Engin
 
 ## Run Locally Fast
 
-Run `npm install` then `npm run start:ski-shop` to start the example e-commerce app. Here are some links to custom generated components you can check out after running the app:
+Run `npm install` then ~~`npm run start:ski-shop` to start the example e-commerce app.~~ Running a back-end server for the ski-shop example is now deprecated. If you want to do it the old way with a CQRS back-end, check out commit `fc119684911d1466defeca0e5409740f709fef64`.
+
+All logic is now fully contained in the front-end bundle so it can be served from a CDN. To run, after install execute `npm run serve:client-side-ski-shop` and navigate to `http://localhost:3000`.
+
+Here are some links to custom generated components you can check out after running the app:
 
 - [CLIENT-006: backcountry adventurer (shown above)](http://localhost:3000/?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
 
