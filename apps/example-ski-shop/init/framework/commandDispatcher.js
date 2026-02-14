@@ -1,4 +1,4 @@
-import EventStore from './eventStore.js';
+import EventStore from '../../framework/eventStore.js';
 import Projector from '../store/projections.js';
 
 /**

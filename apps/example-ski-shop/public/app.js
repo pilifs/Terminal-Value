@@ -7,6 +7,9 @@ const state = {
   inventory: [],
 };
 
+// EXPOSE STATE GLOBALLY (Required for Dynamic Components)
+window.state = state;
+
 // --- INITIALIZATION ---
 async function init() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -40,7 +43,6 @@ async function init() {
     if (devRes.ok) {
       state.deviceProfile = await devRes.json();
     } else {
-      // Mock if not found in DB yet
       state.deviceProfile = {
         id: state.deviceId,
         browser: navigator.userAgent,
@@ -63,9 +65,10 @@ async function init() {
   }`;
 
   // 5. Pass Client ID to Order Component
-  document
-    .getElementById('orderPage')
-    .setAttribute('client-id', state.clientId);
+  const orderPage = document.getElementById('orderPage');
+  if (orderPage) {
+    orderPage.setAttribute('client-id', state.clientId);
+  }
 
   // 6. Initial Route
   const initialPage = urlParams.get('page') || 'home';
@@ -88,6 +91,7 @@ function setupTooltips() {
 
   const attach = (id, getDataFn) => {
     const el = document.getElementById(id);
+    if (!el) return;
     el.addEventListener('mouseenter', () => {
       const data = getDataFn();
       // Pretty print JSON
@@ -99,7 +103,6 @@ function setupTooltips() {
     });
   };
 
-  // Define what data shows for each span
   attach('displayClient', () => state.clientProfile);
   attach(
     'displayDevice',
@@ -113,9 +116,7 @@ function setupTooltips() {
 
 // --- NAVIGATION HANDLERS ---
 
-// Listen for custom events from Web Components
 document.addEventListener('navigate-order', (e) => {
-  // The Home Page requests to navigate to Order Page with a specific item
   router('order', e.detail.item.id, e.detail.item);
 });
 
@@ -124,10 +125,8 @@ document.addEventListener('navigate-home', () => {
 });
 
 document.addEventListener('order-completed', () => {
-  // Refresh inventory on home page silently
   const home = document.getElementById('homePage');
   if (home.loadInventory) home.loadInventory();
-
   router('history');
 });
 
@@ -138,7 +137,6 @@ window.router = function (pageId, itemId = null, itemObj = null) {
 };
 
 function updateUrl(pageId, itemId = null, replace = false) {
-  // Preserve existing params (like homeHash, orderHash) by initializing with window.location.search
   const params = new URLSearchParams(window.location.search);
   
   if (state.clientId) params.set('clientId', state.clientId);
@@ -168,58 +166,62 @@ async function render(pageId, itemId, itemObj = null) {
   const historyEl = document.getElementById('historyPage');
 
   // Reset visibility
-  homeEl.classList.add('hidden');
-  orderEl.classList.add('hidden');
-  historyEl.classList.add('hidden');
+  if(homeEl) homeEl.classList.add('hidden');
+  if(orderEl) orderEl.classList.add('hidden');
+  if(historyEl) historyEl.classList.add('hidden');
 
   if (pageId === 'home') {
-    homeEl.classList.remove('hidden');
+    if(homeEl) homeEl.classList.remove('hidden');
   } else if (pageId === 'order') {
-    orderEl.classList.remove('hidden');
+    if(orderEl) orderEl.classList.remove('hidden');
 
-    // Ensure data is loaded into component
     if (itemObj) {
-      orderEl.loadItem(itemObj);
+      if(orderEl.loadItem) orderEl.loadItem(itemObj);
     } else if (itemId) {
-      // If deep linked, fetch item data first
       const res = await fetch('/api/inventory');
       const inventory = await res.json();
       const item = inventory.find((i) => i.id === itemId);
-      if (item) orderEl.loadItem(item);
+      if (item && orderEl.loadItem) orderEl.loadItem(item);
     }
   } else if (pageId === 'history') {
-    historyEl.classList.remove('hidden');
+    if(historyEl) historyEl.classList.remove('hidden');
     loadHistory();
   }
 }
 
-// History Page Logic (kept in main app as requested implicitly)
 async function loadHistory() {
   const tbody = document.getElementById('historyBody');
+  if(!tbody) return;
+  
   tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-  const res = await fetch(`/api/orders?clientId=${state.clientId}`);
-  const orders = await res.json();
-  if (orders.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="5" style="text-align:center">No orders found.</td></tr>';
-    return;
+  try {
+    const res = await fetch(`/api/orders?clientId=${state.clientId}`);
+    const orders = await res.json();
+    if (!orders || orders.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="5" style="text-align:center">No orders found.</td></tr>';
+      return;
+    }
+    // Reverse logic without mutating if possible, but standard array reverse is fine here
+    orders.reverse();
+    tbody.innerHTML = orders
+      .map(
+        (order) => `
+          <tr>
+              <td>${order.id}</td>
+              <td>${new Date().toLocaleDateString()}</td>
+              <td>${order.items.map((i) => `${i.qty}x`).join(', ')}</td>
+              <td>$${(order.orderTotal || 0).toFixed(2)}</td>
+              <td class="status-${(order.status || '').toLowerCase()}">${
+          order.status
+        }</td>
+          </tr>
+      `
+      )
+      .join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5">Error loading history.</td></tr>';
   }
-  orders.reverse();
-  tbody.innerHTML = orders
-    .map(
-      (order) => `
-        <tr>
-            <td>${order.id}</td>
-            <td>${new Date().toLocaleDateString()}</td>
-            <td>${order.items.map((i) => `${i.qty}x`).join(', ')}</td>
-            <td>$${order.orderTotal.toFixed(2)}</td>
-            <td class="status-${order.status.toLowerCase()}">${
-        order.status
-      }</td>
-        </tr>
-    `
-    )
-    .join('');
 }
 
 init();

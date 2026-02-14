@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Events } from '../domain/constants/eventConstants.js';
+import { Events } from './domain/constants/eventConstants.js';
 
 // Setup paths for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -184,7 +184,7 @@ const Projector = {
 const db = ${JSON.stringify(snapshot, null, 4)};
 export default db;`;
 
-    fs.writeFileSync(path.join(__dirname, 'db.js'), fileContent);
+    fs.writeFileSync(path.join(__dirname, 'local-db.js'), fileContent);
     console.log('✅ Projections persisted to db.js');
   },
 };

@@ -1,12 +1,22 @@
-const { v4: uuidv4 } = require('uuid');
-const { Events } = require('../domain/constants/eventConstants');
+import { Events } from './domain/constants/eventConstants.js';
 
 const CITIES = [
-  'Vancouver', 'Whistler', 'Denver', 'Salt Lake City', 'Calgary', 'Burlington', 'Banff', 'Aspen',
+  'Vancouver',
+  'Whistler',
+  'Denver',
+  'Salt Lake City',
+  'Calgary',
+  'Burlington',
+  'Banff',
+  'Aspen',
 ];
 const BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Edge'];
 const DEVICES = [
-  'iPhone 13', 'Pixel 6', 'MacBook Pro', 'iPad Air', 'Windows Desktop',
+  'iPhone 13',
+  'Pixel 6',
+  'MacBook Pro',
+  'iPad Air',
+  'Windows Desktop',
 ];
 
 const VIEWPORTS = [360, 390, 414, 768, 1024, 1280, 1366, 1440, 1920, 2560];
@@ -24,58 +34,68 @@ const SKI_CATEGORIES = [
 
 // Explicit CRM Note Personas
 // Later on can add scary stuff here manually like: astrology beliefs, favourite colour, political party affiliation, favourite websites -- anything that might impact marketing tone
-// The intent of this is to show how powerfully indivuduals can be targeted with LLMs when given rich context using this technique 
+// The intent of this is to show how powerfully indivuduals can be targeted with LLMs when given rich context using this technique
 const CRM_PERSONAS = [
-  [ // Persona 0
-    "Client is taking a big trip to Vail next month and needs to gear up.",
-    "Previously complained about boots being too tight, needs wide fit.",
-    "High income, value-conscious but willing to pay for durability."
+  [
+    // Persona 0
+    'Client is taking a big trip to Vail next month and needs to gear up.',
+    'Previously complained about boots being too tight, needs wide fit.',
+    'High income, value-conscious but willing to pay for durability.',
   ],
-  [ // Persona 1
-    "Client is a trust fund baby that must buy the latest gear.",
-    "Impulse buyer, usually buys the most expensive item in the category.",
-    "Loves flashy colors and branding."
+  [
+    // Persona 1
+    'Client is a trust fund baby that must buy the latest gear.',
+    'Impulse buyer, usually buys the most expensive item in the category.',
+    'Loves flashy colors and branding.',
   ],
-  [ // Persona 2
-    "Client just got into backcountry skiing and is excited to buy new stuff.",
-    "Attended an avalanche safety course last month.",
-    "Asking about lightweight setups for long tours."
+  [
+    // Persona 2
+    'Client just got into backcountry skiing and is excited to buy new stuff.',
+    'Attended an avalanche safety course last month.',
+    'Asking about lightweight setups for long tours.',
   ],
-  [ // Persona 3
-    "Client has young family members that are into ski racing.",
-    "Buys new gear every November for the kids.",
-    "Often asks for bulk discounts or team deals."
+  [
+    // Persona 3
+    'Client has young family members that are into ski racing.',
+    'Buys new gear every November for the kids.',
+    'Often asks for bulk discounts or team deals.',
   ],
-  [ // Persona 4
-    "Former pro racer, extremely technical about edge tuning.",
-    "Only skis on hardpack groomers.",
-    "Prefers stiff boots and high DIN bindings."
+  [
+    // Persona 4
+    'Former pro racer, extremely technical about edge tuning.',
+    'Only skis on hardpack groomers.',
+    'Prefers stiff boots and high DIN bindings.',
   ],
-  [ // Persona 5
-    "Digital nomad, works from the lodge half the day.",
-    "Needs gear that transitions well from slope to apres-ski.",
-    "Interested in heated gloves and socks."
+  [
+    // Persona 5
+    'Digital nomad, works from the lodge half the day.',
+    'Needs gear that transitions well from slope to apres-ski.',
+    'Interested in heated gloves and socks.',
   ],
-  [ // Persona 6
-    "Retiree skiing 100+ days a year.",
-    "Prioritizes comfort above all else.",
-    "Loyal to the shop for 10 years, expects coffee when they walk in."
+  [
+    // Persona 6
+    'Retiree skiing 100+ days a year.',
+    'Prioritizes comfort above all else.',
+    'Loyal to the shop for 10 years, expects coffee when they walk in.',
   ],
-  [ // Persona 7
-    "Adventure photographer, carries heavy camera gear.",
-    "Needs rugged backpacks and stable skis.",
-    "Often destroys gear quickly due to rough usage."
+  [
+    // Persona 7
+    'Adventure photographer, carries heavy camera gear.',
+    'Needs rugged backpacks and stable skis.',
+    'Often destroys gear quickly due to rough usage.',
   ],
-  [ // Persona 8
-    "Weekend warrior from the city.",
-    "Needs versatile gear for changing conditions.",
-    "Usually rents high-performance demos before buying."
+  [
+    // Persona 8
+    'Weekend warrior from the city.',
+    'Needs versatile gear for changing conditions.',
+    'Usually rents high-performance demos before buying.',
   ],
-  [ // Persona 9
-    "Cross-country fitness enthusiast.",
-    "Tracks every metric on Strava.",
-    "Looking for the lightest possible nordic setup."
-  ]
+  [
+    // Persona 9
+    'Cross-country fitness enthusiast.',
+    'Tracks every metric on Strava.',
+    'Looking for the lightest possible nordic setup.',
+  ],
 ];
 
 function generateEvents() {
@@ -83,7 +103,7 @@ function generateEvents() {
   let timestamp = Date.now() - 10000000;
 
   // --- 1. INITIALIZE INVENTORY ---
-  const inventoryMap = {}; 
+  const inventoryMap = {};
 
   SKI_CATEGORIES.forEach((ski, index) => {
     const id = `ITEM-${ski.sku}`;
@@ -192,13 +212,13 @@ function generateEvents() {
   highValueClients.forEach((client, index) => {
     // [New Logic] Inject CRM Notes based on index
     const personaNotes = CRM_PERSONAS[index % CRM_PERSONAS.length];
-    personaNotes.forEach(note => {
-        events.push({
-            type: Events.Client.NOTE_ADDED,
-            aggregateId: client.id,
-            note: note,
-            timestamp: timestamp++
-        });
+    personaNotes.forEach((note) => {
+      events.push({
+        type: Events.Client.NOTE_ADDED,
+        aggregateId: client.id,
+        note: note,
+        timestamp: timestamp++,
+      });
     });
 
     // Each makes 3 to 7 purchases
@@ -218,4 +238,4 @@ function generateEvents() {
   return events;
 }
 
-module.exports = generateEvents();
+export default generateEvents();
