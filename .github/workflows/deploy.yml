@@ -22,6 +22,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: List
+        run: npx wrangler list
+
       - name: Deploy to Cloudflare Workers
         run: npm run static-cdn-deploy
         env:
