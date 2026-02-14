@@ -204,7 +204,7 @@ const handlers = {
 
 // --- FETCH INTERCEPTOR ---
 
-function startServer() {
+function server() {
   const originalFetch = window.fetch;
 
   window.fetch = async (input, init) => {
@@ -258,4 +258,4 @@ function startServer() {
   console.log('🚀 Sandbox Mock Server Initialized (LocalStorage Active)');
 }
 
-export default startServer;
+export default server;

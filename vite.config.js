@@ -55,7 +55,6 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '/init': path.resolve(__dirname, APP_PATH, 'init'),
       '/store': path.resolve(__dirname, APP_PATH, 'store'),
     },
   },
