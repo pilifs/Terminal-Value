@@ -1,7 +1,7 @@
-const AggregateRoot = require('../framework/aggregateRoot');
-const { Events } = require('./constants/eventConstants');
+import AggregateRoot from '../framework/aggregateRoot.js';
+import { Events } from './constants/eventConstants.js';
 
-class ClientDevice extends AggregateRoot {
+export default class ClientDevice extends AggregateRoot {
   constructor(id, history) {
     super(id, history, {
       id: id,
@@ -46,5 +46,3 @@ class ClientDevice extends AggregateRoot {
     };
   }
 }
-
-module.exports = ClientDevice;

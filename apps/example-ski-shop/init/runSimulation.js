@@ -1,6 +1,6 @@
 // Framework
 import EventStore from './framework/eventStore.js';
-import Projector from '../store/projections.js';
+import Projector from './projections.js';
 
 // Domain Aggregates
 import InventoryItem from './domain/inventoryItem.js';
@@ -9,8 +9,7 @@ import Order from './domain/order.js';
 
 // Import Generated Data
 // Use fixed events for now to link custom templates to users without re-generating
-// Note: We need to import the default export from the memoized file
-import generateEventsResults from './terminal-value/memoizedResults/generateEventsResults.js';
+import generateEventsResults from './mock/generateEventsResults.js';
 
 const initialHistory = generateEventsResults;
 

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Events } from '../domain/constants/eventConstants.js';
+import { Events } from './domain/constants/eventConstants.js';
 
 // Setup paths for ESM
 const __filename = fileURLToPath(import.meta.url);
