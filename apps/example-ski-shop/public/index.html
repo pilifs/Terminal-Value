@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Alpine Ski Shop</title>
+    <title>Alpine Ski Shop (Sandbox)</title>
     <style>
-      /* ... Existing Styles ... */
+      /* --- GLOBAL STYLES --- */
       body {
         font-family: 'Segoe UI', sans-serif;
         margin: 0;
@@ -30,6 +30,19 @@
       }
       header nav a:hover {
         text-decoration: underline;
+      }
+      a.internal-link {
+        color: #e74c3c;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        border: 1px solid #e74c3c;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      a.internal-link:hover {
+        background-color: #e74c3c;
+        color: white;
+        text-decoration: none;
       }
       .container {
         max-width: 1000px;
@@ -100,6 +113,14 @@
         color: green;
         font-weight: bold;
       }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -108,6 +129,9 @@
       <nav>
         <a onclick="router('home')">Shop</a>
         <a onclick="router('history')">My Orders</a>
+        <a href="admin.html" target="_blank" class="internal-link"
+          >Admin (Internal Only)</a
+        >
       </nav>
     </header>
 
@@ -139,63 +163,495 @@
     </div>
 
     <script type="module">
-      (async function () {
-        const params = new URLSearchParams(window.location.search);
-        const clientId = params.get('clientId');
+      // 1. Initialize Mock Server
+      import startMockServer from '/init/startServer.js';
+      startMockServer();
 
-        // --- VERSION CONTROL ---
-        // 1. Check URL for specific version override
-        // 2. Fallback to 'legacy' (or hardcoded default)
-        const HOME_COMPONENT_HASH = params.get('homeHash') || 'legacy';
-        const ORDER_COMPONENT_HASH = params.get('orderHash') || 'legacy';
+      // ==========================================
+      // SECTION: BASE WEB COMPONENTS (EMBEDDED)
+      // ==========================================
 
-        const getComponentSrc = async (
-          defaultSrc,
-          dynamicFolder,
-          fileName,
-          targetHash
-        ) => {
-          if (clientId && targetHash) {
-            // Construct path: ./components/dynamicHome/{hash}/homePage-{id}.js
-            const dynamicSrc = `${dynamicFolder}/${targetHash}/${fileName}`;
-            try {
-              const response = await fetch(dynamicSrc, { method: 'HEAD' });
-              if (response.ok) {
-                console.log(
-                  `%c Loaded Dynamic Component (${targetHash})`,
-                  'color: green; font-weight: bold;'
+      // -- Base Home Page Logic --
+      class BaseHomePage extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+          this.loadInventory();
+        }
+
+        async loadInventory() {
+          const grid = this.shadowRoot.getElementById('productGrid');
+          grid.innerHTML = 'Loading inventory...';
+
+          try {
+            const res = await fetch('/api/inventory');
+            const inventory = await res.json();
+
+            grid.innerHTML = inventory
+              .map(
+                (item) => `
+                      <div class="card">
+                          <h3>${item.name}</h3>
+                          <p class="stock">${
+                            item.stock > 0
+                              ? 'In Stock: ' + item.stock
+                              : 'Out of Stock'
+                          }</p>
+                          <p class="price">$${(item.cost * 1.5).toFixed(2)}</p>
+                          <button 
+                              class="buy-btn" 
+                              data-id="${item.id}"
+                              ${item.stock <= 0 ? 'disabled' : ''}>
+                              ${item.stock > 0 ? 'Buy Now' : 'Sold Out'}
+                          </button>
+                      </div>
+                  `
+              )
+              .join('');
+
+            this.shadowRoot.querySelectorAll('.buy-btn').forEach((btn) => {
+              btn.addEventListener('click', (e) => {
+                const itemId = e.target.dataset.id;
+                const item = inventory.find((i) => i.id === itemId);
+                this.dispatchEvent(
+                  new CustomEvent('navigate-order', {
+                    detail: { item: item },
+                    bubbles: true,
+                    composed: true,
+                  })
                 );
-                return dynamicSrc;
-              }
-            } catch (e) {
-              console.warn(
-                `Dynamic component not found in ${targetHash}, using default.`
-              );
-            }
+              });
+            });
+          } catch (e) {
+            grid.innerHTML = '<p>Error loading inventory.</p>';
           }
-          return defaultSrc;
+        }
+
+        render() {
+          this.shadowRoot.innerHTML = `
+              <style>
+                  :host { display: block; animation: fadeIn 0.3s; }
+                  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+                  .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; font-family: 'Segoe UI', sans-serif; }
+                  .card h3 { margin: 0 0 10px 0; color: #2c3e50; }
+                  .price { font-size: 1.2rem; color: #e74c3c; font-weight: bold; }
+                  .stock { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 15px; }
+                  button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; }
+                  button:hover { background: #2980b9; }
+                  button:disabled { background: #ccc; cursor: not-allowed; }
+                  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+              </style>
+              <h2>Featured Skis</h2>
+              <div id="productGrid" class="grid"></div>
+              `;
+        }
+      }
+
+      // -- Base Order Page Logic --
+      class BaseOrderPage extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.selectedItem = null;
+          this.clientId = null;
+        }
+
+        connectedCallback() {
+          this.render();
+          this.clientId = this.getAttribute('client-id');
+        }
+
+        static get observedAttributes() {
+          return ['client-id'];
+        }
+
+        attributeChangedCallback(name, oldValue, newValue) {
+          if (name === 'client-id') {
+            this.clientId = newValue;
+          }
+        }
+
+        loadItem(item) {
+          this.selectedItem = item;
+          const price = item.cost * 1.5;
+          const root = this.shadowRoot;
+
+          if (!root.getElementById('orderItemName')) return; // Guard if not rendered yet
+
+          root.getElementById('orderItemName').textContent = item.name;
+          root.getElementById('orderItemSku').textContent = item.sku;
+          root.getElementById('orderItemPrice').textContent = `$${price.toFixed(
+            2
+          )}`;
+          root.getElementById('orderTotal').textContent = price.toFixed(2);
+
+          const qtySelect = root.getElementById('orderQty');
+          qtySelect.value = '1';
+          qtySelect.onchange = () => {
+            root.getElementById('orderTotal').textContent = (
+              price * qtySelect.value
+            ).toFixed(2);
+          };
+        }
+
+        async submitOrder() {
+          const root = this.shadowRoot;
+          const qty = parseInt(root.getElementById('orderQty').value);
+          const price = this.selectedItem.cost * 1.5;
+          const btn = root.getElementById('btnConfirm');
+
+          btn.disabled = true;
+          btn.textContent = 'Processing...';
+
+          const payload = {
+            clientId: this.clientId,
+            items: [
+              { skuId: this.selectedItem.id, quantity: qty, price: price },
+            ],
+          };
+
+          try {
+            const res = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+              alert('Order Confirmed! ID: ' + data.orderId);
+              this.dispatchEvent(
+                new CustomEvent('order-completed', {
+                  bubbles: true,
+                  composed: true,
+                })
+              );
+            } else {
+              alert('Error: ' + data.error);
+            }
+          } catch (e) {
+            alert('Network Error');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Confirm Purchase';
+          }
+        }
+
+        render() {
+          this.shadowRoot.innerHTML = `
+              <style>
+                  :host { display: block; animation: fadeIn 0.3s; font-family: 'Segoe UI', sans-serif; }
+                  .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; max-width: 500px; margin: 0 auto; text-align: left; }
+                  .card h3 { margin: 0 0 10px 0; color: #2c3e50; }
+                  .price { font-size: 1.2rem; color: #e74c3c; font-weight: bold; }
+                  hr { border: 0; border-top: 1px solid #eee; margin: 15px 0; }
+                  button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 10px; }
+                  button:hover { background: #2980b9; }
+                  button:disabled { background: #ccc; cursor: not-allowed; }
+                  .cancel-btn { background: #95a5a6; }
+                  .cancel-btn:hover { background: #7f8c8d; }
+                  select { width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+                  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+              </style>
+              <h2>Complete Your Order</h2>
+              <div class="card">
+                  <h3 id="orderItemName">Loading...</h3>
+                  <p>SKU: <span id="orderItemSku"></span></p>
+                  <p>Price: <span id="orderItemPrice" class="price"></span></p>
+                  <hr>
+                  <label>Quantity:</label>
+                  <select id="orderQty">
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                  </select>
+                  <button id="btnConfirm">Confirm Purchase ($<span id="orderTotal"></span>)</button>
+                  <button class="cancel-btn" id="btnCancel">Cancel</button>
+              </div>
+              `;
+
+          this.shadowRoot.getElementById('btnConfirm').onclick = () =>
+            this.submitOrder();
+          this.shadowRoot.getElementById('btnCancel').onclick = () => {
+            this.dispatchEvent(
+              new CustomEvent('navigate-home', {
+                bubbles: true,
+                composed: true,
+              })
+            );
+          };
+        }
+      }
+
+      // ==========================================
+      // SECTION: APP LOGIC & ROUTER (EMBEDDED)
+      // ==========================================
+
+      const state = {
+        clientId: null,
+        deviceId: null,
+        clientProfile: null,
+        deviceProfile: null,
+        inventory: [],
+      };
+      window.state = state;
+
+      async function initApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // 1. Setup Client
+        state.clientId = urlParams.get('clientId');
+        if (!state.clientId) {
+          state.clientId =
+            'CLIENT-' +
+            Math.floor(Math.random() * 100000)
+              .toString()
+              .padStart(5, '0');
+        }
+
+        // 2. Fetch Client Profile
+        try {
+          const res = await fetch(`/api/clients/${state.clientId}`);
+          if (res.ok) {
+            state.clientProfile = await res.json();
+            state.deviceId =
+              state.clientProfile.devices?.[0] || generateDeviceId();
+          } else {
+            state.deviceId = generateDeviceId();
+          }
+        } catch (e) {
+          state.deviceId = generateDeviceId();
+        }
+
+        // 3. Fetch Device Profile
+        try {
+          const devRes = await fetch(`/api/devices/${state.deviceId}`);
+          if (devRes.ok) {
+            state.deviceProfile = await devRes.json();
+          } else {
+            state.deviceProfile = {
+              id: state.deviceId,
+              browser: navigator.userAgent,
+              deviceName: 'Current Session',
+            };
+          }
+        } catch (e) {
+          console.log(e);
+        }
+
+        // 4. Update UI Header
+        document.getElementById(
+          'displayClient'
+        ).textContent = `Client: ${state.clientId}`;
+        document.getElementById(
+          'displayDevice'
+        ).textContent = `Device: ${state.deviceId}`;
+        document.getElementById('displayLocation').textContent = `Location: ${
+          state.clientProfile ? state.clientProfile.city : 'Unknown (Guest)'
+        }`;
+
+        // 5. Component Registration Logic (Dynamic vs Base)
+        // Check URL for specific version override, default to 'legacy' (base) if not found
+        const HOME_HASH = urlParams.get('homeHash') || 'legacy';
+        const ORDER_HASH = urlParams.get('orderHash') || 'legacy';
+
+        await registerComponent(
+          'home-page',
+          BaseHomePage,
+          'homePage',
+          HOME_HASH
+        );
+        await registerComponent(
+          'order-page',
+          BaseOrderPage,
+          'orderPage',
+          ORDER_HASH
+        );
+
+        // 6. Pass Attributes to newly registered elements
+        const orderPage = document.getElementById('orderPage');
+        if (orderPage) orderPage.setAttribute('client-id', state.clientId);
+
+        // 7. Initial Route
+        const initialPage = urlParams.get('page') || 'home';
+        const itemId = urlParams.get('itemId');
+
+        setupTooltips();
+        updateUrl(initialPage, itemId, true);
+        render(initialPage, itemId);
+      }
+
+      function generateDeviceId() {
+        return 'DEV-' + Math.floor(Math.random() * 100000);
+      }
+
+      // --- Component Registration Helper ---
+      // Checks for dynamic version on server. If exists, import it. If not, use Base Class.
+      async function registerComponent(
+        tagName,
+        BaseClass,
+        fileNamePrefix,
+        targetHash
+      ) {
+        let useDynamic = false;
+
+        if (targetHash && targetHash !== 'legacy' && state.clientId) {
+          const dynamicSrc = `./components/dynamicHome/${targetHash}/${fileNamePrefix}-${state.clientId}.js`;
+          // For OrderPage, the folder is dynamicOrder
+          const folder = fileNamePrefix.includes('home')
+            ? 'dynamicHome'
+            : 'dynamicOrder';
+          const src = `./components/${folder}/${targetHash}/${fileNamePrefix}-${state.clientId}.js`;
+
+          try {
+            const head = await fetch(src, { method: 'HEAD' });
+            if (head.ok) {
+              console.log(
+                `%c [${tagName}] Loading Dynamic Version: ${targetHash}`,
+                'color:green'
+              );
+              await import(src); // The script inside defines the custom element
+              useDynamic = true;
+            }
+          } catch (e) {
+            console.warn(`Dynamic component not found: ${src}`);
+          }
+        }
+
+        if (!useDynamic) {
+          console.log(
+            `%c [${tagName}] Using Base Embedded Version`,
+            'color:gray'
+          );
+          // Check if already defined to avoid collision
+          if (!customElements.get(tagName)) {
+            customElements.define(tagName, BaseClass);
+          }
+        }
+      }
+
+      // --- Tooltips ---
+      function setupTooltips() {
+        const tooltip = document.getElementById('detailTooltip');
+        const attach = (id, getDataFn) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener('mouseenter', () => {
+            const data = getDataFn();
+            tooltip.textContent = JSON.stringify(data, null, 2);
+            tooltip.classList.add('visible');
+          });
+          el.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+          });
         };
+        attach('displayClient', () => state.clientProfile);
+        attach('displayDevice', () => state.deviceProfile);
+        attach('displayLocation', () => ({
+          city: state.clientProfile?.city || 'Unknown',
+          registered: state.clientProfile?.isRegistered || false,
+        }));
+      }
 
-        const [homeSrc, orderSrc] = await Promise.all([
-          getComponentSrc(
-            './components/homePage.js',
-            './components/dynamicHome',
-            `homePage-${clientId}.js`,
-            HOME_COMPONENT_HASH
-          ),
-          getComponentSrc(
-            './components/orderPage.js',
-            './components/dynamicOrder',
-            `orderPage-${clientId}.js`,
-            ORDER_COMPONENT_HASH
-          ),
-        ]);
+      // --- Router & Nav ---
+      document.addEventListener('navigate-order', (e) =>
+        router('order', e.detail.item.id, e.detail.item)
+      );
+      document.addEventListener('navigate-home', () => router('home'));
+      document.addEventListener('order-completed', () => {
+        const home = document.getElementById('homePage');
+        if (home.loadInventory) home.loadInventory();
+        router('history');
+      });
 
-        await import(homeSrc);
-        await import(orderSrc);
-      })();
+      window.router = function (pageId, itemId = null, itemObj = null) {
+        updateUrl(pageId, itemId);
+        render(pageId, itemId, itemObj);
+      };
+
+      function updateUrl(pageId, itemId = null, replace = false) {
+        const params = new URLSearchParams(window.location.search);
+        if (state.clientId) params.set('clientId', state.clientId);
+        if (pageId) params.set('page', pageId);
+        if (itemId) params.set('itemId', itemId);
+        else params.delete('itemId');
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        replace
+          ? window.history.replaceState({ pageId, itemId }, '', newUrl)
+          : window.history.pushState({ pageId, itemId }, '', newUrl);
+      }
+
+      window.onpopstate = function (event) {
+        if (event.state) render(event.state.pageId, event.state.itemId);
+        else render('home');
+      };
+
+      async function render(pageId, itemId, itemObj = null) {
+        const homeEl = document.getElementById('homePage');
+        const orderEl = document.getElementById('orderPage');
+        const historyEl = document.getElementById('historyPage');
+
+        if (homeEl) homeEl.classList.add('hidden');
+        if (orderEl) orderEl.classList.add('hidden');
+        if (historyEl) historyEl.classList.add('hidden');
+
+        if (pageId === 'home') {
+          if (homeEl) homeEl.classList.remove('hidden');
+        } else if (pageId === 'order') {
+          if (orderEl) orderEl.classList.remove('hidden');
+          if (itemObj && orderEl.loadItem) {
+            orderEl.loadItem(itemObj);
+          } else if (itemId) {
+            const res = await fetch('/api/inventory');
+            const inventory = await res.json();
+            const item = inventory.find((i) => i.id === itemId);
+            if (item && orderEl.loadItem) orderEl.loadItem(item);
+          }
+        } else if (pageId === 'history') {
+          if (historyEl) historyEl.classList.remove('hidden');
+          loadHistory();
+        }
+      }
+
+      async function loadHistory() {
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+        try {
+          const res = await fetch(`/api/orders?clientId=${state.clientId}`);
+          const orders = await res.json();
+          if (!orders || orders.length === 0) {
+            tbody.innerHTML =
+              '<tr><td colspan="5" style="text-align:center">No orders found.</td></tr>';
+            return;
+          }
+          orders.reverse();
+          tbody.innerHTML = orders
+            .map(
+              (order) => `
+              <tr>
+                  <td>${order.id}</td>
+                  <td>${new Date().toLocaleDateString()}</td>
+                  <td>${order.items.map((i) => `${i.qty}x`).join(', ')}</td>
+                  <td>$${(order.orderTotal || 0).toFixed(2)}</td>
+                  <td class="status-${(order.status || '').toLowerCase()}">${
+                order.status
+              }</td>
+              </tr>
+          `
+            )
+            .join('');
+        } catch (e) {
+          tbody.innerHTML =
+            '<tr><td colspan="5">Error loading history</td></tr>';
+        }
+      }
+
+      // Start Logic
+      initApp();
     </script>
-
-    <script src="app.js"></script>
   </body>
 </html>

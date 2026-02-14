@@ -1,166 +1,266 @@
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import initialDb from '../store/db.js';
 
-import Projector from '../store/projections.js';
-import { dispatch } from '../framework/commandDispatcher.js';
+// --- POLYFILLS (Node.js Support) ---
+if (typeof window === 'undefined') {
+  global.window = global;
+  global.window.location = { origin: 'http://localhost:3000' };
 
-import InventoryItem from '../domain/inventoryItem.js';
-import Client from '../domain/client.js';
-import Order from '../domain/order.js';
+  if (typeof localStorage === 'undefined') {
+    class InMemoryStorage {
+      constructor() {
+        this.store = new Map();
+      }
+      getItem(key) {
+        return this.store.get(key) || null;
+      }
+      setItem(key, value) {
+        this.store.set(key, String(value));
+      }
+      removeItem(key) {
+        this.store.delete(key);
+      }
+      clear() {
+        this.store.clear();
+      }
+    }
+    global.localStorage = new InMemoryStorage();
+  }
 
-// Setup paths for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// --- HELPER: Scan for Component Versions ---
-function getComponentVersions(type, clientId) {
-  // type is 'Home' or 'Order'
-  // dir structure: public/components/dynamic{Type}/{hash}/{type}Page-{clientId}.js
-  const baseDir = path.join(__dirname, `../public/components/dynamic${type}`);
-
-  if (!fs.existsSync(baseDir)) return [];
-
-  try {
-    // Get all subdirectories (hashes)
-    const hashDirs = fs
-      .readdirSync(baseDir, { withFileTypes: true })
-      .filter((dirent) => dirent.isDirectory())
-      .map((dirent) => dirent.name);
-
-    // Filter hashes that contain the specific client file
-    const versions = hashDirs.filter((hash) => {
-      const filePath = path.join(
-        baseDir,
-        hash,
-        `${type.toLowerCase()}Page-${clientId}.js`
-      );
-      return fs.existsSync(filePath);
-    });
-
-    return versions;
-  } catch (err) {
-    console.error(`Error scanning versions for ${type}:`, err);
-    return [];
+  if (typeof Response === 'undefined') {
+    global.Response = class Response {
+      constructor(body, init) {
+        this.body = body;
+        this.status = init?.status || 200;
+        this.headers = init?.headers || {};
+      }
+    };
   }
 }
 
-// --- SERVER SETUP ---
-function startServer() {
-  const app = express();
-  app.use(cors());
-  app.use(bodyParser.json());
-  const PORT = 3000;
+// --- CONFIGURATION ---
+const AVAILABLE_VERSIONS = {
+  Home: [
+    'f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f',
+    '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a',
+  ],
+  Order: [
+    '76c5c136c580bd77f94d8043f0fa45839e6ab527deb6ee22d82ce2ef0ea1a2ce',
+    '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a',
+  ],
+};
 
-  app.use(express.static(path.join(__dirname, '../public')));
+// --- PRICING GUARD DATA ---
+const SKI_CATEGORIES = [
+  { name: 'All Mountain Explorer', cost: 400, sku: 'SKU-AM-001', price: 650 },
+  { name: 'World Cup Racer', cost: 850, sku: 'SKU-RC-002', price: 1200 },
+  { name: 'Backcountry Tour', cost: 600, sku: 'SKU-TR-003', price: 890 },
+  { name: 'Piste Carver', cost: 550, sku: 'SKU-CV-004', price: 799 },
+  { name: 'Park Freestyle', cost: 350, sku: 'SKU-FS-005', price: 499 },
+  { name: 'Deep Powder', cost: 700, sku: 'SKU-PW-006', price: 950 },
+  { name: 'Big Mountain Pro', cost: 750, sku: 'SKU-BM-007', price: 1050 },
+  { name: 'Nordic Cross', cost: 250, sku: 'SKU-XC-008', price: 399 },
+];
 
-  // --- READ ROUTES ---
-  app.get('/api/inventory', (req, res) =>
-    res.json(Projector.getInventoryCatalog())
-  );
-  app.get('/api/dashboard', (req, res) =>
-    res.json(Projector.getDashboardStats())
-  );
+// --- STATE MANAGEMENT ---
+const STORAGE_KEY = 'ski_shop_sandbox_db';
 
-  app.get('/api/clients', (req, res) => {
-    if (req.query.city)
-      return res.json(Projector.getClientsByCity(req.query.city));
+function loadState() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return JSON.parse(JSON.stringify(initialDb));
+}
 
-    let clients = Projector.getClients().slice(0, 100);
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
-    // AUGMENTATION: Scan for all versions of custom files
-    const augmentedClients = clients.map((client) => {
-      const c = { ...client };
+const db = loadState();
 
-      // Get array of available hashes (e.g., ['legacy', 'a7b3...', 'x9z1...'])
-      c.customHomeVersions = getComponentVersions('Home', c.id);
-      c.customOrderVersions = getComponentVersions('Order', c.id);
+// --- HELPER LOGIC ---
+function getComponentVersions(type, clientId) {
+  return AVAILABLE_VERSIONS[type] || [];
+}
 
-      return c;
+// --- MOCK API HANDLERS ---
+
+const handlers = {
+  'GET /api/inventory': () => {
+    return { status: 200, body: db.inventory };
+  },
+
+  'GET /api/dashboard': () => {
+    return { status: 200, body: db.dashboard };
+  },
+
+  'GET /api/clients': (params) => {
+    let clients = db.clients;
+    if (params.city) {
+      clients = clients.filter((c) => c.city === params.city);
+    }
+    const augmented = clients.map((c) => ({
+      ...c,
+      customHomeVersions: getComponentVersions('Home', c.id),
+      customOrderVersions: getComponentVersions('Order', c.id),
+    }));
+    return { status: 200, body: augmented };
+  },
+
+  'GET /api/clients/:id': (params, id) => {
+    const client = db.clients.find((c) => c.id === id);
+    if (!client) return { status: 404, body: { error: 'Client not found' } };
+    return { status: 200, body: client };
+  },
+
+  'GET /api/devices/:id': (params, id) => {
+    const device = db.devices.find((d) => d.id === id);
+    if (!device) return { status: 404, body: { error: 'Device not found' } };
+    return { status: 200, body: device };
+  },
+
+  'GET /api/orders': (params) => {
+    if (!params.clientId)
+      return { status: 400, body: { error: 'Please provide ?clientId=' } };
+    const orders = db.orders.filter((o) => o.clientId === params.clientId);
+    return { status: 200, body: orders };
+  },
+
+  'POST /api/orders': (params, id, body) => {
+    const { clientId, items } = body;
+
+    // --- 1. PRICING GUARD ---
+    for (const orderItem of items) {
+      // Find the item in our database to identify the SKU
+      const dbItem = db.inventory.find((i) => i.id === orderItem.skuId);
+
+      if (!dbItem) {
+        return {
+          status: 400,
+          body: { error: `Invalid SKU ID: ${orderItem.skuId}` },
+        };
+      }
+
+      // Find the official pricing rule for this SKU
+      const rule = SKI_CATEGORIES.find((c) => c.sku === dbItem.sku);
+
+      // Validate
+      if (rule && orderItem.price > rule.price) {
+        console.warn(
+          `[Pricing Guard] Rejected order for ${rule.name}. Price ${orderItem.price} exceeds limit ${rule.price}.`
+        );
+        return {
+          status: 400,
+          body: {
+            error: `Price Verification Failed: ${rule.name} cannot exceed $${rule.price}.`,
+          },
+        };
+      }
+    }
+
+    // --- 2. Create Order ---
+    const orderId = `ORDER-${Math.floor(Math.random() * 10000000)}`;
+    let orderTotal = 0;
+    const orderItems = items.map((i) => {
+      orderTotal += i.price * i.quantity;
+      return {
+        itemId: i.skuId,
+        qty: i.quantity,
+        price: i.price,
+      };
     });
 
-    res.json(augmentedClients);
-  });
+    const newOrder = {
+      id: orderId,
+      type: 'PURCHASE',
+      clientId: clientId,
+      status: 'CONFIRMED',
+      items: orderItems,
+      orderTotal: orderTotal,
+    };
 
-  app.get('/api/clients/:id', (req, res) => {
-    const client = Projector.getClientProfile(req.params.id);
-    if (!client) return res.status(404).json({ error: 'Client not found' });
-    res.json(client);
-  });
+    db.orders.push(newOrder);
 
-  app.get('/api/devices/:id', (req, res) => {
-    const device = Projector.getDeviceDetails(req.params.id);
-    if (!device) return res.status(404).json({ error: 'Device not found' });
-    res.json(device);
-  });
-
-  app.get('/api/orders', (req, res) => {
-    if (req.query.clientId)
-      return res.json(Projector.getOrdersByClient(req.query.clientId));
-    res.json({ error: 'Please provide ?clientId=' });
-  });
-
-  app.get('/api/orders/:id', (req, res) => {
-    const order = Projector.getOrderDetails(req.params.id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
-    res.json(order);
-  });
-
-  // --- WRITE ROUTES ---
-  app.post('/api/orders', async (req, res) => {
-    const { clientId, items } = req.body;
-    const orderId = `ORDER-${Date.now()}`;
-    try {
-      await dispatch(Order, orderId, (order) =>
-        order.initiatePurchase(clientId)
-      );
-      for (const item of items) {
-        await dispatch(Order, orderId, (order) =>
-          order.addItem(item.skuId, item.quantity, item.price)
-        );
+    // --- 3. Update Inventory ---
+    items.forEach((orderItem) => {
+      const invItem = db.inventory.find((i) => i.id === orderItem.skuId);
+      if (invItem) {
+        invItem.stock = Math.max(0, invItem.stock - orderItem.quantity);
       }
-      await dispatch(Order, orderId, (order) => order.confirm());
-      for (const item of items) {
-        await dispatch(InventoryItem, item.skuId, (inv) =>
-          inv.removeStock(item.quantity)
-        );
+    });
+
+    // --- 4. Update Stats ---
+    db.dashboard.totalRevenue += orderTotal;
+    db.dashboard.totalOrdersConfirmed += 1;
+    db.dashboard.itemsSold += items.reduce((sum, i) => sum + i.quantity, 0);
+
+    const client = db.clients.find((c) => c.id === clientId);
+    if (client) {
+      client.totalSpent = (client.totalSpent || 0) + orderTotal;
+    }
+
+    saveState(db);
+
+    return { status: 201, body: { success: true, orderId } };
+  },
+};
+
+// --- FETCH INTERCEPTOR ---
+
+function startServer() {
+  const originalFetch = window.fetch;
+
+  window.fetch = async (input, init) => {
+    const url = new URL(input, window.location.origin);
+    const method = init?.method || 'GET';
+    const path = url.pathname;
+
+    let handlerKey = `${method} ${path}`;
+    let handler = handlers[handlerKey];
+    let idParam = null;
+
+    if (!handler) {
+      const segments = path.split('/');
+      const lastSegment = segments.pop();
+      const baseRoute = segments.join('/');
+
+      const genericKey = `${method} ${baseRoute}/:id`;
+      if (handlers[genericKey]) {
+        handler = handlers[genericKey];
+        idParam = lastSegment;
       }
-      res.status(201).json({ success: true, orderId });
-    } catch (e) {
-      res.status(400).json({ error: e.message });
     }
-  });
 
-  app.post('/api/clients/:id/register', async (req, res) => {
-    const { age, city } = req.body;
+    if (!path.startsWith('/api/') || !handler) {
+      if (originalFetch) return originalFetch(input, init);
+      return new Response(JSON.stringify({ error: 'Not Found' }), {
+        status: 404,
+      });
+    }
+
+    console.log(`[MockServer] Intercepted: ${method} ${path}`);
+
+    await new Promise((r) => setTimeout(r, 150));
+
     try {
-      const result = await dispatch(Client, req.params.id, (client) =>
-        client.register(age, city)
-      );
-      res.json(result);
-    } catch (e) {
-      res.status(400).json({ error: e.message });
+      const queryParams = Object.fromEntries(url.searchParams.entries());
+      const body = init?.body ? JSON.parse(init.body) : {};
+
+      const response = handler(queryParams, idParam, body);
+
+      return new Response(JSON.stringify(response.body), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      console.error('[MockServer] Error processing request', err);
+      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+        status: 500,
+      });
     }
-  });
+  };
 
-  app.post('/api/admin/persist', (req, res) => {
-    Projector.persist();
-    res.json({ success: true, message: 'State saved to store.js' });
-  });
-
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Ski Shop running at http://localhost:${PORT}`);
-    console.log(
-      `\n🚀 Single Page Application running at http://localhost:${PORT}/index.html`
-    );
-    console.log(
-      `\n🚀 Admin Page running at http://localhost:${PORT}/admin.html`
-    );
-    console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
-  });
+  console.log('🚀 Sandbox Mock Server Initialized (LocalStorage Active)');
 }
 
 export default startServer;
