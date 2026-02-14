@@ -12,7 +12,8 @@
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
     "test": "node terminal-value/functionalTests/runTests.js",
     "update-mocks": "node terminal-value/functionalTests/updateFunctionalTestData.js",
-    "build": "vite build"
+    "build": "vite build",
+    "static-cdn-deploy": "npx wrangler pages deploy dist --project-name ski-shop-sandbox"
   },
   "engines": {
     "node": "24.13.0"
