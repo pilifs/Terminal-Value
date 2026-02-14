@@ -63,6 +63,28 @@ export function generateValueMetadata(fullDb) {
 }
 
 /**
+ * Generates the metadata and job configurations for a single client in real-time.
+ *
+ * @param {Object} client - A single client object (one item from parsedData).
+ * @returns {Array<Object>} A list of batch job metadata for this specific client.
+ */
+export function generateValueMetadataRealtime(client) {
+  // 1. Generate enriched content/prompts based on the single domain entity
+  const generateValueResults = getGenerateValueResults([client]);
+
+  // 2. Prepare batch jobs for Home Page web components
+  const homePageJobs = generateAllHomePageComponents(generateValueResults);
+
+  // 3. Prepare batch jobs for Order Page web components
+  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+
+  const rawConfigs = [...homePageJobs, ...orderPageJobs];
+
+  // 4. Convert raw configs into Batch API metadata
+  return createBatchJobMetadata(rawConfigs);
+}
+
+/**
  * Creates the batch job metadata required for execution.
  * This is a pure function that formats the request body for the Gemini Batch API.
  *
@@ -239,10 +261,13 @@ function getSkiShopContext() {
     return '';
   }
 
-  let fileContents = [];
-
-  function readDirRecursive(dir) {
+  function readDirRecursive(dir, indentLevel = 0) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+    // Sort entries to ensure deterministic output (folders first or alphabetical)
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    let xmlOutput = '';
+    const indent = '  '.repeat(indentLevel);
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -251,17 +276,25 @@ function getSkiShopContext() {
         if (entry.name === 'dynamicOrder' || entry.name === 'dynamicHome') {
           continue;
         }
-        readDirRecursive(fullPath);
+        // Normalize tag name (replace non-alphanumeric with _)
+        const tagName = entry.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        xmlOutput += `${indent}<${tagName}>\n`;
+        xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
+        xmlOutput += `${indent}</${tagName}>\n`;
       } else {
-        const relativePath = path.relative(skiShopPublicDir, fullPath);
         const content = fs.readFileSync(fullPath, 'utf-8');
-        fileContents.push(`\n// --- FILE: ${relativePath} ---\n${content}`);
+        xmlOutput += `${indent}<file name="${entry.name}">\n`;
+        xmlOutput += content;
+        // Ensure content ends with newline for cleaner XML
+        if (!content.endsWith('\n')) xmlOutput += '\n';
+        xmlOutput += `${indent}</file>\n`;
       }
     }
+    return xmlOutput;
   }
 
-  readDirRecursive(skiShopPublicDir);
-  return fileContents.join('\n');
+  return readDirRecursive(skiShopPublicDir);
 }
 
 export function getGenerateValueHash() {
