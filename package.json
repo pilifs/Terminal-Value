@@ -13,17 +13,18 @@
     "test": "node terminal-value/functionalTests/runTests.js",
     "update-mocks": "node terminal-value/functionalTests/updateFunctionalTestData.js",
     "build": "vite build",
-    "static-cdn-deploy": "npx wrangler@4 pages deploy dist --project-name=terminal-value"
+    "static-cdn-deploy": "npx wrangler@4 pages deploy dist --project-name=terminal-value",
+    "serve-static": "npx wrangler pages dev dist"
   },
   "engines": {
-    "node": "24.13.0"
+    "node": "24.13.1"
   },
   "author": "Filip Stankovic",
   "license": "MIT",
   "devDependencies": {
     "prettier": "2.8.8",
     "vite": "7.3.1",
-    "vite-plugin-static-copy": "^3.2.0",
+    "vite-plugin-static-copy": "3.2.0",
     "wrangler": "4.65.0"
   },
   "dependencies": {
