@@ -500,25 +500,26 @@
         let useDynamic = false;
 
         if (targetHash && targetHash !== 'legacy' && state.clientId) {
-          const dynamicSrc = `./components/dynamicHome/${targetHash}/${fileNamePrefix}-${state.clientId}.js`;
           // For OrderPage, the folder is dynamicOrder
           const folder = fileNamePrefix.includes('home')
             ? 'dynamicHome'
             : 'dynamicOrder';
+
           const src = `./components/${folder}/${targetHash}/${fileNamePrefix}-${state.clientId}.js`;
 
           try {
-            const head = await fetch(src, { method: 'HEAD' });
-            if (head.ok) {
-              console.log(
-                `%c [${tagName}] Loading Dynamic Version: ${targetHash}`,
-                'color:green'
-              );
-              await import(src); // The script inside defines the custom element
-              useDynamic = true;
-            }
+            // Attempt to load directly. If 404 or CORS fail, it throws to catch block.
+            await import(src);
+
+            console.log(
+              `%c [${tagName}] Loading Dynamic Version: ${targetHash}`,
+              'color:green'
+            );
+            useDynamic = true;
           } catch (e) {
-            console.warn(`Dynamic component not found: ${src}`);
+            console.warn(
+              `Dynamic component not found or failed to load: ${src}`
+            );
           }
         }
 

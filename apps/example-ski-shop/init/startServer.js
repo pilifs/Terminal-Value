@@ -39,10 +39,7 @@ if (typeof window === 'undefined') {
 
 // --- CONFIGURATION ---
 const AVAILABLE_VERSIONS = {
-  Home: [
-    'f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f',
-    '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a',
-  ],
+  Home: ['f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f'],
   Order: [
     '76c5c136c580bd77f94d8043f0fa45839e6ab527deb6ee22d82ce2ef0ea1a2ce',
     '0a4b6faa8e907688e098cad4a511fba633c94e4f6d1a6374bb2ac9cfc968b17a',
@@ -240,7 +237,8 @@ function startServer() {
 
     console.log(`[MockServer] Intercepted: ${method} ${path}`);
 
-    await new Promise((r) => setTimeout(r, 150));
+    // Simulate small amount of latency
+    await new Promise((r) => setTimeout(r, 30));
 
     try {
       const queryParams = Object.fromEntries(url.searchParams.entries());

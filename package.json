@@ -2,7 +2,7 @@
   "name": "terminal-value",
   "version": "1.0.0",
   "description": "A sandbox designed to help engineers pragmatically ramp up on Large Language Models.",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "start:gemini": "node ./apps/gemini-batch/server.js",
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
@@ -22,7 +22,9 @@
   "license": "MIT",
   "devDependencies": {
     "prettier": "2.8.8",
-    "vite": "7.3.1"
+    "vite": "7.3.1",
+    "vite-plugin-static-copy": "^3.2.0",
+    "wrangler": "4.65.0"
   },
   "dependencies": {
     "@google/genai": "1.39.0",
