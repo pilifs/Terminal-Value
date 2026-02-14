@@ -22,8 +22,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - uses: cloudflare/wrangler-action@v3
-
       - name: Deploy to Cloudflare Workers
         run: npm run static-cdn-deploy
         env:
