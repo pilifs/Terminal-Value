@@ -80,8 +80,13 @@ export function generateValueMetadataRealtime(client) {
 
   const rawConfigs = [...homePageJobs, ...orderPageJobs];
 
-  // 4. Convert raw configs into Batch API metadata
-  return createGeminiApiRequestMetadata(rawConfigs);
+  // 4. Convert raw configs into Single Send API metadata
+  const clientMetadata = createGeminiApiRequestMetadata(rawConfigs);
+
+  // 5. Include original client profile data to render in front-end
+  clientMetadata.profile = client.profile;
+
+  return clientMetadata;
 }
 
 /**
@@ -94,12 +99,12 @@ export function generateValueMetadataRealtime(client) {
  */
 function mapJobConfigs(jobConfigs, payloadBuilder) {
   return jobConfigs.map((config) => {
-    const { combinedPrompt, customId, pageType, valueInputHash } = config;
+    const { combinedPrompt, customId, pageType, fileHash } = config;
     return {
       ...payloadBuilder(combinedPrompt),
       customId,
       pageType,
-      valueInputHash,
+      fileHash,
     };
   });
 }
@@ -154,17 +159,12 @@ export async function submitBatchJobs(jobMetadataList) {
   const jobs = [];
 
   for (const meta of jobMetadataList) {
-    const { batchData, customId, pageType, valueInputHash } = meta;
+    const { batchData, customId, pageType, fileHash } = meta;
     const clientId = customId;
 
     console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
-      const job = await createBatchJob(
-        batchData,
-        customId,
-        pageType,
-        valueInputHash
-      );
+      const job = await createBatchJob(batchData, customId, pageType, fileHash);
 
       jobs.push({
         clientId,
@@ -207,7 +207,7 @@ function createPageGenerator(pageType) {
       } Pages...`
     );
 
-    const valueInputHash = getGenerateValueHash();
+    const fileHash = getGenerateValueHash();
     const jobConfigs = [];
 
     // Map 'home' -> 'webComponentHome', 'order' -> 'webComponentOrder'
@@ -232,7 +232,7 @@ function createPageGenerator(pageType) {
         promptText,
         clientId,
         pageType,
-        valueInputHash
+        fileHash
       );
       jobConfigs.push(config);
     }
@@ -249,14 +249,18 @@ export function createSkiShopWebComponentPrompt(
   promptText,
   customId,
   pageType,
-  previousBatchHash = null
+  // Original hash from batch job
+  fileHash = null
 ) {
   const fileContext = getSkiShopContext();
 
   // Hash the file contents for version/change tracking
-  const valueInputHash =
-    previousBatchHash ||
-    crypto.createHash('sha256').update(fileContext).digest('hex');
+  const contextHash = crypto
+    .createHash('sha256')
+    .update(fileContext)
+    .digest('hex');
+
+  fileHash = fileHash || contextHash;
 
   const combinedPrompt = `
 ${promptText}
@@ -268,7 +272,7 @@ ${fileContext}
     combinedPrompt,
     customId,
     pageType,
-    valueInputHash,
+    fileHash,
   };
 }
 
@@ -305,6 +309,11 @@ function getSkiShopContext() {
         xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
         xmlOutput += `${indent}</${tagName}>\n`;
       } else {
+        // Skip admin.html to avoid leaking admin logic or confusing the LLM
+        if (entry.name === 'admin.html') {
+          continue;
+        }
+
         const content = fs.readFileSync(fullPath, 'utf-8');
         xmlOutput += `${indent}<file name="${entry.name}">\n`;
         xmlOutput += content;

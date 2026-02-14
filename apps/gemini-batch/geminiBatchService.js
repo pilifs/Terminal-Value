@@ -121,7 +121,7 @@ export async function createBatchJob(
     batchData[0]?.request?.contents?.[0]?.parts?.[0]?.text || 'UNKNOWN_PROMPT';
 
   try {
-    // Note: batchData construction logic has been moved out (e.g., to createGeminiBatchJobMetadata)
+    // Note: batchData construction logic has been moved out (e.g., to createBatchJobMetadata)
     // We now just write the provided structure to the JSONL file.
 
     fs.writeFileSync(
