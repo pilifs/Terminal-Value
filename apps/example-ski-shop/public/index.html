@@ -31,6 +31,21 @@
       header nav a:hover {
         text-decoration: underline;
       }
+      /* Style for the internal admin link */
+      a.internal-link {
+        color: #e74c3c; /* Red color for visibility */
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        border: 1px solid #e74c3c;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      a.internal-link:hover {
+        background-color: #e74c3c;
+        color: white;
+        text-decoration: none;
+      }
+
       .container {
         max-width: 1000px;
         margin: 2rem auto;
@@ -108,6 +123,9 @@
       <nav>
         <a onclick="router('home')">Shop</a>
         <a onclick="router('history')">My Orders</a>
+        <a href="admin.html" target="_blank" class="internal-link"
+          >Admin (Internal Only)</a
+        >
       </nav>
     </header>
 
@@ -139,6 +157,14 @@
     </div>
 
     <script type="module">
+      // --- MOCK SERVER INITIALIZATION ---
+      // This intercepts all fetch requests to handle API calls locally in the browser.
+      import startMockServer from '/init/startServer.js';
+
+      // Start interception immediately
+      startMockServer();
+
+      // --- APPLICATION LOGIC ---
       (async function () {
         const params = new URLSearchParams(window.location.search);
         const clientId = params.get('clientId');
@@ -196,6 +222,6 @@
       })();
     </script>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

@@ -309,7 +309,13 @@
       </div>
     </div>
 
-    <script>
+    <script type="module">
+      import startMockServer from '/init/startServer.js';
+
+      // 1. Initialize Mock Server to intercept fetches
+      startMockServer();
+
+      // 2. Application Logic
       window.clientsMap = new Map();
       let currentUxClientId = null;
 
@@ -387,7 +393,9 @@
         );
       }
 
-      function openNoteModal(clientId) {
+      // --- EXPOSE FUNCTIONS TO WINDOW FOR ONCLICK HANDLERS ---
+
+      window.openNoteModal = function (clientId) {
         const client = window.clientsMap.get(clientId);
         if (!client) return;
         document.getElementById(
@@ -397,9 +405,9 @@
           .map((n) => `<li>${n}</li>`)
           .join('');
         document.getElementById('noteModal').classList.add('visible');
-      }
+      };
 
-      function openUxModal(clientId) {
+      window.openUxModal = function (clientId) {
         currentUxClientId = clientId;
         const client = window.clientsMap.get(clientId);
         if (!client) return;
@@ -449,9 +457,9 @@
         orderList.innerHTML = orderHtml;
 
         document.getElementById('uxModal').classList.add('visible');
-      }
+      };
 
-      function navigateCustom() {
+      window.navigateCustom = function () {
         if (!currentUxClientId) return;
 
         // Helper to get checked value
@@ -474,11 +482,11 @@
         }
 
         window.open(url, '_blank');
-      }
+      };
 
-      function closeModal(id) {
+      window.closeModal = function (id) {
         document.getElementById(id).classList.remove('visible');
-      }
+      };
 
       window.onclick = function (event) {
         if (event.target.classList.contains('modal')) {
@@ -486,6 +494,7 @@
         }
       };
 
+      // Start App
       init();
     </script>
   </body>
