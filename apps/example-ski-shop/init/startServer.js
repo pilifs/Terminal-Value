@@ -1,14 +1,10 @@
 import initialDb from '../store/db.js';
 
 // --- POLYFILLS (Node.js Support) ---
-// Allows this client-side code to run in a Node environment without crashing
 if (typeof window === 'undefined') {
-  global.window = global; // Allow attaching to window.fetch
-
-  // Mock window.location for URL construction
+  global.window = global;
   global.window.location = { origin: 'http://localhost:3000' };
 
-  // Mock LocalStorage (In-Memory)
   if (typeof localStorage === 'undefined') {
     class InMemoryStorage {
       constructor() {
@@ -30,7 +26,6 @@ if (typeof window === 'undefined') {
     global.localStorage = new InMemoryStorage();
   }
 
-  // Mock Response object if missing (Node < 18)
   if (typeof Response === 'undefined') {
     global.Response = class Response {
       constructor(body, init) {
@@ -54,6 +49,18 @@ const AVAILABLE_VERSIONS = {
   ],
 };
 
+// --- PRICING GUARD DATA ---
+const SKI_CATEGORIES = [
+  { name: 'All Mountain Explorer', cost: 400, sku: 'SKU-AM-001', price: 650 },
+  { name: 'World Cup Racer', cost: 850, sku: 'SKU-RC-002', price: 1200 },
+  { name: 'Backcountry Tour', cost: 600, sku: 'SKU-TR-003', price: 890 },
+  { name: 'Piste Carver', cost: 550, sku: 'SKU-CV-004', price: 799 },
+  { name: 'Park Freestyle', cost: 350, sku: 'SKU-FS-005', price: 499 },
+  { name: 'Deep Powder', cost: 700, sku: 'SKU-PW-006', price: 950 },
+  { name: 'Big Mountain Pro', cost: 750, sku: 'SKU-BM-007', price: 1050 },
+  { name: 'Nordic Cross', cost: 250, sku: 'SKU-XC-008', price: 399 },
+];
+
 // --- STATE MANAGEMENT ---
 const STORAGE_KEY = 'ski_shop_sandbox_db';
 
@@ -62,20 +69,17 @@ function loadState() {
   if (stored) {
     return JSON.parse(stored);
   }
-  return JSON.parse(JSON.stringify(initialDb)); // Deep copy seed data
+  return JSON.parse(JSON.stringify(initialDb));
 }
 
 function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-// Global in-memory state
 const db = loadState();
 
 // --- HELPER LOGIC ---
-
 function getComponentVersions(type, clientId) {
-  // Optimistic versioning for sandbox demo
   return AVAILABLE_VERSIONS[type] || [];
 }
 
@@ -92,17 +96,14 @@ const handlers = {
 
   'GET /api/clients': (params) => {
     let clients = db.clients;
-
     if (params.city) {
       clients = clients.filter((c) => c.city === params.city);
     }
-
     const augmented = clients.map((c) => ({
       ...c,
       customHomeVersions: getComponentVersions('Home', c.id),
       customOrderVersions: getComponentVersions('Order', c.id),
     }));
-
     return { status: 200, body: augmented };
   },
 
@@ -128,6 +129,36 @@ const handlers = {
   'POST /api/orders': (params, id, body) => {
     const { clientId, items } = body;
 
+    // --- 1. PRICING GUARD ---
+    for (const orderItem of items) {
+      // Find the item in our database to identify the SKU
+      const dbItem = db.inventory.find((i) => i.id === orderItem.skuId);
+
+      if (!dbItem) {
+        return {
+          status: 400,
+          body: { error: `Invalid SKU ID: ${orderItem.skuId}` },
+        };
+      }
+
+      // Find the official pricing rule for this SKU
+      const rule = SKI_CATEGORIES.find((c) => c.sku === dbItem.sku);
+
+      // Validate
+      if (rule && orderItem.price > rule.price) {
+        console.warn(
+          `[Pricing Guard] Rejected order for ${rule.name}. Price ${orderItem.price} exceeds limit ${rule.price}.`
+        );
+        return {
+          status: 400,
+          body: {
+            error: `Price Verification Failed: ${rule.name} cannot exceed $${rule.price}.`,
+          },
+        };
+      }
+    }
+
+    // --- 2. Create Order ---
     const orderId = `ORDER-${Math.floor(Math.random() * 10000000)}`;
     let orderTotal = 0;
     const orderItems = items.map((i) => {
@@ -150,7 +181,7 @@ const handlers = {
 
     db.orders.push(newOrder);
 
-    // Update Inventory
+    // --- 3. Update Inventory ---
     items.forEach((orderItem) => {
       const invItem = db.inventory.find((i) => i.id === orderItem.skuId);
       if (invItem) {
@@ -158,7 +189,7 @@ const handlers = {
       }
     });
 
-    // Update Stats
+    // --- 4. Update Stats ---
     db.dashboard.totalRevenue += orderTotal;
     db.dashboard.totalOrdersConfirmed += 1;
     db.dashboard.itemsSold += items.reduce((sum, i) => sum + i.quantity, 0);
@@ -180,7 +211,6 @@ function startServer() {
   const originalFetch = window.fetch;
 
   window.fetch = async (input, init) => {
-    // Handle both relative path and full URL in Node env
     const url = new URL(input, window.location.origin);
     const method = init?.method || 'GET';
     const path = url.pathname;
@@ -210,7 +240,6 @@ function startServer() {
 
     console.log(`[MockServer] Intercepted: ${method} ${path}`);
 
-    // Simulate network delay
     await new Promise((r) => setTimeout(r, 150));
 
     try {
