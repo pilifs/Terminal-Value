@@ -2,7 +2,7 @@
   "name": "terminal-value",
   "version": "1.0.0",
   "description": "A sandbox designed to help engineers pragmatically ramp up on Large Language Models.",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start:gemini": "node ./apps/gemini-batch/server.js",
     "start:ski-shop": "node ./apps/example-ski-shop/index.js",
@@ -11,8 +11,7 @@
     "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html,css}\"",
     "test": "node terminal-value/functionalTests/runTests.js",
-    "update-mocks": "node terminal-value/functionalTests/updateFunctionalTestData.js",
-    "execute-gemini-api": ""
+    "update-mocks": "node terminal-value/functionalTests/updateFunctionalTestData.js"
   },
   "engines": {
     "node": "24.13.0"
