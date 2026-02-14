@@ -237,9 +237,6 @@ function startServer() {
 
     console.log(`[MockServer] Intercepted: ${method} ${path}`);
 
-    // Simulate small amount of latency
-    await new Promise((r) => setTimeout(r, 30));
-
     try {
       const queryParams = Object.fromEntries(url.searchParams.entries());
       const body = init?.body ? JSON.parse(init.body) : {};
