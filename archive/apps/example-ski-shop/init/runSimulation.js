@@ -10,7 +10,7 @@ import Order from '../domain/order.js';
 // Import Generated Data
 // Use fixed events for now to link custom templates to users without re-generating
 // Note: We need to import the default export from the memoized file
-import generateEventsResults from '../../../terminal-value/memoizedResults/generateEventsResults.js';
+import generateEventsResults from '../generateEventsResults.js';
 
 const initialHistory = generateEventsResults;
 
