@@ -27,7 +27,7 @@ export async function executeValueChain(metadata) {
 
   await submitBatchJobs(metadata);
 
-  // 6. Poll results and verify (Future Implementation)
+  // Poll results and verify (Future Implementation)
   // await verifyExternalConfidence(results);
 }
 
@@ -38,8 +38,7 @@ export async function executeValueChain(metadata) {
  * 1. Retrieving parsed domain entities.
  * 2. Generating enriched value results.
  * 3. Creating job configs for Home Page components.
- * 4. Creating job configs for Order Page components.
- * 5. Transforming configs into Batch API Metadata.
+ * 4. Transforming configs into Batch API Metadata.
  *
  * @returns {Array<Object>} A combined list of all batch job metadata ready for submission.
  */
@@ -63,30 +62,96 @@ export function generateValueMetadata(fullDb) {
 }
 
 /**
- * Creates the batch job metadata required for execution.
- * This is a pure function that formats the request body for the Gemini Batch API.
+ * Generates the metadata and job configurations for a single client in real-time.
  *
+ * @param {Object} client - A single client object (one item from parsedData).
+ * @returns {Array<Object>} A list of batch job metadata for this specific client.
+ */
+export function generateValueMetadataRealtime(client) {
+  // 1. Generate enriched content/prompts based on the single domain entity
+  const generateValueResults = getGenerateValueResults([client]);
+
+  // 2. Prepare batch jobs for Home Page web components
+  const homePageJobs = generateAllHomePageComponents(generateValueResults);
+
+  // 3. Prepare batch jobs for Order Page web components
+  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+
+  const rawConfigs = [...homePageJobs, ...orderPageJobs];
+
+  // 4. Convert raw configs into Batch API metadata
+  return createBatchJobMetadata(rawConfigs);
+}
+
+/**
+ * Generates the metadata and job configurations for a single client in real-time.
+ *
+ * @param {Object} client - A single client object (one item from parsedData).
+ * @returns {Array<Object>} A list of batch job metadata for this specific client.
+ */
+export function generateValueMetadataRealtime(client) {
+  // 1. Generate enriched content/prompts based on the single domain entity
+  const generateValueResults = getGenerateValueResults([client]);
+
+  // 2. Prepare single send jobs for Home Page web components
+  const homePageJobs = generateAllHomePageComponents(generateValueResults);
+
+  const rawConfigs = [...homePageJobs];
+
+  // 3. Convert raw configs into Batch API metadata
+  const clientMetadata = createGeminiApiRequestMetadata(rawConfigs);
+
+  // 4. Include original client profile data to render in front-end
+  clientMetadata.profile = client.profile;
+
+  return clientMetadata;
+}
+
+/**
+ * Helper to map job configurations to a specific output format.
+ * Reduces duplication between Batch and Realtime metadata creation.
+ *
+ * @param {Array<Object>} jobConfigs - List of job configurations.
+ * @param {Function} payloadBuilder - Function(prompt) that returns the specific payload object.
+ * @returns {Array<Object>}
+ */
+function mapJobConfigs(jobConfigs, payloadBuilder) {
+  return jobConfigs.map((config) => {
+    const { combinedPrompt, customId, pageType, fileHash, promptId } = config;
+    return {
+      ...payloadBuilder(combinedPrompt),
+      customId,
+      pageType,
+      fileHash,
+      promptId,
+    };
+  });
+}
+
+/**
  * @param {Array<Object>} jobConfigs - The list of job configuration objects.
  * @returns {Array<Object>} A list of metadata objects ready for submission.
  */
 export function createBatchJobMetadata(jobConfigs) {
-  return jobConfigs.map((config) => {
-    const { combinedPrompt, customId, pageType, valueInputHash } = config;
-
-    // Logic extracted from geminiBatchService.js
-    const batchData = [
+  return mapJobConfigs(jobConfigs, (prompt) => ({
+    batchData: [
       {
-        request: { contents: [{ parts: [{ text: combinedPrompt }] }] },
+        request: { contents: [{ parts: [{ text: prompt }] }] },
       },
-    ];
+    ],
+  }));
+}
 
-    return {
-      batchData,
-      customId,
-      pageType,
-      valueInputHash,
-    };
-  });
+/**
+ * Creates metadata required to submit a request to Gemini LLM API.
+ *
+ * @param {Array<Object>} jobConfigs - The list of job configuration objects.
+ * @returns {Array<Object>} A list of metadata objects ready for submission.
+ */
+export function createGeminiApiRequestMetadata(jobConfigs) {
+  return mapJobConfigs(jobConfigs, (prompt) => ({
+    promptText: prompt,
+  }));
 }
 
 /**
@@ -94,12 +159,6 @@ export function createBatchJobMetadata(jobConfigs) {
  * @type {function(Array): Array<Object>}
  */
 export const generateAllHomePageComponents = createPageGenerator('home');
-
-/**
- * Generates batch job configurations specifically for the "Order Page" web components.
- * @type {function(Array): Array<Object>}
- */
-export const generateAllOrderPageComponents = createPageGenerator('order');
 
 /**
  * Submits a list of configured jobs to the batch processing service.
@@ -113,17 +172,12 @@ export async function submitBatchJobs(jobMetadataList) {
   const jobs = [];
 
   for (const meta of jobMetadataList) {
-    const { batchData, customId, pageType, valueInputHash } = meta;
+    const { batchData, customId, pageType, fileHash } = meta;
     const clientId = customId;
 
     console.log(`\n▶️ Processing ${pageType} Page for: ${clientId}`);
     try {
-      const job = await createBatchJob(
-        batchData,
-        customId,
-        pageType,
-        valueInputHash
-      );
+      const job = await createBatchJob(batchData, customId, pageType, fileHash);
 
       jobs.push({
         clientId,
@@ -161,39 +215,33 @@ export async function submitBatchJobs(jobMetadataList) {
 function createPageGenerator(pageType) {
   return (generateValueResults) => {
     console.log(
-      `🚀 Preparing batch configuration for ${generateValueResults.length} ${
-        pageType.charAt(0).toUpperCase() + pageType.slice(1)
-      } Pages...`
+      `🚀 Preparing batch configuration for ${generateValueResults.length} clients (${pageType} Page)...`
     );
 
-    const valueInputHash = getGenerateValueHash();
     const jobConfigs = [];
-
-    // Map 'home' -> 'webComponentHome', 'order' -> 'webComponentOrder'
-    const promptKey = `webComponent${
-      pageType.charAt(0).toUpperCase() + pageType.slice(1)
-    }`;
 
     for (const clientData of generateValueResults) {
       const clientId = clientData.clientId;
-      const promptText = clientData.prompts?.[promptKey];
+      const prompts = clientData.prompts || {};
 
-      if (!promptText) {
-        if (pageType === 'order') {
-          console.warn(
-            `⚠️ Skipping ${clientId}: No '${promptKey}' prompt found.`
+      // Iterate over all generated prompts for this client
+      // Each value is expected to be: { promptId: string, text: string }
+      Object.values(prompts).forEach((promptData) => {
+        const { promptId, text } = promptData;
+
+        // Currently, our experiment prompts are designed for the Home Page.
+        // We filter based on pageType to ensure we don't duplicate jobs or use wrong prompts.
+        if (pageType === 'home') {
+          const config = createSkiShopWebComponentPrompt(
+            text,
+            clientId,
+            pageType,
+            null, // Legacy to not fully break batch support, replace with hash of file bundle in next call
+            promptId
           );
+          jobConfigs.push(config);
         }
-        continue;
-      }
-
-      const config = createSkiShopWebComponentPrompt(
-        promptText,
-        clientId,
-        pageType,
-        valueInputHash
-      );
-      jobConfigs.push(config);
+      });
     }
 
     return jobConfigs;
@@ -208,23 +256,30 @@ export function createSkiShopWebComponentPrompt(
   promptText,
   customId,
   pageType,
-  valueInputHash = null
+  fileHash,
+  promptId
 ) {
   const fileContext = getSkiShopContext();
-  const combinedPrompt = `
-${promptText}
 
-================================================================================
-BELOW IS THE EXISTING CODEBASE FOR THE SKI SHOP SITE (excluding dynamic folders)
-================================================================================
-${fileContext}
-`;
+  // Hash the file contents for version/change tracking
+  const contextHash = crypto
+    .createHash('sha256')
+    .update(fileContext)
+    .digest('hex');
+
+  // fileHash is always null unless in case of batch job retrieval where it was previously generated
+  fileHash = fileHash || contextHash;
+
+  const combinedPrompt = `${promptText}
+
+${fileContext}`;
 
   return {
     combinedPrompt,
     customId,
     pageType,
-    valueInputHash,
+    fileHash,
+    promptId,
   };
 }
 
@@ -239,10 +294,19 @@ function getSkiShopContext() {
     return '';
   }
 
-  let fileContents = [];
-
-  function readDirRecursive(dir) {
+  function readDirRecursive(dir, indentLevel = 0) {
+  function readDirRecursive(dir, indentLevel = 0) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+    // Sort entries to ensure deterministic output (folders first or alphabetical)
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    let xmlOutput = '';
+    const indent = '  '.repeat(indentLevel);
+    // Sort entries to ensure deterministic output (folders first or alphabetical)
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    let xmlOutput = '';
+    const indent = '  '.repeat(indentLevel);
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -251,17 +315,43 @@ function getSkiShopContext() {
         if (entry.name === 'dynamicOrder' || entry.name === 'dynamicHome') {
           continue;
         }
-        readDirRecursive(fullPath);
+        // Normalize tag name (replace non-alphanumeric with _)
+        const tagName = entry.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        xmlOutput += `${indent}<${tagName}>\n`;
+        xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
+        xmlOutput += `${indent}</${tagName}>\n`;
+        // Normalize tag name (replace non-alphanumeric with _)
+        const tagName = entry.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        xmlOutput += `${indent}<${tagName}>\n`;
+        xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
+        xmlOutput += `${indent}</${tagName}>\n`;
       } else {
-        const relativePath = path.relative(skiShopPublicDir, fullPath);
+        // Skip admin.html to avoid leaking admin logic or confusing the LLM
+        if (entry.name === 'admin.html') {
+          continue;
+        }
+
         const content = fs.readFileSync(fullPath, 'utf-8');
-        fileContents.push(`\n// --- FILE: ${relativePath} ---\n${content}`);
+        xmlOutput += `${indent}<file name="${entry.name}">\n`;
+        xmlOutput += content;
+        // Ensure content ends with newline for cleaner XML
+        if (!content.endsWith('\n')) xmlOutput += '\n';
+        xmlOutput += `${indent}</file>\n`;
+        xmlOutput += `${indent}<file name="${entry.name}">\n`;
+        xmlOutput += content;
+        // Ensure content ends with newline for cleaner XML
+        if (!content.endsWith('\n')) xmlOutput += '\n';
+        xmlOutput += `${indent}</file>\n`;
       }
     }
+    return xmlOutput;
+    return xmlOutput;
   }
 
-  readDirRecursive(skiShopPublicDir);
-  return fileContents.join('\n');
+  return readDirRecursive(skiShopPublicDir);
+  return readDirRecursive(skiShopPublicDir);
 }
 
 export function getGenerateValueHash() {
