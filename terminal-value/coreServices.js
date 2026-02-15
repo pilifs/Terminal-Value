@@ -52,7 +52,32 @@ export function generateValueMetadata(fullDb) {
   // 3. Prepare batch jobs for Home Page web components
   const homePageJobs = generateAllHomePageComponents(generateValueResults);
 
-  const rawConfigs = [...homePageJobs];
+  // 4. Prepare batch jobs for Order Page web components
+  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+
+  const rawConfigs = [...homePageJobs, ...orderPageJobs];
+
+  // 5. Convert raw configs into Batch API metadata
+  return createBatchJobMetadata(rawConfigs);
+}
+
+/**
+ * Generates the metadata and job configurations for a single client in real-time.
+ *
+ * @param {Object} client - A single client object (one item from parsedData).
+ * @returns {Array<Object>} A list of batch job metadata for this specific client.
+ */
+export function generateValueMetadataRealtime(client) {
+  // 1. Generate enriched content/prompts based on the single domain entity
+  const generateValueResults = getGenerateValueResults([client]);
+
+  // 2. Prepare batch jobs for Home Page web components
+  const homePageJobs = generateAllHomePageComponents(generateValueResults);
+
+  // 3. Prepare batch jobs for Order Page web components
+  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+
+  const rawConfigs = [...homePageJobs, ...orderPageJobs];
 
   // 4. Convert raw configs into Batch API metadata
   return createBatchJobMetadata(rawConfigs);
@@ -270,7 +295,13 @@ function getSkiShopContext() {
   }
 
   function readDirRecursive(dir, indentLevel = 0) {
+  function readDirRecursive(dir, indentLevel = 0) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+    // Sort entries to ensure deterministic output (folders first or alphabetical)
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    let xmlOutput = '';
+    const indent = '  '.repeat(indentLevel);
     // Sort entries to ensure deterministic output (folders first or alphabetical)
     entries.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -290,6 +321,12 @@ function getSkiShopContext() {
         xmlOutput += `${indent}<${tagName}>\n`;
         xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
         xmlOutput += `${indent}</${tagName}>\n`;
+        // Normalize tag name (replace non-alphanumeric with _)
+        const tagName = entry.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+        xmlOutput += `${indent}<${tagName}>\n`;
+        xmlOutput += readDirRecursive(fullPath, indentLevel + 1);
+        xmlOutput += `${indent}</${tagName}>\n`;
       } else {
         // Skip admin.html to avoid leaking admin logic or confusing the LLM
         if (entry.name === 'admin.html') {
@@ -302,11 +339,18 @@ function getSkiShopContext() {
         // Ensure content ends with newline for cleaner XML
         if (!content.endsWith('\n')) xmlOutput += '\n';
         xmlOutput += `${indent}</file>\n`;
+        xmlOutput += `${indent}<file name="${entry.name}">\n`;
+        xmlOutput += content;
+        // Ensure content ends with newline for cleaner XML
+        if (!content.endsWith('\n')) xmlOutput += '\n';
+        xmlOutput += `${indent}</file>\n`;
       }
     }
     return xmlOutput;
+    return xmlOutput;
   }
 
+  return readDirRecursive(skiShopPublicDir);
   return readDirRecursive(skiShopPublicDir);
 }
 
