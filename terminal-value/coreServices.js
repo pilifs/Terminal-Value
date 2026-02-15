@@ -27,7 +27,7 @@ export async function executeValueChain(metadata) {
 
   await submitBatchJobs(metadata);
 
-  // 6. Poll results and verify (Future Implementation)
+  // Poll results and verify (Future Implementation)
   // await verifyExternalConfidence(results);
 }
 
@@ -38,8 +38,7 @@ export async function executeValueChain(metadata) {
  * 1. Retrieving parsed domain entities.
  * 2. Generating enriched value results.
  * 3. Creating job configs for Home Page components.
- * 4. Creating job configs for Order Page components.
- * 5. Transforming configs into Batch API Metadata.
+ * 4. Transforming configs into Batch API Metadata.
  *
  * @returns {Array<Object>} A combined list of all batch job metadata ready for submission.
  */
@@ -53,12 +52,9 @@ export function generateValueMetadata(fullDb) {
   // 3. Prepare batch jobs for Home Page web components
   const homePageJobs = generateAllHomePageComponents(generateValueResults);
 
-  // 4. Prepare batch jobs for Order Page web components
-  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+  const rawConfigs = [...homePageJobs];
 
-  const rawConfigs = [...homePageJobs, ...orderPageJobs];
-
-  // 5. Convert raw configs into Batch API metadata
+  // 4. Convert raw configs into Batch API metadata
   return createBatchJobMetadata(rawConfigs);
 }
 
@@ -72,18 +68,15 @@ export function generateValueMetadataRealtime(client) {
   // 1. Generate enriched content/prompts based on the single domain entity
   const generateValueResults = getGenerateValueResults([client]);
 
-  // 2. Prepare batch jobs for Home Page web components
+  // 2. Prepare single send jobs for Home Page web components
   const homePageJobs = generateAllHomePageComponents(generateValueResults);
 
-  // 3. Prepare batch jobs for Order Page web components
-  const orderPageJobs = generateAllOrderPageComponents(generateValueResults);
+  const rawConfigs = [...homePageJobs];
 
-  const rawConfigs = [...homePageJobs, ...orderPageJobs];
-
-  // 4. Convert raw configs into Single Send API metadata
+  // 3. Convert raw configs into Batch API metadata
   const clientMetadata = createGeminiApiRequestMetadata(rawConfigs);
 
-  // 5. Include original client profile data to render in front-end
+  // 4. Include original client profile data to render in front-end
   clientMetadata.profile = client.profile;
 
   return clientMetadata;
@@ -99,12 +92,13 @@ export function generateValueMetadataRealtime(client) {
  */
 function mapJobConfigs(jobConfigs, payloadBuilder) {
   return jobConfigs.map((config) => {
-    const { combinedPrompt, customId, pageType, fileHash } = config;
+    const { combinedPrompt, customId, pageType, fileHash, promptId } = config;
     return {
       ...payloadBuilder(combinedPrompt),
       customId,
       pageType,
       fileHash,
+      promptId,
     };
   });
 }
@@ -140,12 +134,6 @@ export function createGeminiApiRequestMetadata(jobConfigs) {
  * @type {function(Array): Array<Object>}
  */
 export const generateAllHomePageComponents = createPageGenerator('home');
-
-/**
- * Generates batch job configurations specifically for the "Order Page" web components.
- * @type {function(Array): Array<Object>}
- */
-export const generateAllOrderPageComponents = createPageGenerator('order');
 
 /**
  * Submits a list of configured jobs to the batch processing service.
@@ -202,39 +190,33 @@ export async function submitBatchJobs(jobMetadataList) {
 function createPageGenerator(pageType) {
   return (generateValueResults) => {
     console.log(
-      `🚀 Preparing batch configuration for ${generateValueResults.length} ${
-        pageType.charAt(0).toUpperCase() + pageType.slice(1)
-      } Pages...`
+      `🚀 Preparing batch configuration for ${generateValueResults.length} clients (${pageType} Page)...`
     );
 
-    const fileHash = getGenerateValueHash();
     const jobConfigs = [];
-
-    // Map 'home' -> 'webComponentHome', 'order' -> 'webComponentOrder'
-    const promptKey = `webComponent${
-      pageType.charAt(0).toUpperCase() + pageType.slice(1)
-    }`;
 
     for (const clientData of generateValueResults) {
       const clientId = clientData.clientId;
-      const promptText = clientData.prompts?.[promptKey];
+      const prompts = clientData.prompts || {};
 
-      if (!promptText) {
-        if (pageType === 'order') {
-          console.warn(
-            `⚠️ Skipping ${clientId}: No '${promptKey}' prompt found.`
+      // Iterate over all generated prompts for this client
+      // Each value is expected to be: { promptId: string, text: string }
+      Object.values(prompts).forEach((promptData) => {
+        const { promptId, text } = promptData;
+
+        // Currently, our experiment prompts are designed for the Home Page.
+        // We filter based on pageType to ensure we don't duplicate jobs or use wrong prompts.
+        if (pageType === 'home') {
+          const config = createSkiShopWebComponentPrompt(
+            text,
+            clientId,
+            pageType,
+            null, // Legacy to not fully break batch support, replace with hash of file bundle in next call
+            promptId
           );
+          jobConfigs.push(config);
         }
-        continue;
-      }
-
-      const config = createSkiShopWebComponentPrompt(
-        promptText,
-        clientId,
-        pageType,
-        fileHash
-      );
-      jobConfigs.push(config);
+      });
     }
 
     return jobConfigs;
@@ -249,8 +231,8 @@ export function createSkiShopWebComponentPrompt(
   promptText,
   customId,
   pageType,
-  // Original hash from batch job
-  fileHash = null
+  fileHash,
+  promptId
 ) {
   const fileContext = getSkiShopContext();
 
@@ -260,19 +242,19 @@ export function createSkiShopWebComponentPrompt(
     .update(fileContext)
     .digest('hex');
 
+  // fileHash is always null unless in case of batch job retrieval where it was previously generated
   fileHash = fileHash || contextHash;
 
-  const combinedPrompt = `
-${promptText}
+  const combinedPrompt = `${promptText}
 
-${fileContext}
-`;
+${fileContext}`;
 
   return {
     combinedPrompt,
     customId,
     pageType,
     fileHash,
+    promptId,
   };
 }
 
