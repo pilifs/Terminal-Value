@@ -5,7 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
 import Together from 'together-ai';
 
-// Keep existing local imports (ensure these files exist relative to this script)
+// Keep existing local imports
 import { generateValueMetadataRealtime } from './coreServices.js';
 import { parseValueResults } from './functionalTests/fixedMocks/parseValueResults.js';
 
@@ -13,50 +13,54 @@ import { parseValueResults } from './functionalTests/fixedMocks/parseValueResult
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, 'db.js');
+const DB_PATH = path.join(__dirname, 'db-two.js');
+
+// Configuration Constants
+const ITERATIONS_PER_PROMPT = 10;
+const MAX_CONCURRENCY_PER_MODEL = 10;
 
 // Initialize clients
 const together = new Together(); // Requires process.env.TOGETHER_API_KEY
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Define the list of models with their specific strategies
+// Define the list of models
 const modelConfigs = [
-  {
-    id: 'gemini-3-pro-preview',
-    generate: async (prompt) => {
-      return await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
-        contents: prompt,
-      });
-    },
-    extract: (response) => {
-      return response.candidates?.[0]?.content?.parts?.[0]?.text;
-    },
-  },
-  {
-    id: 'gemini-3-flash-preview',
-    generate: async (prompt) => {
-      return await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
-    },
-    extract: (response) => {
-      return response.candidates?.[0]?.content?.parts?.[0]?.text;
-    },
-  },
-  {
-    id: 'gemini-2-flash',
-    generate: async (prompt) => {
-      return await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-      });
-    },
-    extract: (response) => {
-      return response.candidates?.[0]?.content?.parts?.[0]?.text;
-    },
-  },
+  // {
+  //   id: 'gemini-3-pro-preview',
+  //   generate: async (prompt) => {
+  //     return await ai.models.generateContent({
+  //       model: 'gemini-3-pro-preview',
+  //       contents: prompt,
+  //     });
+  //   },
+  //   extract: (response) => {
+  //     return response.candidates?.[0]?.content?.parts?.[0]?.text;
+  //   },
+  // },
+  // {
+  //   id: 'gemini-3-flash-preview',
+  //   generate: async (prompt) => {
+  //     return await ai.models.generateContent({
+  //       model: 'gemini-3-flash-preview',
+  //       contents: prompt,
+  //     });
+  //   },
+  //   extract: (response) => {
+  //     return response.candidates?.[0]?.content?.parts?.[0]?.text;
+  //   },
+  // },
+  // {
+  //   id: 'gemini-2-flash',
+  //   generate: async (prompt) => {
+  //     return await ai.models.generateContent({
+  //       model: 'gemini-2.0-flash',
+  //       contents: prompt,
+  //     });
+  //   },
+  //   extract: (response) => {
+  //     return response.candidates?.[0]?.content?.parts?.[0]?.text;
+  //   },
+  // },
   {
     id: 'llama-4-maverick',
     generate: async (prompt) => {
@@ -76,19 +80,45 @@ const modelConfigs = [
   },
 ];
 
-// --- Helper Functions (File System) ---
+// --- Helper Functions ---
 
 /**
- * parses the AI response to separate file content, code snippets, and conversational text.
- * * Logic:
- * 1. Prioritizes explicit <file name="..."> tags.
- * 2. Fallbacks to Markdown code blocks.
- * 3. Identifies "index.html" automatically if raw HTML tags are found.
- * 4. Scans Markdown blocks for filenames in comments (e.g. "// app.js").
- * 5. Fallback: Uses the markdown language tag as the filename (e.g. "javascript"), or "unknown".
- * 6. Aggregates all remaining text into 'otherContent'.
- * * @param {string} text - The raw response string from the AI.
- * @returns {object} - { snippets: [], otherContent: string }
+ * Simple concurrency limiter (p-limit style) to strictly control
+ * active requests per model.
+ */
+function pLimit(concurrency) {
+  const queue = [];
+  let activeCount = 0;
+
+  const next = () => {
+    activeCount--;
+    if (queue.length > 0) {
+      queue.shift()();
+    }
+  };
+
+  return (fn) => {
+    const run = async () => {
+      activeCount++;
+      try {
+        return await fn();
+      } finally {
+        next();
+      }
+    };
+
+    if (activeCount < concurrency) {
+      return run();
+    } else {
+      return new Promise((resolve) => {
+        queue.push(() => resolve(run()));
+      });
+    }
+  };
+}
+
+/**
+ * Parses the AI response to separate file content, code snippets, and conversational text.
  */
 function extractFileFromText(text) {
   if (!text) return { snippets: [], otherContent: '' };
@@ -97,34 +127,28 @@ function extractFileFromText(text) {
   const snippets = [];
 
   // --- PASS 1: Explicit <file> Tags ---
-  // Matches <file name="example.js">content</file>
   const fileTagRegex = /<file name="([^"]+)">([\s\S]*?)<\/file>/g;
-
   remainingText = remainingText.replace(
     fileTagRegex,
     (match, fileName, content) => {
-      // Add directly to snippets
       snippets.push({
         fileName,
         content: content.trim(),
         type: 'xml_tag',
         lang: fileName.split('.').pop() || 'text',
       });
-      return ''; // Remove code from conversational text
+      return '';
     }
   );
 
   // --- PASS 2: Markdown Code Blocks ---
-  // Matches ```javascript ... ```
   const markdownRegex = /```(\w+)?\s*([\s\S]*?)```/g;
-
   remainingText = remainingText.replace(
     markdownRegex,
     (match, lang, content) => {
       const trimmedContent = content.trim();
       let detectedFileName = null;
 
-      // Heuristic A: Is this an implicit index.html?
       if (
         trimmedContent.includes('<!DOCTYPE html>') ||
         trimmedContent.includes('<html')
@@ -132,27 +156,20 @@ function extractFileFromText(text) {
         detectedFileName = 'index.html';
       }
 
-      // Heuristic B: Look for filename in first-line comments
       if (!detectedFileName) {
         const firstLine = trimmedContent.split('\n')[0].trim();
-        // Matches start, optional comment chars, whitespace, filename.ext, optional end comment
         const commentFileRegex =
           /^(?:\/\/|\/\*|#)?\s*([\w.-]+\.\w+)\s*(?:\*\/)?$/;
         const commentMatch = firstLine.match(commentFileRegex);
-
         if (commentMatch && commentMatch[1]) {
           detectedFileName = commentMatch[1];
         }
       }
 
-      // --- NEW LOGIC START ---
-      // Fallback: Use lang or 'unknown' if no specific filename found
       if (!detectedFileName) {
         detectedFileName = lang || 'unknown';
       }
-      // --- NEW LOGIC END ---
 
-      // Add to snippets
       snippets.push({
         fileName: detectedFileName,
         lang: lang || 'text',
@@ -160,7 +177,7 @@ function extractFileFromText(text) {
         type: 'markdown_block',
       });
 
-      return ''; // Remove code from conversational text
+      return '';
     }
   );
 
@@ -170,37 +187,25 @@ function extractFileFromText(text) {
   };
 }
 
-/**
- * Parses the AI response and extracts files/snippets without writing to disk.
- * @param {object} responseObj - The response object containing responseResult, modelId, etc.
- * @returns {object|null} - The augmented response object or null on error.
- */
 function parseAndSaveResponse(responseObj) {
   try {
-    // 1. Extract content using our updated logic
     const extractedData = extractFileFromText(responseObj.responseResult);
     const { snippets, otherContent } = extractedData;
-
-    // 2. Prepare a list of files that *would* be saved (for metadata/DB purposes)
     const extractedFiles = [];
 
     snippets.forEach((snippet) => {
       if (snippet.fileName) {
         extractedFiles.push({
           ...snippet,
-          // Generate unique name for reference
           outputName: `${responseObj.customId}_${responseObj.modelId}_${snippet.fileName}`,
         });
       }
     });
 
     if (extractedFiles.length === 0) {
-      console.warn(
-        `No valid files found in response for ${responseObj.modelId} (Client: ${responseObj.customId}).`
-      );
+      // console.warn optional to reduce noise during high concurrency
     }
 
-    // 3. Return augmented response
     return {
       ...responseObj,
       extractedFiles: extractedFiles,
@@ -213,13 +218,13 @@ function parseAndSaveResponse(responseObj) {
 }
 
 /**
- * Reads the current DB, checks for duplicates, and appends the new item.
- * Writes back to disk immediately.
+ * Writes to DB immediately.
+ * Sync operations are safe here as Node is single-threaded;
+ * fs.writeFileSync acts as a natural mutex for file access.
  */
 function writeToDbImmediate(newItem) {
   let existingData = [];
 
-  // 1. Read existing DB
   if (fs.existsSync(DB_PATH)) {
     try {
       const fileContent = fs.readFileSync(DB_PATH, 'utf8');
@@ -232,23 +237,6 @@ function writeToDbImmediate(newItem) {
     }
   }
 
-  // 2. Check for Duplicates
-  const isDuplicate = existingData.some(
-    (existingItem) =>
-      existingItem.customId === newItem.customId &&
-      existingItem.fileHash === newItem.fileHash &&
-      existingItem.modelId === newItem.modelId &&
-      existingItem.promptId === newItem.promptId
-  );
-
-  if (isDuplicate) {
-    console.log(
-      `Duplicate detected (${newItem.customId}/${newItem.modelId}), skipping save.`
-    );
-    return;
-  }
-
-  // 3. Append and Save
   existingData.push(newItem);
   const dbContent = `export const db = ${JSON.stringify(
     existingData,
@@ -258,9 +246,8 @@ function writeToDbImmediate(newItem) {
 
   try {
     fs.writeFileSync(DB_PATH, dbContent, 'utf8');
-    console.log(
-      `[Saved to DB] Client: ${newItem.customId} | Model: ${newItem.modelId}`
-    );
+    // Log less frequently or use shorter logs to avoid console flooding
+    // console.log(`[Saved] ${newItem.customId} | ${newItem.modelId} (#${newItem.iterationIndex})`);
   } catch (err) {
     console.error(`Error writing to db.js:`, err.message);
   }
@@ -270,59 +257,74 @@ function writeToDbImmediate(newItem) {
 
 /**
  * Runs models in parallel.
- * Each model processes the list of metadataItems sequentially within its own "thread" (Promise chain).
- * This allows fast models to finish all items without waiting for slow models.
+ * Each model manages its own queue of tasks with strict concurrency limits.
  */
 async function runBatch(models, metadataItems) {
-  console.log(`🚀 Starting parallel execution for ${models.length} models...`);
+  console.log(
+    `🚀 Starting batch: ${models.length} models, ${metadataItems.length} items, ${ITERATIONS_PER_PROMPT} iterations each.`
+  );
+  console.log(`⚡ Max concurrency per model: ${MAX_CONCURRENCY_PER_MODEL}`);
 
   // Map Model To Standalone Async Chain
   const modelQueues = models.map(async (modelConfig) => {
     console.log(`🏁 [Start] Queue for Model: ${modelConfig.id}`);
-    const modelResults = [];
 
-    // Process Items Sequentially Per Model
+    // Create a concurrency limiter for this specific model
+    const limit = pLimit(MAX_CONCURRENCY_PER_MODEL);
+    const tasks = [];
+
+    // Create tasks for every item X every iteration
     for (const item of metadataItems) {
-      try {
-        console.log(
-          `   ⏳ [${modelConfig.id}] Processing Client: ${item.customId}...`
-        );
+      for (let i = 1; i <= ITERATIONS_PER_PROMPT; i++) {
+        // Wrap the task in the limiter
+        const task = limit(async () => {
+          try {
+            // 1. Generate Response
+            const response = await modelConfig.generate(item.promptText);
+            const resultText = modelConfig.extract(response);
+            const usageMetadata =
+              response.usageMetadata || response.usage || null;
 
-        // 1. Generate Response
-        const response = await modelConfig.generate(item.promptText);
-        const resultText = modelConfig.extract(response);
-        const usageMetadata = response.usageMetadata || response.usage || null;
+            // 2. Destructure Inputs
+            const { promptText, ...rest } = item;
 
-        // 2. Destructure Inputs To Prepare Raw Result
-        const { promptText, ...rest } = item;
-        const rawResult = {
-          ...rest,
-          inputPrompt: promptText,
-          responseResult: resultText,
-          modelId: modelConfig.id,
-          usageMetadata,
-        };
+            const rawResult = {
+              ...rest,
+              inputPrompt: promptText,
+              responseResult: resultText,
+              modelId: modelConfig.id,
+              usageMetadata,
+              iterationIndex: i, // Track which iteration this is
+            };
 
-        // 3. Parse Response
-        const parsedResult = parseAndSaveResponse(rawResult);
+            // 3. Parse Response
+            const parsedResult = parseAndSaveResponse(rawResult);
 
-        if (parsedResult) {
-          // 4. Write To DB Immediately
-          // Since writeToDbImmediate is synchronous (fs.writeFileSync),
-          // it is safe to call from concurrent model promises without mutexes.
-          writeToDbImmediate(parsedResult);
-          modelResults.push(parsedResult);
-        }
-      } catch (error) {
-        console.error(
-          `❌ [Error] Model: ${modelConfig.id} | Client: ${item.customId}:`,
-          error.message
-        );
+            if (parsedResult) {
+              // 4. Write To DB (Sync)
+              writeToDbImmediate(parsedResult);
+              process.stdout.write('.'); // Simple progress indicator
+              return parsedResult;
+            }
+          } catch (error) {
+            console.error(
+              `\n❌ [Error] ${modelConfig.id} | ${item.customId} (#${i}):`,
+              error.message
+            );
+            return null;
+          }
+        });
+
+        tasks.push(task);
       }
     }
 
-    console.log(`✅ [Complete] Queue for Model: ${modelConfig.id} finished.`);
-    return modelResults;
+    // Wait for all tasks for this model to complete
+    const modelResults = await Promise.all(tasks);
+    console.log(`\n✅ [Complete] Queue for Model: ${modelConfig.id} finished.`);
+
+    // Filter out nulls (errors)
+    return modelResults.filter(Boolean);
   });
 
   // Wait for all model queues to finish
@@ -341,11 +343,12 @@ const clientMetadata = targetClients.flatMap((client) =>
 );
 
 console.log(
-  `Starting processing for ${clientMetadata.length} items (from ${targetClients.length} clients) across ${modelConfigs.length} models...`
+  `Generated ${clientMetadata.length} unique prompts. Total requests will be ${
+    clientMetadata.length * ITERATIONS_PER_PROMPT * modelConfigs.length
+  }.`
 );
 
 // 3. Run Batch
-// Note: We no longer need the 'throttle' flag as concurrency is handled per-model.
 await runBatch(modelConfigs, clientMetadata);
 
 console.log(`\n🎉 All batch processing complete.`);
