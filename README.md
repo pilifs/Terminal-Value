@@ -1,7 +1,5 @@
 # Terminal Value: A Pipeline That Generates Contextual Web Components Via LLM
 
-See it in action: https://terminalvalue.net/
-
 This repo is a sandbox rooted in an architecture concept I summarize as "probabilistic core, deterministic shell." The hypothesis is that by treating LLMs as probabilistic software systems and applying engineering principles to mitigate their inherent downsides, then we can invoke them transactionally to serve higher-order logic in a predictable way.
 
 For example, the pipeline currently references a **Base Home Page Web Component** from an mock e-commerce web app:
