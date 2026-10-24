@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Original vs. generated home page · Terminal Value</title>
+    <meta
+      name="description"
+      content="The mock ski shop's base home page next to the page an LLM generated for one customer, both live."
+    />
+    <style>
+      /* Tokens match blog/assets/style.css. */
+      :root {
+        --bg: #fafaf9;
+        --text: #1c1917;
+        --muted: #57534e;
+        --rule: #e7e5e4;
+        --accent: #1d4ed8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0c0a09;
+          --text: #f5f5f4;
+          --muted: #a8a29e;
+          --rule: #292524;
+          --accent: #93c5fd;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+          Roboto, sans-serif;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.2em;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.5rem;
+        align-items: baseline;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      main {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      section {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+      }
+      h2 {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      h2 a {
+        font-weight: 400;
+        font-size: 0.85rem;
+      }
+      .frame {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+      }
+      /* Each page renders at a desktop width and is scaled down to fit. */
+      iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border: 0;
+        background: #fff;
+        transform-origin: 0 0;
+      }
+      .tabs {
+        display: none;
+      }
+
+      /* Narrow screens: one page at a time, at its own width. */
+      @media (max-width: 52rem) {
+        main {
+          padding-top: 0;
+        }
+        .tabs {
+          display: flex;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+        }
+        .tabs button {
+          flex: 1;
+          padding: 0.5rem;
+          border: 1px solid var(--rule);
+          border-radius: 6px;
+          background: transparent;
+          color: var(--muted);
+          font: inherit;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+        .tabs button[aria-selected='true'] {
+          border-color: var(--text);
+          color: var(--text);
+        }
+        section:not(.active) {
+          display: none;
+        }
+        h2 {
+          display: none;
+        }
+        iframe {
+          width: 100% !important;
+          height: 100% !important;
+          transform: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/posts/terminal-value-pipeline/">← Back to the post</a>
+      <p>Both pages are live. They run in your browser, with mock data.</p>
+    </header>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="false" data-for="original">
+        Original
+      </button>
+      <button role="tab" aria-selected="true" data-for="generated">
+        Generated
+      </button>
+    </div>
+    <main>
+      <section id="original">
+        <h2>
+          Original home page
+          <a href="../" target="_blank" rel="noopener">Open ↗</a>
+        </h2>
+        <div class="frame">
+          <iframe src="../" title="Original home page"></iframe>
+        </div>
+      </section>
+      <section id="generated" class="active">
+        <h2>
+          Generated for one customer
+          <a
+            href="../?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home"
+            target="_blank"
+            rel="noopener"
+            >Open ↗</a
+          >
+        </h2>
+        <div class="frame">
+          <iframe
+            src="../?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home"
+            title="Home page generated for one customer"
+          ></iframe>
+        </div>
+      </section>
+    </main>
+    <script>
+      const PAGE_WIDTH = 1280;
+      function fit() {
+        for (const frame of document.querySelectorAll('.frame')) {
+          const iframe = frame.querySelector('iframe');
+          const scale = Math.min(1, frame.clientWidth / PAGE_WIDTH);
+          iframe.style.width = `${PAGE_WIDTH}px`;
+          iframe.style.height = `${frame.clientHeight / scale}px`;
+          iframe.style.transform = `scale(${scale})`;
+        }
+      }
+      new ResizeObserver(fit).observe(document.querySelector('main'));
+
+      for (const tab of document.querySelectorAll('.tabs button')) {
+        tab.addEventListener('click', () => {
+          for (const other of document.querySelectorAll('.tabs button'))
+            other.setAttribute('aria-selected', other === tab);
+          for (const section of document.querySelectorAll('section'))
+            section.classList.toggle('active', section.id === tab.dataset.for);
+        });
+      }
+    </script>
+  </body>
+</html>

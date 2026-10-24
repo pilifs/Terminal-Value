@@ -1,0 +1,367 @@
+/* Tokens match the holding page (site/index.html). */
+:root {
+  --bg: #fafaf9;
+  --text: #1c1917;
+  --muted: #57534e;
+  --rule: #e7e5e4;
+  --accent: #1d4ed8;
+  --code-bg: #f5f5f4;
+  --note-bg: #eff6ff;
+  --measure: 34rem;
+  --wide: 46rem;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0a09;
+    --text: #f5f5f4;
+    --muted: #a8a29e;
+    --rule: #292524;
+    --accent: #93c5fd;
+    --code-bg: #1c1917;
+    --note-bg: #172033;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: 0 1rem;
+  background: var(--bg);
+  color: var(--text);
+  font: 18px/1.65 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+header.site,
+main,
+footer.site {
+  width: min(var(--measure), 100%);
+  margin: 0 auto;
+}
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+/* Site chrome */
+header.site {
+  padding: 2rem 0 0;
+  font-weight: 600;
+}
+header.site a {
+  color: var(--text);
+  text-decoration: none;
+}
+main {
+  padding: 3rem 0 2rem;
+}
+footer.site {
+  padding: 1rem 0 3rem;
+  border-top: 1px solid var(--rule);
+}
+footer.site nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.95rem;
+}
+
+/* Index */
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.tagline,
+.meta {
+  margin: 0 0 2.5rem;
+  color: var(--muted);
+}
+.posts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.posts li {
+  margin: 0 0 2rem;
+}
+.posts li > a {
+  font-weight: 600;
+}
+.posts time {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.posts p {
+  margin: 0.25rem 0 0;
+}
+.posts .cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2.4;
+  object-fit: cover;
+  margin: 0.75rem 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.draft {
+  margin-left: 0.6rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  vertical-align: 0.15em;
+}
+
+/* Post body */
+article p,
+article ul,
+article ol,
+article blockquote {
+  margin: 0 0 1.25rem;
+}
+article h2,
+article h3 {
+  margin: 2.5rem 0 0.75rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+article h2 {
+  font-size: 1.25rem;
+}
+article h3 {
+  font-size: 1.05rem;
+}
+article h2 a,
+article h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+article li {
+  margin: 0 0 0.4rem;
+}
+article blockquote {
+  padding-left: 1rem;
+  border-left: 2px solid var(--rule);
+  color: var(--muted);
+}
+.note {
+  margin: 0 0 2rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 6px;
+  background: var(--note-bg);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.note p {
+  margin: 0;
+}
+.note p + p {
+  margin-top: 0.75rem;
+}
+article hr {
+  margin: 2.5rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+.source {
+  margin: 3rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Footnotes ([^1] in Markdown) */
+.footnotes {
+  margin: 3rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.footnotes ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.footnotes li p {
+  margin: 0 0 0.75rem;
+}
+sup a {
+  text-decoration: none;
+}
+[data-footnote-backref] {
+  text-decoration: none;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Figures: images can be wider than the text column, and tap to enlarge. */
+figure {
+  margin: 2rem 0;
+}
+@media (min-width: 52rem) {
+  figure {
+    margin-inline: calc((var(--measure) - var(--wide)) / 2);
+  }
+}
+figure a.zoom {
+  display: block;
+  cursor: zoom-in;
+}
+/* Never upscale past the image's own width; smaller images sit centered. */
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+figcaption {
+  margin: 0.6rem auto 0;
+  max-width: var(--measure);
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Before → after pair, on one line at every width */
+.compare {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 2rem 0 0.75rem;
+}
+@media (min-width: 52rem) {
+  .compare {
+    margin-inline: calc((var(--measure) - var(--wide)) / 2);
+  }
+}
+.compare figure {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.compare .arrow {
+  align-self: center;
+  margin-top: -1.5rem; /* centre on the images, not the captions */
+  color: var(--muted);
+  font-size: 1.25rem;
+}
+.compare figcaption {
+  margin-top: 0.4rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* Code */
+code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+:not(pre) > code {
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+pre.shiki {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: var(--code-bg) !important;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+pre.shiki code {
+  font-size: inherit;
+}
+.shiki span {
+  color: var(--shiki-light);
+}
+@media (prefers-color-scheme: dark) {
+  .shiki span {
+    color: var(--shiki-dark);
+  }
+}
+
+/* Enlarged image viewer (see zoom.js) */
+dialog.zoom-view {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+dialog.zoom-view[open] {
+  display: flex;
+  flex-direction: column;
+}
+dialog.zoom-view::backdrop {
+  background: var(--bg);
+}
+dialog.zoom-view .frame {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+dialog.zoom-view img {
+  max-width: 100%;
+  max-height: 100%;
+  cursor: zoom-in;
+}
+dialog.zoom-view.full img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+dialog.zoom-view.full .frame {
+  place-items: start;
+}
+dialog.zoom-view .bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+dialog.zoom-view .bar p {
+  flex: 1;
+  margin: 0;
+  max-height: 30dvh;
+  overflow-y: auto;
+}
+dialog.zoom-view button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}

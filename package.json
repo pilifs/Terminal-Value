@@ -1,0 +1,29 @@
+{
+  "name": "terminal-value-blog",
+  "private": true,
+  "type": "module",
+  "description": "Source for terminalvalue.net, an AI engineering blog.",
+  "engines": {
+    "node": "24.13.1"
+  },
+  "scripts": {
+    "new": "node blog/new-post.mjs",
+    "build:projects": "npm --prefix projects/terminal-value-pipeline ci && npm --prefix projects/terminal-value-pipeline run build",
+    "build": "node blog/build.mjs",
+    "build:drafts": "node blog/build.mjs --drafts",
+    "dev": "node blog/build.mjs --drafts --serve",
+    "deploy": "npm run build:projects && node blog/build.mjs && wrangler pages deploy dist --project-name=terminal-value --branch=production",
+    "deploy:dev": "node blog/build.mjs --drafts && wrangler pages deploy dist --project-name=terminal-value --branch=dev"
+  },
+  "author": "Filip Stankovic",
+  "license": "MIT",
+  "dependencies": {
+    "image-size": "2.0.4",
+    "marked": "18.0.14",
+    "marked-footnote": "1.4.0",
+    "shiki": "4.5.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.65.0"
+  }
+}

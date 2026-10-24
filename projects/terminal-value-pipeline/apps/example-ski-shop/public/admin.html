@@ -342,7 +342,7 @@
           .map((c) => {
             const actionButton =
               c.id && c.id !== 'undefined'
-                ? `<a href="/?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
+                ? `<a href="./?clientId=${c.id}" target="_blank" class="impersonate-btn">Impersonate ↗</a>`
                 : `<span style="color:#ccc">N/A</span>`;
 
             let notesButton = `<span style="color:#ccc">-</span>`;
@@ -471,7 +471,7 @@
         const homeHash = getSelected('homeHash');
         const orderHash = getSelected('orderHash');
 
-        let url = `/?clientId=${currentUxClientId}`;
+        let url = `./?clientId=${currentUxClientId}`;
 
         if (homeHash) {
           url += `&homeHash=${homeHash}`;

@@ -14,7 +14,7 @@ It combines this base component with user-specific context (notes from a CRM sys
 
 The app serves and renders this user-specific component on demand when that user visits the mock e-commerce site.
 
-Each custom web component was generated in one shot using about 10,000 tokens, and averages about 4 KB unminified. Raw request and response samples from the Gemini Batch API are in `./apps/gemini-batch/local-inputs`. They include the prompt input, the LLM response and token usage metadata.
+Each custom web component was generated in one shot using about 10,000 tokens, and averages about 10 KB unminified. The LLM inputs, as Gemini Batch API request files, are in `./apps/gemini-batch/local-inputs`. The responses and token usage metadata are in [`apps/gemini-batch/results/skiShopResults.js`](./apps/gemini-batch/results/skiShopResults.js).
 
 The result isn't quite MCP, vibe coding, LLM-as-a-compiler or agentic AI. It's something in between, closer to "transactional AI."
 
