@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminal Value</title>
+    <meta
+      name="description"
+      content="Terminal Value: writing on AI engineering by Filip Stankovic. A new site is on the way."
+    />
+    <meta name="author" content="Filip Stankovic" />
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="https://terminalvalue.net/" />
+    <style>
+      :root {
+        --bg: #fafaf9;
+        --text: #1c1917;
+        --muted: #57534e;
+        --rule: #e7e5e4;
+        --accent: #1d4ed8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0c0a09;
+          --text: #f5f5f4;
+          --muted: #a8a29e;
+          --rule: #292524;
+          --accent: #93c5fd;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+        background: var(--bg);
+        color: var(--text);
+        font: 18px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+          Roboto, sans-serif;
+      }
+      main {
+        width: min(34rem, 100%);
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.75rem;
+        letter-spacing: -0.02em;
+      }
+      .tagline {
+        margin: 0 0 2rem;
+        color: var(--muted);
+      }
+      p {
+        margin: 0 0 1rem;
+      }
+      nav {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--rule);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.5rem;
+        font-size: 0.95rem;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Terminal Value</h1>
+      <p class="tagline">AI engineering, written for humans and agents.</p>
+      <p>
+        The new site is on the way. Until then, the early-2026 experiment behind
+        the name is on GitHub: an LLM pipeline that generates client-specific
+        web components from CRM context.
+      </p>
+      <nav aria-label="Links">
+        <a
+          href="https://github.com/pilifs/Terminal-Value/tree/main/projects/terminal-value-pipeline"
+          >The Terminal Value pipeline</a
+        >
+        <a href="https://www.linkedin.com/in/filipstankovic/">LinkedIn</a>
+      </nav>
+    </main>
+  </body>
+</html>

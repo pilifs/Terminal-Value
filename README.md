@@ -1,113 +1,21 @@
-# Terminal Value: A Pipeline That Generates Contextual Web Components Via LLM
+# Terminal Value
 
-This repo is a sandbox rooted in an architecture concept I summarize as "probabilistic core, deterministic shell." The hypothesis is that by treating LLMs as probabilistic software systems and applying engineering principles to mitigate their inherent downsides, then we can invoke them transactionally to serve higher-order logic in a predictable way.
+Source for [terminalvalue.net](https://terminalvalue.net), where I write about AI engineering for humans and agents.
 
-For example, the pipeline currently references a **Base Home Page Web Component** from an mock e-commerce web app:
+The blog is being rebuilt. For now, `site/` holds a temporary holding page.
 
-[<img src="./blog/images/base-common-thumbnail.png" alt="Base Thumbnail">](./blog/images/base-home-page-example.png)
+## Projects
 
-It combines this base component with user-specific context (i.e., notes from a CRM system) then feeds it to an LLM, in a fully automated way, to generate a **Client-Specific Home Page Web Component:**
+- [**Terminal Value pipeline**](./projects/terminal-value-pipeline/) (Feb 2026): an early "transactional AI" experiment. An LLM pipeline takes a base web component and CRM notes about a customer, and generates a personalized home page for that customer in a mock ski shop. Every page is generated in one shot, using about 10k tokens.
 
-[<img src="./blog/images/client-specific-thumbnail.png" alt="Client-Specific Thumbnail">](./blog/images/client-specific-home-page-example.png)
+## Deploy
 
-This user-specific component is then served and rendered on demand when the appropriate user visits the original mock e-commerce web app.
+The site is hosted on Cloudflare Pages, in the `terminal-value` project.
 
-Each custom web component is generated in one-shot using about 10,000 tokens, averaging around ~4kb unminified size. Sample raw responses from Gemini Batch APIs that show raw prompt input, raw LLM response and detailed token usage metadata can be found in `./apps/gemini-batch/local-inputs`.
+```sh
+npx wrangler@4 pages deploy site --project-name=terminal-value --branch=production
+```
 
-The framework and architecture behind this approach is the namesake of this repository, Terminal Value. The result is not quite MCP, vibe coding, LLM as a compiler, or agentic AI, but something in between -- more along the lines of "transactional AI."
+## License
 
-Before continuing, I encourage you to start with [Approaching LLMs Like an Engineer](./blog/1-approaching-llms-like-an-engineer.md), a blog post embedded in this repo that details the philosophy applied here, some key principles to ground yourself with, and bite-sized examples.
-
-## Run Locally Fast
-
-Run `npm install` then ~~`npm run start:ski-shop` to start the example e-commerce app.~~ Running a back-end server for the ski-shop example is now deprecated. If you want to do it the old way with a CQRS back-end, check out commit `fc119684911d1466defeca0e5409740f709fef64`.
-
-All logic is now fully contained in the front-end bundle so it can be served from a CDN. To run, after install execute `npm run serve:client-side-ski-shop` and navigate to `http://localhost:3000`.
-
-Here are some links to custom generated components you can check out after running the app:
-
-- [CLIENT-006: backcountry adventurer (shown above)](http://localhost:3000/?clientId=CLIENT-006&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-
-[<img src="./blog/images/nomad-lodge-example-thumb.png" alt="Base Thumbnail">](./blog/images/nomad-lodge-example.png)
-
-- [CLIENT-012: digital nomad](http://localhost:3000/?clientId=CLIENT-012&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-
-[<img src="./blog/images/aspen-private-example-thumb.png" alt="Base Thumbnail">](./blog/images/aspen-private-example.png)
-
-- [CLIENT-004: trust-fund elite](http://localhost:3000/?clientId=CLIENT-004&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-
-[<img src="./blog/images/calgary-race-example-thumb.png" alt="Base Thumbnail">](./blog/images/calgary-race-example.png)
-
-- [CLIENT-012: ski racer parent](http://localhost:3000/?clientId=CLIENT-008&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-
-[<img src="./blog/images/retired-reserve-example-thumb.png" alt="Base Thumbnail">](./blog/images/retired-reserve-example.png)
-
-- [CLIENT-014: retired enthusiast](http://localhost:3000/?clientId=CLIENT-014&homeHash=f2ab68d7d8446ac0e372a886a3dcd79589def7a00c3ca538468e6bd68496ce7f&page=home)
-
-Compare and contrast them with the [base home page experience](http://localhost:3000/index.html), which is used in the prompt. Visit the [admin page](http://localhost:3000/admin.html) to view all client details and open other custom LLM-generated pages.
-
-[<img src="./blog/images/ski-shop-admin-page-thumbnail.png" alt="Admin Thumbnail">](./blog/images/ski-shop-admin-page.png)
-
-All input prompts, output prompts, client data and Gemini metadata is stored in `./apps/gemini-batch/skiShopResults.js`. To illustrate how all of the above web components were generated by an LLM, here's a quick snippet of what this data structure looks like:
-
-![Result Data Structure](./blog/images/ski-shop-results-object-example.png)
-
-The `text` field under fileOutputResult is the LLM response. It contains code that renders the dynamically generated user-specific home page web component in screnshots above.
-
-## Overall Structure
-
-There are three apps in this repo.
-
-- Ski Shop: detailed above.
-- Gemini Batch: an app you can start by executing `npm run start:gemini` then access at `http://localhost:3001`. It has a crude front-end to help keep track of Gemini Batch API requests to render components, along with other methods to interact with this API.
-- Terminal Value: a pipeline to render custom views for Ski Shop by extracting relevant user info, along with key files, by programatically passing them to an LLM then dynamically serving the results.
-
-## Ski Shop Architecture
-
-The mock ski shop e-commerce application architecture looks something like this, at a high-level:
-
-[Events](./terminal-value//memoizedResults/generateEventsResults.js) -> [Projections](./apps/example-ski-shop/store/projections.js) -> [Database](./apps/example-ski-shop/store/db.js)
-
-The Ski Shop application implements an event sourcing / CQRS pattern to tightly control all state changes. It leverages projections to simulate strongly consistent writes and eventually consistent reads. This allows us to easily, in theory, implement features that observe relevant changes then re-generate any associated custom views acccordingly.
-
-This is a robust, production-grade design that uses server resources efficiently and scales horizontally. It is intended to mimic what is frequently implemented by large online retailers and other high-throughput apps. It's also a functional architecture pattern that LLMs seem to do well with.
-
-## Terminal Value Architecture
-
-The architecture behind the Terminal Value pipeline looks something like this, at a high-level:
-
-[Database](./apps/example-ski-shop/store/db.js) -> [Parse Data](./terminal-value/parseValue.js) -> [Construct Base Prompts](./terminal-value/generateValueRefactor.js) -> [Append Code Context](./apps/gemini-batch/skiShopResults.js) -> [Generate Contextual Components](./terminal-value/coreServices.js) -> [Serve Dynamically](./terminal-value/generateDynamicFiles.js)
-
-You can see additional details by browsing the repository. For now, rather than spend more time documenting, I will refactor this code in coming days to be much cleaner, then update this README.
-
-## Feature Ideas
-
-Here are some feature ideas on my mind.
-
-- Refactor Terminal Value Pipeline
-
-The current approach is rife with side effects as I have not finished extra all the logic from `geminiBatchServices` to `coreServices`. The data structure behind the prompt will also change to make it easier to render other multi-modal components to enable an integrated vertical experience for the end-user.
-
-- Add Additional User-Specific Render Prompts
-
-The obvious ones are marketing prompts, such as reddit or twitter copy. It would also be interesting to show example marketing images with the same look and feel as the web components and marketing copy.
-
-- External Confidence Test Framework
-
-In order to effectively test probabilistic output, we must validate external confidence. Create an external confidence verification system designed to verify changes in base prompts used by the LLM to generate contextual components.
-
-- Harden Web App and Make Context More Realistic
-
-Update so dynamic pricing is set by a back-end config, and allow the LLM to render this dynamically as well. Refine context for viewports and devices so we can pass to LLM for device-specific experiences.
-
-- Optimize and Demonstrate Scaled Example
-
-Render for 10,000 users. Analyze the prompt much more carefully to tune performance. Publish token utilization metrics.
-
-If you'd like to work on these, or submit any of your own, please read the [contributing guidelines](./CONTRIBUTING.md) first, then feel free to jump in.
-
-## Conclusion
-
-This is meant to be a thought provoking example, not a startup or polished final product. Your participation is strongly encouraged!
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[MIT](./LICENSE.txt)
