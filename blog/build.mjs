@@ -16,7 +16,7 @@ import { createHighlighter } from 'shiki';
 
 const SITE = {
   title: 'Terminal Value',
-  tagline: 'Thoughts and experiments on AI Engineering.',
+  tagline: 'Thoughts and experiments on AI Engineering',
   url: 'https://terminalvalue.net',
   author: 'Filip Stankovic',
   links: [

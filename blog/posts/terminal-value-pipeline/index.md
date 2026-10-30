@@ -1,5 +1,5 @@
 ---
-title: Using LLMs to generate unique, client-specific experiences in one-shot
+title: Generating unique, client-focused experiences with LLMs
 date: 2026-02-10
 description: An early proof of concept built with Gemini 3 highlighting how one-shot prompts and a coding template can generate a personalized page for every customer, with 98.9% of the prompt cacheable across customers.
 image: cover.png
