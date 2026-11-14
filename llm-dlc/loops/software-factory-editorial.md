@@ -162,7 +162,17 @@ Under Progress, the exact changes for files you don't own:
   - The body is the plan's seven headings (with "Software Factory" for "Factory"), each followed only by an italic
     `_Prompt: ..._` paragraph. The test pins the headings and fails on any paragraph that isn't a prompt (checked
     by adding a sentence with a number), and on any `claude-fable-5-2` in the source.
-- Next: C5, the production exclusion test (`loadPosts` without drafts leaves out `fable-5-1-vs-5-2`).
+- **C5 done** (2026-11-14). The selection tests (C1) and evidence tests (C2) were already in place. The production
+  test is `test/editorial-production.test.mjs` (6 tests, 62 in the suite, all passing) and runs on the real
+  `blog/posts/`. `loadPosts` without drafts leaves out every draft, the scaffold included. No published post's source
+  names the draft's slug or title. `selectPosts` on production posts never names it. A published section built from
+  production posts into a temporary folder writes no file, sitemap entry, llms.txt line or header that names it.
+  Every post, drafts included, passes `validateEvidence`. Production build unchanged (85 files, 0 files name the
+  slug or title).
+  - To check the tests bite, I set the scaffold to `draft: false` for one run: 7 tests failed, then I restored it.
+    The section-build test still passed, because Phase 0's `render.mjs` (stream B's) doesn't list posts yet. That
+    test guards the merged result once the section page lists `selectPosts` output.
+- Next: C6, the coordinator's changes written out under Progress.
 - Status: working
 
 ## Loop settings
