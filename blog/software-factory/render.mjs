@@ -25,11 +25,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
-import { torontoDay, trend } from '../assets/software-factory/measures-local.js';
+import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const METRIC_CONFIG = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'metrics.json'), 'utf8'));
 const METRIC = Object.fromEntries(METRIC_CONFIG.metrics.map((m) => [m.id, m]));
+const AREAS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'areas.json'), 'utf8'));
 
 const TITLE = 'Software Factory';
 const DESCRIPTION =
@@ -197,13 +198,13 @@ function observations(snapshot, e) {
 }
 
 /** A post as the section lists it: title, description, byline, date and a small cover. */
-export function postCard(post, { e, formatDate, featured = false }) {
+export function postCard(post, { e, formatDate, featured = false, level = 3 }) {
   const cover = post.cover
     ? `<img class="sf-cover" src="${e(post.cover.url)}" width="${post.cover.width}" height="${post.cover.height}" alt="" loading="lazy">`
     : '';
   const byline = post.author ? `<span class="sf-byline">By ${e(post.author)}</span> · ` : '';
   return `<article class="sf-post${featured ? ' sf-post-featured' : ''}">${cover}<div>
-              <h3><a href="${e(post.url)}">${e(post.title)}</a></h3>
+              <h${level}><a href="${e(post.url)}">${e(post.title)}</a></h${level}>
               <p class="sf-post-meta">${byline}<time datetime="${e(post.date)}">${e(formatDate(post.date))}</time></p>
               <p>${e(post.description)}</p>
             </div></article>`;
@@ -329,6 +330,214 @@ ${footer}
   };
 }
 
+const footNav = (paths, e, here) =>
+  `      <nav class="sf-foot" aria-label="Software Factory">${[
+    ['', 'Overview'],
+    ['analysis/', 'Analysis'],
+    ['methodology/', 'Methodology'],
+  ]
+    .map(([sub, label]) => (sub === here ? `<span aria-current="page">${label}</span>` : `<a href="${e(paths.route)}${sub}">${label}</a>`))
+    .join(' · ')}</nav>`;
+
+function pageHead({ title, lede, fixture, e, paths, crumb = true }) {
+  return `      <header class="sf-intro">
+        ${crumb ? `<p class="sf-crumb"><a href="${e(paths.route)}">${TITLE}</a></p>` : ''}
+        <h1>${title}</h1>
+        <p class="sf-lede">${e(lede)}</p>
+        ${banner(fixture, e)}
+      </header>`;
+}
+
+/** analysis/index.html: the author's Software Factory posts, newest first, and related background apart. */
+function analysisPage({ posts, helpers, paths }) {
+  const e = helpers.escapeHtml;
+  const formatDate = helpers.formatDate ?? formatDay;
+  const featured = posts?.featured ?? null;
+  const items = posts?.items ?? [];
+  const related = posts?.related ?? [];
+  const list = items.length
+    ? `<div class="sf-post-list sf-post-archive">${items
+        .map((p) => postCard(p, { e, formatDate, featured: p === featured || p.slug === featured?.slug, level: 2 }))
+        .join('\n          ')}</div>`
+    : `<p class="sf-empty">No analysis published yet. Filip's notes on what the numbers mean will appear here, each linking the data it uses. The <a href="${e(
+        paths.route
+      )}">overview</a> has the latest published data.</p>`;
+  const background = related.length
+    ? `
+      <section class="sf-panel sf-related" aria-labelledby="sf-related-title">
+        <h2 id="sf-related-title">Related background</h2>
+        <p class="sf-caption">Other posts about the software factory, linked for background. They are not Filip's analysis.</p>
+        <div class="sf-post-list">${related.map((p) => postCard(p, { e, formatDate })).join('')}</div>
+      </section>`
+    : '';
+  return {
+    path: 'analysis/index.html',
+    title: `Analysis & notes by Filip · ${TITLE}`,
+    description: "Filip Stankovic's analysis of the software factory in in-the-loop: what its numbers mean and what running it teaches.",
+    body: `    <div class="sf-shell" data-sf-page="analysis">
+${pageHead({ title: 'Analysis &amp; notes by Filip', lede: 'What the Software Factory numbers mean and what running the factory teaches, written by Filip. Each post links the data it uses.', fixture: false, e, paths })}
+      <section class="sf-panel sf-analysis" id="analysis" aria-label="Posts">
+          ${list}
+      </section>${background}
+${footNav(paths, e, 'analysis/')}
+    </div>`,
+  };
+}
+
+const DATASET_LABELS = { usage: 'Model usage', verification: 'Verification results', changes: 'Recorded changes', catalog: 'Example catalog' };
+const OUTCOME_WORDS = { 'new-snapshot': 'found new data', unchanged: 'found nothing new', failed: 'failed' };
+
+function provenance(snapshot, { e, formatDate }) {
+  const { pointer, manifest } = snapshot;
+  const asOf = dataAsOf(snapshot);
+  const day = (instant) => {
+    const d = torontoDay(instant);
+    return `<time datetime="${e(instant)}">${e(formatDate(d))}</time>`;
+  };
+  const check = pointer.lastSourceCheck;
+  const rows = [
+    ['Source', `<a href="${REPO}/tree/${e(manifest.source.sha)}">${e(manifest.source.repository)}</a> at <code>${e(manifest.source.sha)}</code>`],
+    ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e(manifest.source.inputs.length.toLocaleString('en-US'))} source files, each recorded with its SHA-256`],
+    ['Data as of', asOf ? `<time datetime="${asOf}">${e(formatDate(asOf))}</time>, the last day with activity in the data` : 'No dated activity'],
+    ['Published', day(pointer.publishedAt)],
+    [
+      'Source last checked',
+      `${day(check.at)}: ${e(OUTCOME_WORDS[check.outcome] ?? check.outcome)}${check.error ? ` (${e(check.error)})` : ''}. A check that finds nothing new doesn't make the data newer.`,
+    ],
+    ['Generator', `<code>${e(manifest.generator.name)}</code>, version ${e(manifest.generator.version)}`],
+    ['Metric definitions', `Version ${e(manifest.metricDefinitions.version)}, SHA-256 <code>${e(manifest.metricDefinitions.sha256.slice(0, 12))}</code>`],
+    ['Prices', `List prices as of <time datetime="${e(manifest.pricingAsOf)}">${e(formatDate(manifest.pricingAsOf))}</time>`],
+    ['Timezone', `${e(manifest.timezone)}: ${e(METRIC_CONFIG.periods.interval)}`],
+  ];
+  return `      <section class="sf-panel sf-provenance" id="provenance" aria-labelledby="sf-provenance-title">
+        <h2 id="sf-provenance-title">Source and freshness</h2>
+        <dl class="sf-facts">
+${rows.map(([k, v]) => `          <div><dt>${k}</dt><dd>${v}</dd></div>`).join('\n')}
+        </dl>
+      </section>`;
+}
+
+function datasetCoverage(snapshot, { e, formatDate }) {
+  const { manifest } = snapshot;
+  const sha = shortSha(manifest.source.sha);
+  const rows = manifest.datasets
+    .map((d) => {
+      const days = datasetDays(manifest, d.id);
+      const window =
+        d.kind === 'stock'
+          ? `Snapshot total at <code>${e(sha)}</code>`
+          : days
+            ? `<time datetime="${days.first}">${e(formatDate(days.first))}</time> to <time datetime="${days.last}">${e(formatDate(days.last))}</time>`
+            : '<span class="sf-muted">No data</span>';
+      const used = METRIC_CONFIG.metrics.filter((m) => METRICS[m.id]?.dataset === d.id).map((m) => e(m.label));
+      return `<tr><th scope="row">${e(DATASET_LABELS[d.id] ?? d.id)}</th><td>${d.kind === 'stock' ? 'Snapshot total' : 'Period'}</td><td>${window}</td><td>${e(
+        formatCoverage(d.coverage)
+      )}</td><td>${used.join(', ')}</td></tr>`;
+    })
+    .join('\n            ');
+  return `      <section class="sf-panel sf-coverage-panel" id="coverage" aria-labelledby="sf-coverage-title">
+        <h2 id="sf-coverage-title">Coverage by dataset</h2>
+        <p class="sf-caption">What each dataset measured. Days outside a period dataset's window are unknown, not zero, and show no value.</p>
+        <div class="sf-table-wrap">
+          <table class="sf-table">
+            <thead><tr><th scope="col">Dataset</th><th scope="col">Kind</th><th scope="col">Measured (Toronto days)</th><th scope="col">Coverage</th><th scope="col">Metrics</th></tr></thead>
+            <tbody>
+            ${rows}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+}
+
+function definitions(e) {
+  const items = METRIC_CONFIG.metrics
+    .map(
+      (m) => `          <article class="sf-method" id="def-${e(m.id)}">
+            <h3>${e(m.label)} <code class="sf-muted">${e(m.id)}</code></h3>
+            <dl class="sf-facts">
+              <div><dt>Unit</dt><dd>${e(UNIT_WORDS[m.unit] ?? m.unit)}</dd></div>
+              <div><dt>Kind</dt><dd>${m.kind === 'stock' ? 'Snapshot total at the source revision' : 'Activity over a period'}</dd></div>
+              <div><dt>Filters</dt><dd>${e(filterScope(m.id))}</dd></div>
+              <div><dt>Definition</dt><dd>${e(m.definition)}</dd></div>
+              <div><dt>Coverage counts</dt><dd>${e(m.coverage)}</dd></div>
+              <div><dt>Notes</dt><dd>${e(m.notes)}</dd></div>
+            </dl>
+          </article>`
+    )
+    .join('\n');
+  const separate = METRIC_CONFIG.separate.map((s) => `<li><strong>${e(s.label)}.</strong> ${e(s.note)}</li>`).join('');
+  return `      <section class="sf-panel sf-definitions" id="definitions" aria-labelledby="sf-definitions-title">
+        <h2 id="sf-definitions-title">Metric definitions</h2>
+        <p class="sf-caption">Version ${e(METRIC_CONFIG.version)} of the definitions. ${e(METRIC_CONFIG.note.split('. ').slice(-1)[0])}</p>
+${items}
+        <h3>Figures kept separate</h3>
+        <p>These are other figures, never added to estimated model usage: they are not parts of one bill.</p>
+        <ul class="sf-list">${separate}</ul>
+      </section>`;
+}
+
+function areasSection(e) {
+  const row = (a) =>
+    `<tr><th scope="row">${e(a.label)}</th><td>${e(a.description ?? '')}</td><td>${(a.paths ?? []).map((x) => `<code>${e(x)}</code>`).join(' ') || '<span class="sf-muted">None</span>'}</td><td>${
+      (a.campaigns ?? []).map((x) => `<code>${e(x)}</code>`).join(' ') || '<span class="sf-muted">None</span>'
+    }</td></tr>`;
+  return `      <section class="sf-panel sf-areas" id="areas" aria-labelledby="sf-areas-title">
+        <h2 id="sf-areas-title">Areas of work</h2>
+        <p><span class="sf-tag">Mapping ${e(AREAS.status)}</span> version ${e(AREAS.version)}. ${e(AREAS.note)}</p>
+        <p>${e(AREAS.rule)}</p>
+        <div class="sf-table-wrap">
+          <table class="sf-table sf-areas-table">
+            <thead><tr><th scope="col">Area</th><th scope="col">What it covers</th><th scope="col">Paths</th><th scope="col">Campaigns</th></tr></thead>
+            <tbody>${AREAS.areas.map(row).join('')}${row({ ...AREAS.unassigned, description: 'Anything no rule places. Always shown.' })}</tbody>
+          </table>
+        </div>
+      </section>`;
+}
+
+function limits(e) {
+  const { periods } = METRIC_CONFIG;
+  return `      <section class="sf-panel sf-limits" id="limits" aria-labelledby="sf-limits-title">
+        <h2 id="sf-limits-title">Comparison limits</h2>
+        <ul class="sf-list">
+          <li>${e(periods.note)}</li>
+          <li>Periods are the last 7 or 30 calendar days of the data, ending on its last day, not on today: the numbers are as of the snapshot.</li>
+          <li>The model and effort filters apply to usage only. Verification jobs aren't linked well enough to sessions to filter by model, and stocks are totals at the source revision.</li>
+          <li>Estimated usage is priced from token counts at one date's list prices. It is not a bill, and models with different task mixes aren't comparable by it.</li>
+        </ul>
+      </section>`;
+}
+
+/** methodology/index.html: definitions, coverage, provenance, freshness and limits. */
+function methodologyPage({ snapshot, unavailable, fixture, helpers, paths }) {
+  const e = helpers.escapeHtml;
+  const formatDate = helpers.formatDate ?? formatDay;
+  const data = snapshot
+    ? [provenance(snapshot, { e, formatDate }), datasetCoverage(snapshot, { e, formatDate })]
+    : [
+        `      <section class="sf-panel sf-unavailable" role="status" aria-labelledby="sf-unavailable-title">
+        <h2 id="sf-unavailable-title">Data unavailable</h2>
+        <p>${e(unavailable || 'No Software Factory data is available.')}</p>
+        <p>The source, freshness and coverage of the data appear here when a snapshot is published. The definitions below don't depend on it.</p>
+      </section>`,
+      ];
+  return {
+    path: 'methodology/index.html',
+    title: `Methodology · ${TITLE}`,
+    description: 'How each Software Factory number is defined and measured: definitions, coverage, source, freshness and comparison limits.',
+    body: `    <div class="sf-shell" data-sf-page="methodology">
+${pageHead({ title: 'Methodology', lede: "How each number on the Software Factory pages is defined and measured, what it covers, where it comes from, and what it can't be compared with.", fixture, e, paths })}
+      <nav class="sf-toc" aria-label="On this page"><a href="#${snapshot ? 'provenance' : 'definitions'}">${snapshot ? 'Source and freshness' : 'Definitions'}</a>${
+        snapshot ? ' · <a href="#coverage">Coverage</a> · <a href="#definitions">Definitions</a>' : ''
+      } · <a href="#areas">Areas</a> · <a href="#limits">Limits</a></nav>
+${data.join('\n')}
+${definitions(e)}
+${areasSection(e)}
+${limits(e)}
+${footNav(paths, e, 'methodology/')}
+    </div>`,
+  };
+}
+
 export function renderPages(input) {
-  return [overviewPage(input)];
+  return [overviewPage(input), analysisPage(input), methodologyPage(input)];
 }

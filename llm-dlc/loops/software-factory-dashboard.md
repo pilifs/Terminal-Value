@@ -145,11 +145,30 @@ only under `/software-factory/`).
   and `./measures.mjs` (`render.mjs`), keep `trend`, `periodRange`, `torontoDay` and `datasetDays` from
   `measures-local.js`, and check A's results against `test/client-measures.test.mjs`.
 - **Contract request: `test/build.test.mjs`.** Its test "a published section is listed in the sitemap and llms.txt"
-  asserts the sitemap is exactly `['/software-factory/']`. Once the analysis and methodology pages exist (next
-  piece), `index.mjs` lists all three and that frozen test fails. Asked of the merge: assert the three URLs
+  asserts the sitemap is exactly `['/software-factory/']`. Now that the analysis and methodology pages exist (cycle
+  2), `index.mjs` lists all three and that frozen test fails. Asked of the merge: assert the three URLs
   (`/software-factory/`, `/software-factory/analysis/`, `/software-factory/methodology/`). Until then that one test
   fails in this stream and in the integration check, and nothing else does.
-- Next: B1's `analysis/index.html` and `methodology/index.html`, then B2 styles.
+- **B1, analysis and methodology** (cycle 2): `renderPages` returns all three pages. B1 is done.
+  - `analysis/index.html`: every post in `posts.items` in selectPosts' order (newest first), the featured one
+    marked, with cover, title, byline (only with an author), date and description; `posts.related` in a separate
+    "Related background" panel that says it isn't Filip's analysis; the empty state links the overview. It shows
+    no data, so no fixture banner and no unavailable variant.
+  - `methodology/index.html`: source and freshness (repository and SHA, snapshot id and input count, data as of,
+    published, last source check and its outcome, generator, metric-definition version and hash, pricing date,
+    timezone and the interval rule), coverage per manifest dataset (Toronto days or snapshot total, coverage,
+    metrics it feeds), every metric's definition, coverage, notes, kind and filter scope from
+    `config/metrics.json`, the separate figures, the area mapping from `config/areas.json` with its status and
+    Unassigned, and comparison limits. No snapshot: an unavailable notice, the definitions kept. Fixture banner.
+  - The separate figures (`reported_usd`, `unattributed_usd`, `uncached_usd`) are described but have no values:
+    no snapshot file carries them (overview and sessions don't). If the data stream adds them, show them here.
+  - Shared footer navigation on the two new pages (Overview · Analysis · Methodology, the current one marked).
+  - Tests: `test/render-pages.test.mjs` (11): three pages, no "Live", no "Factory" alone, analysis order,
+    featured, bylines, related apart, empty state with and without data, methodology definitions, provenance,
+    coverage table, areas and limits, unavailable, fixture banner, escaping. 52 tests, 51 pass; the one failure is
+    the frozen sitemap assertion above. Production build byte-identical (85 files); drafts build renders the
+    three pages from the example and from no snapshot.
+- Next: B2 styles (`style.css`), then B3 `app.js`.
 - Status: working
 
 ## Loop settings
