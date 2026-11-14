@@ -3,7 +3,8 @@
 // the chart's measure (kept in the URL), checks for newer data while the tab is
 // visible, and loads the deeper exploration's records when a reader opens one.
 // The logic is in the pure modules beside it (state, snapshot, poll, view,
-// details, measures-local); this file only reads and writes the page.
+// details, measures-local, and stream A's measures); this file only reads and
+// writes the page.
 //
 // Data: the remote /software-factory/data/latest.json first, and on any failure
 // the bundled /software-factory/static-data/ snapshot, whole. New data is
@@ -13,7 +14,8 @@
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
-import { computeMeasures, METRICS, trend, usageBreakdown } from './measures-local.js';
+import { METRICS, trend, usageBreakdown } from './measures-local.js';
+import { computeMeasures, series } from './measures.js';
 import { createPoller } from './poll.js';
 import { collectionUrl, firstSnapshot, loadCollection, loadSnapshot, newRecords } from './snapshot.js';
 import { describeState, fitState, parseState, PERIOD_LABELS, PERIODS, queryOptions, sameState, serializeState } from './state.js';
@@ -130,7 +132,7 @@ async function start(shell) {
     }
 
     const id = state.measure;
-    const points = trend(ov, current.manifest, id, opts);
+    const points = trend(series(ov, id, opts), current.manifest, id);
     const chart = { label: METRIC_LABELS[id], unit: METRICS[id].unit };
     $('[data-sf-caption]').textContent = chartCaption(id, state, ov);
     $('[data-sf-chart]').innerHTML = chartSvg(points, chart);

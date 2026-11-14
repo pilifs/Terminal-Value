@@ -15,7 +15,8 @@ import { Marked } from 'marked';
 import markedFootnote from 'marked-footnote';
 import { createHighlighter } from 'shiki';
 import { loadPosts } from './posts.mjs';
-import { buildSection } from './software-factory/index.mjs';
+import { byline, evidenceLinks, validateEvidence } from './software-factory/editorial.mjs';
+import { buildSection, SECTION } from './software-factory/index.mjs';
 
 const SITE = {
   title: 'Terminal Value',
@@ -235,13 +236,16 @@ function postImage({ slug, dir, meta }) {
 function renderPost(post) {
   const { meta, slug, html } = post;
   const draft = meta.draft ? '<span class="draft">Draft</span>' : '';
+  // Software Factory: the author's byline, and links to the post's frozen
+  // evidence and the section, once the section is built.
+  const links = evidenceLinks(post, { section: SECTION.published || includeDrafts });
   const body = `      <article>
         <h1>${escapeHtml(meta.title)}</h1>
         <p class="meta"><time datetime="${meta.date}">${formatDate(
     meta.date
-  )}</time>${draft}</p>
+  )}</time>${byline(post)}${draft}</p>
         ${html}
-      </article>
+      </article>${links ? `\n      ${links}` : ''}
       <p class="source">This post is also available as <a href="/posts/${slug}/index.md">Markdown</a>.</p>`;
   return layout({
     title: meta.title,
@@ -360,6 +364,8 @@ async function build() {
     includeDrafts,
     render: (dir, body) => createMarkdown(highlighter, dir).parse(body),
   });
+  const problems = posts.flatMap(validateEvidence);
+  if (problems.length) throw new Error(problems.join('\n'));
 
   for (const name of PROJECTS) {
     if (!fs.existsSync(path.join(PROJECTS_DIR, name, 'dist', 'index.html')))

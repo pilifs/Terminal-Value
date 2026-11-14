@@ -272,7 +272,39 @@ Settled by the author on 2026-11-14:
   - **For the author** (not this loop's): at launch, add `related: software-factory` to
     `blog/posts/reading-the-trace/index.md` (C's change 4); the Fable 5.1 vs. 5.2 draft's content, evidence and
     cover; a Software Factory cover for the template, if wanted.
-- Next: M1.1, carry out C's coordinator changes and the switch to A's measures.
+- **M1.1 streams' asks: done** (cycle 2).
+  - C's changes 1, 2, 3 and 5 as C6 wrote them:
+    - `index.mjs` exports `SECTION`;
+    - `renderPost` adds `byline(post)` to the date line and `evidenceLinks` after the article, with
+      `section: SECTION.published || includeDrafts`;
+    - `build()` throws on any `validateEvidence` problem;
+    - `npm run new -- --software-factory <slug>`;
+    - the "Software Factory posts" section in `AGENTS.md`, between Posts and Format, unwrapped like the rest of the
+      file.
+  - Change 4 (`related:` on `reading-the-trace`) stays for launch.
+  - A's measures:
+    - `app.js` imports `computeMeasures` and `series` from `./measures.js`, and `render.mjs` imports `series` from
+      `./measures.mjs`.
+    - `measures-local.js` keeps only B's own: `METRICS`, `addDays`, `periodRange`, `torontoDay`, `datasetDays`,
+      `usageBreakdown`, and `trend`.
+    - `trend` now takes `series` points, so the module still has no imports and Node can import it from
+      `blog/assets/`.
+    - The client tests use A's module. Two expectations follow A's documented rules: `filtered` is true when no filter
+      was asked for, and stocks keep their value with `filtered: false` for a period with no data.
+  - Checks:
+    - 188 of 188 tests pass.
+    - The production build is byte for byte `d4d33a0`'s (85 files).
+    - The drafts build shows the scaffold's "· By Filip Stankovic" and its "Data used in this analysis" and "Latest
+      Software Factory data" line; `reading-the-trace` is unchanged.
+    - Headless Chromium on `PORT=8790`: the client loads with no script error. `?period=7d` recomputes the cards with
+      A's module ($224.22, 3,498 calls) and the table has 7 days. The only 404 is `/software-factory/data/latest.json`,
+      expected without the Function.
+    - The evidence check fails the drafts build when the scaffold says `complete` (restored).
+    - `new` was checked in a copy under `/tmp`: the flag before or after the slug, a plain post without it, usage and
+      exit 1 with no slug.
+  - Optional `modulepreload` is left to M1.3's size and round-trip measurement.
+- Next: M1.2, a Software Factory entry in the navigation and on the home page, rendered only while `published` is
+  true.
 - Status: working
 
 ## Loop settings

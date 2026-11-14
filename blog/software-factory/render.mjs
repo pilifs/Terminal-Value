@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
+import { series } from './measures.mjs';
 import {
   breakdownRows,
   breakdownTag,
@@ -149,7 +150,7 @@ ${cards}
 function trendSection(snapshot, e) {
   const id = METRIC_CONFIG.chart[0];
   const m = METRIC[id];
-  const points = trend(snapshot.overview, snapshot.manifest, id);
+  const points = trend(series(snapshot.overview, id), snapshot.manifest, id);
   const options = METRIC_CONFIG.chart
     .map(
       (c) =>

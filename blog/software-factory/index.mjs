@@ -16,7 +16,7 @@ import { validateSnapshotDir } from './validate.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROUTE = 'software-factory';
 export const DATA_DIR = path.join(HERE, 'data');
-const SECTION = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'section.json'), 'utf8'));
+export const SECTION = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'section.json'), 'utf8'));
 // Public browser files: blog/assets/software-factory/ is copied by build.mjs
 // with the other assets; measures.mjs is shared with the importer and copied here.
 const STYLES = [`/${ROUTE}/style.css`];

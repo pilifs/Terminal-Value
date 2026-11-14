@@ -1,6 +1,7 @@
-// The dashboard's interim period measures (blog/assets/software-factory/
-// measures-local.js), kept to stream A's computeMeasures/series interface until
-// the merge, and the chart and formatting modules. Run: npm run test:software-factory
+// The dashboard's period measures, from stream A's measures.mjs (the browser
+// loads it as /software-factory/measures.js), with the dashboard's own helpers in
+// blog/assets/software-factory/measures-local.js, and the chart and formatting
+// modules. Run: npm run test:software-factory
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,7 +10,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, niceTicks } from '../../assets/software-factory/chart.js';
 import { formatCoverage, formatTick, formatValue } from '../../assets/software-factory/format.js';
-import { computeMeasures, datasetDays, METRICS, periodRange, series, torontoDay, trend } from '../../assets/software-factory/measures-local.js';
+import { datasetDays, METRICS, periodRange, torontoDay, trend } from '../../assets/software-factory/measures-local.js';
+import { computeMeasures, series } from '../measures.mjs';
 import { loadSnapshot } from '../index.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -30,7 +32,7 @@ test('unfiltered, the measures equal the snapshot all-time measures', () => {
   for (const m of computeMeasures(overview)) {
     const expected = overview.measures.find((x) => x.id === m.id);
     assert.equal(m.value, expected.value, m.id);
-    assert.equal(m.filtered, false);
+    assert.equal(m.filtered, true, 'no filter asked for, none left out');
   }
 });
 
@@ -50,7 +52,12 @@ test('a period is the last days of the snapshot, half-open, and an empty range i
   const week = computeMeasures(overview, periodRange(overview, '7d'));
   assert.ok(Math.abs(week.find((m) => m.id === 'usage_usd').value - 14.673111) < 1e-9);
   const none = computeMeasures(overview, { from: '2027-01-01', to: '2027-01-08' });
-  for (const m of none) assert.equal(m.value, null, m.id);
+  for (const m of none) {
+    const stock = METRICS[m.id].filters.length === 0;
+    // A stock is a snapshot total: no period applies, and the record says so.
+    assert.equal(m.value, stock ? overview.measures.find((x) => x.id === m.id).value : null, m.id);
+    if (stock) assert.equal(m.filtered, false, m.id);
+  }
   // A filter that leaves no calls: the ratio has no denominator, so no value.
   const cache = computeMeasures(overview, { efforts: ['no-such-effort'] }).find((m) => m.id === 'cache_reuse');
   assert.equal(cache.value, null);
@@ -62,7 +69,7 @@ test('series give one value per day, and trend leaves unmeasured days null', () 
   assert.equal(s.reduce((t, p) => t + p.value, 0), 590);
   assert.deepEqual(datasetDays(manifest, 'usage'), { first: '2026-10-30', last: '2026-11-02' });
   assert.deepEqual(datasetDays(manifest, 'verification'), { first: '2026-11-07', last: '2026-11-08' });
-  const t = trend(overview, manifest, 'verification_completed');
+  const t = trend(series(overview, 'verification_completed'), manifest, 'verification_completed');
   assert.deepEqual(t.filter((p) => p.value !== null), [{ day: '2026-11-07', value: 2 }, { day: '2026-11-08', value: 10 }]);
 });
 

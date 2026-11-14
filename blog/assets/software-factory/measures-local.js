@@ -1,18 +1,17 @@
-// Period measures computed from overview.json, for the dashboard until stream A's
-// measures.mjs (copied to /software-factory/measures.js) lands at the merge. It
-// keeps that module's interface, so switching is a change of import:
+// The dashboard's own helpers beside stream A's period measures. computeMeasures
+// and series are A's (blog/software-factory/measures.mjs, served as
+// /software-factory/measures.js); this module keeps what A's has no part in:
 //
-//   computeMeasures(overview, { from, to, models, efforts })
-//     -> [{ id, value, unit, numerator, denominator, coverage, filtered }]
-//   series(overview, metricId, { from, to, models, efforts }) -> [{ day, value }]
+//   METRICS          the metric table by id, with each metric's dataset
+//   periodRange      the date-range control's choices as a range (addDays helps)
+//   torontoDay       an instant's America/Toronto calendar day
+//   datasetDays      the local days a manifest dataset measured
+//   trend            series points with days outside those bounds as null
+//   usageBreakdown   a usage breakdown recomputed for a range and filters
 //
 // from and to are local dates, half-open [from, to); null is unbounded. models
-// and efforts are lists of raw ids, or null for all. A filter a metric doesn't
-// support is not applied, and the record says filtered: false.
-//
-// Also here, because they are the dashboard's own: periodRange (the date-range
-// control's choices as a range), torontoDay, and trend (a series with days
-// outside the dataset's measured bounds as null). No imports, no Node APIs.
+// and efforts are lists of raw ids, or null for all. No imports, no Node APIs,
+// so the build imports it as it is and the browser loads it unbundled.
 
 // From config/metrics.json (version 1); a test checks they agree.
 export const METRICS = {
@@ -25,8 +24,6 @@ export const METRICS = {
   examples_catalog: { unit: 'examples', filters: [], dataset: 'catalog' },
   usage_share_by_model: { unit: 'ratio', filters: ['period', 'effort'], dataset: 'usage' },
 };
-
-const PERIOD_MEASURES = ['usage_usd', 'model_calls', 'cache_reuse', 'verification_completed', 'verification_duration_median'];
 
 const col = (table, name) => table.columns.indexOf(name);
 
@@ -54,110 +51,7 @@ function usageRows(overview, metricId, { from = null, to = null, models = null, 
   );
 }
 
-function verificationRows(overview, { from = null, to = null } = {}) {
-  const days = dayIndexes(overview, from, to);
-  const cDay = col(overview.verification, 'day');
-  return overview.verification.rows.filter((r) => days.has(r[cDay]));
-}
-
 const sum = (rows, i) => rows.reduce((total, r) => total + (r[i] ?? 0), 0);
-
-function median(values) {
-  if (!values.length) return null;
-  const s = [...values].sort((a, b) => a - b);
-  const mid = s.length >> 1;
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
-
-function measureOf(overview, metricId, rowsFor) {
-  const t = overview.usage;
-  const v = overview.verification;
-  switch (metricId) {
-    case 'usage_usd': {
-      const rows = rowsFor('usage');
-      const calls = sum(rows, col(t, 'calls'));
-      const priced = sum(rows, col(t, 'pricedCalls'));
-      return {
-        value: sum(rows, col(t, 'usd')),
-        numerator: null,
-        denominator: null,
-        coverage: { included: priced, total: calls, missing: calls - priced },
-      };
-    }
-    case 'model_calls': {
-      const rows = rowsFor('usage');
-      const allTime = overview.measures.find((m) => m.id === 'model_calls');
-      // Session coverage doesn't depend on the filter: a session with no metrics
-      // file has unknown calls on every day and model.
-      return { value: sum(rows, col(t, 'calls')), numerator: null, denominator: null, coverage: allTime?.coverage ?? null };
-    }
-    case 'cache_reuse': {
-      const rows = rowsFor('usage');
-      const read = sum(rows, col(t, 'cacheReadTokens'));
-      const denominator = sum(rows, col(t, 'inputTokens')) + read + sum(rows, col(t, 'cacheWriteTokens'));
-      const calls = sum(rows, col(t, 'calls'));
-      return {
-        value: denominator > 0 ? read / denominator : null,
-        numerator: read,
-        denominator,
-        coverage: { included: calls, total: calls },
-      };
-    }
-    case 'verification_completed': {
-      const rows = rowsFor('verification');
-      return { value: rows.length, numerator: null, denominator: null, coverage: { included: rows.length, total: rows.length, missing: 0 } };
-    }
-    case 'verification_duration_median': {
-      const rows = rowsFor('verification');
-      const wall = col(v, 'wallSeconds');
-      const valid = rows.map((r) => r[wall]).filter((s) => typeof s === 'number' && Number.isFinite(s) && s > 0);
-      return {
-        value: median(valid),
-        numerator: null,
-        denominator: null,
-        coverage: { included: valid.length, total: rows.length, missing: rows.length - valid.length },
-      };
-    }
-    default:
-      throw new Error(`measures-local: no period measure ${metricId}`);
-  }
-}
-
-function rowsGetter(overview, metricId, opts) {
-  return (kind) => (kind === 'usage' ? usageRows(overview, metricId, opts) : verificationRows(overview, opts));
-}
-
-function isFiltered(metricId, { from = null, to = null, models = null, efforts = null } = {}) {
-  const { filters } = METRICS[metricId];
-  return (
-    (filters.includes('period') && (from !== null || to !== null)) ||
-    (filters.includes('model') && models !== null) ||
-    (filters.includes('effort') && efforts !== null)
-  );
-}
-
-export function computeMeasures(overview, opts = {}) {
-  // A range with none of the snapshot's days in it measured nothing: null, not 0.
-  const empty = dayIndexes(overview, opts.from ?? null, opts.to ?? null).size === 0;
-  return PERIOD_MEASURES.map((id) => ({
-    id,
-    unit: METRICS[id].unit,
-    ...(empty
-      ? { value: null, numerator: null, denominator: null, coverage: { included: 0, total: 0 } }
-      : measureOf(overview, id, rowsGetter(overview, id, opts))),
-    filtered: isFiltered(id, opts),
-  }));
-}
-
-export function series(overview, metricId, opts = {}) {
-  const { from = null, to = null } = opts;
-  const days = METRICS[metricId].filters.includes('period') ? overview.days.filter((d) => (from === null || d >= from) && (to === null || d < to)) : overview.days;
-  return days.map((day) => {
-    const next = addDays(day, 1);
-    const one = { ...opts, from: day, to: next };
-    return { day, value: measureOf(overview, metricId, rowsGetter(overview, metricId, one)).value };
-  });
-}
 
 /** 'YYYY-MM-DD' plus n days. */
 export function addDays(day, n) {
@@ -193,14 +87,13 @@ export function datasetDays(manifest, datasetId) {
 }
 
 /**
- * series() for the trend chart, with days the metric's dataset didn't measure
- * as null: a day outside the measured bounds is unknown, not zero.
+ * The trend chart's points: series(overview, metricId, opts) from measures.js,
+ * with days the metric's dataset didn't measure as null. A day outside the
+ * measured bounds is unknown, not zero.
  */
-export function trend(overview, manifest, metricId, opts = {}) {
+export function trend(points, manifest, metricId) {
   const bounds = datasetDays(manifest, METRICS[metricId].dataset);
-  return series(overview, metricId, opts).map((p) =>
-    bounds && (p.day < bounds.first || p.day > bounds.last) ? { day: p.day, value: null } : p
-  );
+  return points.map((p) => (bounds && (p.day < bounds.first || p.day > bounds.last) ? { day: p.day, value: null } : p));
 }
 
 const DIMENSION_COLUMN = { model: 'model', effort: 'effort' };
@@ -210,8 +103,8 @@ const DIMENSION_COLUMN = { model: 'model', effort: 'effort' };
  * in the shape of overview.breakdowns rows: [{ key, label, value, share }],
  * in the snapshot's order of models or efforts, leaving out a key with no calls
  * in the cohort. The metric's filters decide which options apply: usage share
- * by model doesn't take the model filter. The dashboard's own (stream A's
- * module has no breakdowns); it stays after the merge.
+ * by model doesn't take the model filter. The dashboard's own: stream A's
+ * module has no breakdowns.
  */
 export function usageBreakdown(overview, breakdown, opts = {}) {
   const column = DIMENSION_COLUMN[breakdown.dimension];

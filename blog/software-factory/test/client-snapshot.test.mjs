@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { computeMeasures } from '../../assets/software-factory/measures-local.js';
+import { computeMeasures } from '../measures.mjs';
 import {
   checkManifest,
   checkOverview,
