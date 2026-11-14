@@ -181,8 +181,34 @@ Test it in Node.
     where it was 0.
   - `usage_share_by_model` is a value per model, so it is not one of the records. The dashboard can take a model's
     period share as `usage_usd` with `models: [id]` over `usage_usd` unfiltered by model.
-- Next: A4, `refresh` in `import.mjs` (staging, `validateSnapshotDir`, atomic replace, `unchanged`, retention), tested
-  against every refresh outcome of `cases.json`.
+- **A4 refresh: done.** `refresh` in `import.mjs`: read, normalize, aggregate, write the snapshot and a pointer to a
+  staging directory beside `data/` (same filesystem, so renames are atomic; removed in every case), check it with
+  `validateSnapshotDir`, then rename the snapshot into `data/snapshots/` and the pointer over `data/latest.json`.
+  `test/data-refresh.test.mjs`, 17 tests:
+  - Every case of `cases.json`, against a `data/` holding the published example: each failing case gives its code
+    and path and leaves `data/` byte for byte as it was (and a missing `data/` missing); the two optional-input cases
+    give a valid new snapshot; `stale-source` refreshed again a day later is `unchanged`, with the same snapshot
+    files and a pointer that differs only in `lastSourceCheck` (`publishedAt` stays).
+  - Other failures, also leaving `data/` untouched: aggregation throwing (code `error`), output refused by
+    `validateSnapshotDir` (`invalid`), and an existing snapshot directory of the same id with other bytes
+    (`conflict`: the same id must mean the same files).
+  - Deterministic: two refreshes of the same input and clock give identical trees, compact JSON.
+  - Retention, after a new pointer only: the current snapshot and every `sf1-` id written in any post's
+    `evidence.json` stay (read as text, so a draft's or a malformed file's still count); other `sf1-` directories go,
+    listed in `pruned`; anything else in `snapshots/` is left alone. An existing snapshot the pointer doesn't name
+    becomes current again without being rewritten.
+  - From a local checkout (a throwaway repository): its commit gives a snapshot, an unknown sha fails as `missing`.
+    That needed one importer fix: a given sha is now checked to be a commit of the checkout (it failed later, as a
+    raw git error).
+  - `refresh` also takes `dir`, `fetchImpl`, `postsDir` (default `blog/posts`), `config` and `now`, and returns
+    `{ outcome, snapshotId, sha, pruned, error }`, plus `code` and `path` on failure (documented in the header).
+  - The CLI, tried on the real checkout and then removed (A5 makes and commits it): `software-factory:refresh --sha
+    7384f8c2… --checkout ../in-the-loop` gave `new-snapshot` `sf1-95bf08f3ebdea3fa` in 1.6 s, `software-factory:validate`
+    said valid, a second refresh `unchanged`; an unknown sha exited 1 with `data/` unchanged.
+- For the merge: a failed refresh doesn't write `latest.json`, so the pointer's `lastSourceCheck.outcome: failed` is
+  never written locally (the case notes require `data/` untouched); the R2 publisher may use it.
+- Next: A5, the first real snapshot of `7384f8c2` from the checkout and from GitHub (same id), reconciled, its gzipped
+  sizes measured, `data/` committed.
 - Status: working
 
 ## Loop settings

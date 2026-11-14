@@ -36,11 +36,37 @@
 //   - loadConfig(dir) reads { source, areas, models } for normalizeSources.
 //   - Normalized records carry a `campaign` (sessions, changes, verification)
 //     for metrics.mjs's area rule, and the rollup's totals as `rollup`.
+//   - refresh also takes `dir` and `fetchImpl` (passed to readSources),
+//     `postsDir` (default blog/posts) and `config`; `now` is a Date, an ISO
+//     instant or milliseconds (default the clock). It returns
+//     { outcome, snapshotId, sha, pruned, error }, and on failure `code` and
+//     `path` (a SourceError's, or 'invalid', 'conflict' or 'error') with
+//     snapshotId the current one. How it writes:
+//       - It stages in a new directory beside dataDir, so a failure of any
+//         kind leaves dataDir byte for byte as it was.
+//       - A snapshot already in dataDir must have exactly the staged files
+//         ('conflict' otherwise). If latest.json already names it, the
+//         outcome is 'unchanged' and only lastSourceCheck moves; if not, the
+//         pointer moves to it ('new-snapshot').
+//       - latest.json is replaced by one rename. publishedAt is when the
+//         pointer last changed snapshot.
+//       - After a new pointer, snapshots/ keeps the current snapshot and every
+//         one named in a post's evidence.json (namedSnapshots); the rest are
+//         deleted and listed in `pruned`.
+//       - Output depends on the input and `now` only.
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { CONFIG_DIR, sha256 } from './identity.mjs';
+import { fileURLToPath } from 'node:url';
+import { CONFIG_DIR, serialize, sha256 } from './identity.mjs';
+import { aggregate, collectionFiles } from './metrics.mjs';
+import { validate, validateSnapshotDir } from './validate.mjs';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+// index.mjs's DATA_DIR, not imported: index.mjs loads the render modules.
+const DATA_DIR = path.join(HERE, 'data');
+const POSTS_DIR = path.join(HERE, '..', 'posts');
 
 export class SourceError extends Error {
   /** code: 'missing' | 'schema' | 'malformed' | 'network' | 'reconcile'. */
@@ -86,14 +112,17 @@ const FIELDS = {
 /** Readers: each resolves a ref, reads a file at the sha (null when absent), and lists a folder's files. */
 function gitReader(checkout) {
   const git = (args, opts = {}) => execFileSync('git', ['-C', checkout, ...args], { maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'pipe'], ...opts });
+  const resolve = (ref) => {
+    try {
+      return git(['rev-parse', '--verify', `${ref}^{commit}`]).toString().trim();
+    } catch {
+      throw new SourceError('missing', `no revision ${ref} in ${checkout}`);
+    }
+  };
   return {
-    resolve(ref) {
-      try {
-        return git(['rev-parse', '--verify', `${ref}^{commit}`]).toString().trim();
-      } catch {
-        throw new SourceError('missing', `no revision ${ref} in ${checkout}`);
-      }
-    },
+    resolve,
+    // A given sha must be a commit of the checkout, not just absent files.
+    verify: resolve,
     async read(sha, rel) {
       try {
         return git(['show', `${sha}:${rel}`]);
@@ -191,7 +220,7 @@ export async function readSources({ ref, sha, checkout, dir, fetchImpl = globalT
   const reader = dir ? dirReader(dir) : checkout ? gitReader(checkout) : githubReader(repository, fetchImpl);
   if (sha && !SHA.test(sha)) throw new SourceError('missing', `${sha} is not a full 40-digit commit sha`);
   const resolvedRef = sha ? null : (ref ?? config.source.defaultRef);
-  const at = sha ?? (await reader.resolve(resolvedRef));
+  const at = sha ? (reader.verify?.(sha) ?? sha) : await reader.resolve(resolvedRef);
   if (!SHA.test(at)) throw new SourceError('network', `${resolvedRef} resolved to ${JSON.stringify(at)}, not a sha`);
 
   const files = new Map();
@@ -436,6 +465,124 @@ export function normalizeSources(raw, config = loadConfig()) {
   };
 }
 
-export async function refresh() {
-  throw new Error('import.mjs refresh: not implemented yet (stream A, phase A4)');
+// --- Refreshing ------------------------------------------------------------
+
+const SNAPSHOT_DIR = /^sf1-[0-9a-f]{16}$/;
+const SNAPSHOT_NAME = /sf1-[0-9a-f]{16}/g;
+const instant = (now) => new Date(now ?? Date.now()).toISOString().replace(/\.\d{3}Z$/, 'Z');
+const readPointer = (dataDir) => {
+  try {
+    const pointer = JSON.parse(fs.readFileSync(path.join(dataDir, 'latest.json'), 'utf8'));
+    return validate('pointer', pointer).length ? null : pointer;
+  } catch {
+    return null;
+  }
+};
+
+/** Every file under dir, as relative path -> bytes, in path order. */
+function tree(dir, base = dir, out = new Map()) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) tree(file, base, out);
+    else out.set(path.relative(base, file).split(path.sep).join('/'), fs.readFileSync(file));
+  }
+  return out;
+}
+
+const sameTree = (a, b) => a.size === b.size && [...a].every(([rel, bytes]) => b.get(rel)?.equals(bytes));
+
+/**
+ * The snapshot ids posts depend on: every sf1- id written anywhere in a post's
+ * evidence.json, read as text, so that a draft's or a malformed file's still
+ * count. Never deleted by a refresh.
+ */
+export function namedSnapshots(postsDir = POSTS_DIR) {
+  const ids = new Set();
+  if (!fs.existsSync(postsDir)) return ids;
+  for (const entry of fs.readdirSync(postsDir, { withFileTypes: true })) {
+    const file = path.join(postsDir, entry.name, 'evidence.json');
+    if (entry.isDirectory() && fs.existsSync(file)) for (const id of fs.readFileSync(file, 'utf8').match(SNAPSHOT_NAME) ?? []) ids.add(id);
+  }
+  return ids;
+}
+
+export async function refresh({
+  ref,
+  sha,
+  checkout,
+  dir,
+  fetchImpl,
+  dataDir = DATA_DIR,
+  postsDir = POSTS_DIR,
+  now,
+  config = loadConfig(),
+} = {}) {
+  const at = instant(now);
+  const current = readPointer(dataDir);
+  const failed = (e, sourceSha = null) => ({
+    outcome: 'failed',
+    snapshotId: current?.snapshotId ?? null,
+    sha: sourceSha,
+    code: e.code ?? 'error',
+    path: e.path ?? null,
+    error: e.message,
+  });
+
+  // Everything that can fail happens before data/ is touched, in a staging
+  // directory beside it (so on the same filesystem, for the renames).
+  fs.mkdirSync(path.dirname(path.resolve(dataDir)), { recursive: true });
+  const staging = fs.mkdtempSync(path.join(path.dirname(path.resolve(dataDir)), '.software-factory-refresh-'));
+  let sourceSha = null;
+  try {
+    let built;
+    try {
+      const raw = await readSources({ ref, sha, checkout, dir, fetchImpl, config });
+      sourceSha = raw.source.sha;
+      built = aggregate(normalizeSources(raw, config), { config });
+    } catch (e) {
+      return failed(e, sourceSha);
+    }
+    const id = built.manifest.snapshotId;
+    const rel = `snapshots/${id}`;
+    fs.mkdirSync(path.join(staging, rel, 'details'), { recursive: true });
+    fs.writeFileSync(path.join(staging, rel, 'manifest.json'), serialize(built.manifest));
+    for (const f of collectionFiles(built)) fs.writeFileSync(path.join(staging, rel, f.path), f.text);
+
+    const target = path.join(dataDir, rel);
+    const exists = fs.existsSync(target);
+    if (exists && !sameTree(tree(target), tree(path.join(staging, rel))))
+      return failed({ code: 'conflict', message: `${rel} already exists with other content: the same id must mean the same files` }, sourceSha);
+    const unchanged = exists && current?.snapshotId === id;
+    const pointer = {
+      schema: 'software-factory-pointer/v1',
+      snapshotId: id,
+      manifest: `${rel}/manifest.json`,
+      publishedAt: unchanged ? current.publishedAt : at,
+      lastSourceCheck: { at, sha: sourceSha, outcome: unchanged ? 'unchanged' : 'new-snapshot', error: null },
+    };
+    fs.writeFileSync(path.join(staging, 'latest.json'), serialize(pointer));
+    const problems = validateSnapshotDir(staging);
+    if (problems.length) return failed({ code: 'invalid', message: `the new snapshot failed validation: ${problems.join('; ')}` }, sourceSha);
+
+    // Validated: add the snapshot, then replace the pointer in one rename.
+    if (!exists) {
+      fs.mkdirSync(path.join(dataDir, 'snapshots'), { recursive: true });
+      fs.renameSync(path.join(staging, rel), target);
+    }
+    fs.renameSync(path.join(staging, 'latest.json'), path.join(dataDir, 'latest.json'));
+
+    // Retention, after a new pointer only: the current snapshot and every one a post names stay.
+    const pruned = [];
+    if (!unchanged) {
+      const keep = new Set([id, ...namedSnapshots(postsDir)]);
+      for (const name of fs.readdirSync(path.join(dataDir, 'snapshots')).sort())
+        if (SNAPSHOT_DIR.test(name) && !keep.has(name)) {
+          fs.rmSync(path.join(dataDir, 'snapshots', name), { recursive: true });
+          pruned.push(name);
+        }
+    }
+    return { outcome: pointer.lastSourceCheck.outcome, snapshotId: id, sha: sourceSha, pruned, error: null };
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
 }
