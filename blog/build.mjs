@@ -17,6 +17,7 @@ import { createHighlighter } from 'shiki';
 import { loadPosts } from './posts.mjs';
 import { byline, evidenceLinks, validateEvidence } from './software-factory/editorial.mjs';
 import { buildSection, SECTION } from './software-factory/index.mjs';
+import * as sectionEntry from './software-factory/site.mjs';
 
 const SITE = {
   title: 'Terminal Value',
@@ -53,6 +54,10 @@ const CODE_LANGS = [
 
 const args = new Set(process.argv.slice(2));
 const includeDrafts = args.has('--drafts');
+// The Software Factory section is built in production once published, and in
+// the drafts build as a preview. Its entry in the header and on the home page,
+// and its posts' evidence links, follow it.
+const sectionShown = SECTION.published || includeDrafts;
 
 const escapeHtml = (s) =>
   String(s).replace(
@@ -205,7 +210,11 @@ function layout({
   </head>
   <body${pageClass ? ` class="${escapeHtml(pageClass)}"` : ''}>
     ${
-      home ? '' : `<header class="site"><a href="/">${SITE.title}</a></header>`
+      home
+        ? ''
+        : `<header class="site"><a href="/">${SITE.title}</a>${
+            sectionShown ? sectionEntry.headerNav(canonical) : ''
+          }</header>`
     }
     <main>
 ${body}
@@ -238,7 +247,7 @@ function renderPost(post) {
   const draft = meta.draft ? '<span class="draft">Draft</span>' : '';
   // Software Factory: the author's byline, and links to the post's frozen
   // evidence and the section, once the section is built.
-  const links = evidenceLinks(post, { section: SECTION.published || includeDrafts });
+  const links = evidenceLinks(post, { section: sectionShown });
   const body = `      <article>
         <h1>${escapeHtml(meta.title)}</h1>
         <p class="meta"><time datetime="${meta.date}">${formatDate(
@@ -278,7 +287,9 @@ function renderIndex(posts) {
     })
     .join('\n');
   const body = `      <h1>${SITE.title}</h1>
-      <p class="tagline">${SITE.tagline}</p>
+      <p class="tagline">${SITE.tagline}</p>${
+        sectionShown ? `\n      ${sectionEntry.homeEntry()}` : ''
+      }
       ${
         posts.length
           ? `<ol class="posts">\n${items}\n      </ol>`
@@ -376,6 +387,8 @@ async function build() {
 
   fs.rmSync(OUT_DIR, { recursive: true, force: true });
   fs.cpSync(ASSETS_DIR, OUT_DIR, { recursive: true });
+  if (sectionShown)
+    fs.appendFileSync(path.join(OUT_DIR, 'style.css'), sectionEntry.STYLES);
   for (const name of PROJECTS) {
     fs.cpSync(
       path.join(PROJECTS_DIR, name, 'dist'),

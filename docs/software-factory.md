@@ -46,6 +46,7 @@ blog/posts.mjs                    parsePost, loadPosts (drafts left out before r
 blog/software-factory/
   index.mjs                       buildSection: the build seam (coordinator)
   cli.mjs                         refresh and validate commands (coordinator)
+  site.mjs  site.css              the section's entry in the site header and home page (coordinator)
   schema.json  validate.mjs       the frozen contract and its validator
   identity.mjs                    canonical JSON, config hash, snapshot id
   config/                         section, source, metrics, areas, models
@@ -66,7 +67,7 @@ what it needs under its Progress, and the merge does it.
 
 | Owner | Files |
 | --- | --- |
-| Coordinator (Phase 0, then the merge loop) | `blog/build.mjs`, `blog/posts.mjs`, `blog/new-post.mjs`, `blog/assets/style.css`, `package.json`, `package-lock.json`, `blog/software-factory/index.mjs`, `cli.mjs`, `ops/`, `functions/`, `wrangler.toml`, `.github/workflows/`, `docs/software-factory.md`, site navigation and the home page |
+| Coordinator (Phase 0, then the merge loop) | `blog/build.mjs`, `blog/posts.mjs`, `blog/new-post.mjs`, `blog/assets/style.css`, `package.json`, `package-lock.json`, `blog/software-factory/index.mjs`, `cli.mjs`, `ops/`, `functions/`, `wrangler.toml`, `.github/workflows/`, `docs/software-factory.md`, site navigation and the home page (`site.mjs`, `site.css`, `test/site-*.test.mjs`) |
 | Contract (frozen; changes only at the merge) | `schema.json`, `validate.mjs`, `identity.mjs`, `config/metrics.json`, `config/section.json`, `test/contract.test.mjs`, `test/build.test.mjs`, `test/fixtures/upstream/`, `snapshot-example/`, `cases.*`, `make-*.mjs` |
 | A, data | `import.mjs`, `metrics.mjs`, `measures.mjs`, `config/source.json`, `config/areas.json`, `config/models.json`, `data/`, `test/data-*.test.mjs` |
 | B, dashboard | `render.mjs`, `blog/assets/software-factory/`, `test/render-*.test.mjs`, `test/client-*.test.mjs` |

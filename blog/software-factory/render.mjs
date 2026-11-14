@@ -47,8 +47,10 @@ const METRIC_CONFIG = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'metr
 const METRIC = Object.fromEntries(METRIC_CONFIG.metrics.map((m) => [m.id, m]));
 const AREAS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'areas.json'), 'utf8'));
 
-const TITLE = 'Software Factory';
-const DESCRIPTION =
+// The section's name and one-line description, shared with the site's entry
+// (site.mjs).
+export const TITLE = 'Software Factory';
+export const DESCRIPTION =
   'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches.';
 
 const FILTER_WORDS = { period: 'date range', model: 'model', effort: 'effort' };

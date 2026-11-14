@@ -303,8 +303,28 @@ Settled by the author on 2026-11-14:
     - `new` was checked in a copy under `/tmp`: the flag before or after the slug, a plain post without it, usage and
       exit 1 with no slug.
   - Optional `modulepreload` is left to M1.3's size and round-trip measurement.
-- Next: M1.2, a Software Factory entry in the navigation and on the home page, rendered only while `published` is
-  true.
+- **M1.2 navigation and home page: done** (cycle 3).
+  - `blog/software-factory/site.mjs` (coordinator's) adds a "Software Factory" link to every page's header, marked
+    `aria-current` on the section's own pages, and a short bordered block under the home page's tagline. Both use
+    the section's title and description, now exported by `render.mjs`.
+  - Their rules are in `blog/software-factory/site.css`, appended to `dist/style.css` only when the entry shows. The
+    production `style.css` stays byte for byte `blog/assets/style.css`.
+  - The entry shows where the section is built: in production once `published` is true, and in the drafts build,
+    which previews the section. It uses the same condition as the evidence links, `SECTION.published ||
+    includeDrafts`.
+  - Checks:
+    - `test/site-entry.test.mjs` builds whole temporary copies of the site. Unpublished production has no
+      "software-factory" in any page, feed, sitemap, `llms.txt` or `_headers`, and its `style.css` matches. Published
+      production, in the copy only, has the header link on every page and the home block. It also has the sitemap
+      entry, no noindex, and nothing of the draft. The drafts build previews the entry, noindex.
+    - 192 of 192 tests pass.
+    - The production build is byte for byte `d4d33a0`'s (85 files).
+    - `software-factory:validate`: valid.
+    - Headless Chromium on `PORT=8790` (shots in `/tmp/sf-m12/`): home, a post and the overview, desktop and mobile,
+      light and dark. The header link sits right of the site title, muted. The home block sits between the tagline
+      and the posts. Nothing wraps or overflows at 390 px.
+- Next: M1.3, real data in the drafts build, with the gzip sizes of the overview page, `overview.json` and the
+  scripts measured against the ~150 KB budget.
 - Status: working
 
 ## Loop settings
