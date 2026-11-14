@@ -27,3 +27,10 @@ This repo is the source of an AI engineering blog. Posts are Markdown files that
 - Code blocks: under about 60 characters wide, cut down to the lines that matter, and marked as abridged when they are.
 - Captions say what to notice, not what the image is. Alt text describes the image for someone who can't see it.
 - Put expert detail in footnotes, so the main text stays an easy read.
+
+## Version control and agent loops
+
+- The repo uses jj, colocated with git. Run `python3 llm-dlc/tools/sync.py init` once per clone. Never run `git commit`.
+- Commit each feature as soon as it's finished and verified, without asking: `python3 llm-dlc/tools/sync.py commit -m "Summary line" -m "What changed, why, and how it was verified."` The check that follows must report 0 errors.
+- Push only when the author asks: `python3 llm-dlc/tools/sync.py push --bookmark main`.
+- Unattended loops work through briefs in `llm-dlc/loops/`. See [`llm-dlc/README.md`](./llm-dlc/README.md). A loop never pushes or deploys.

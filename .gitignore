@@ -5,3 +5,7 @@ requests.jsonl
 tmp-llm-input/**
 dist/
 .wrangler
+__pycache__/
+
+# The agent loops: each run's record and run-streams.sh state (llm-dlc/README.md)
+llm-dlc/loop-summaries/

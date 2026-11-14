@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 llm-dlc/tools/sync.py:*)",
+      "Bash(python3 llm-dlc/tools/test_*.py:*)",
+      "Bash(python3 llm-dlc/tools/prune_workspaces.py:*)",
+      "Bash(python3 llm-dlc/tools/streams_status.py:*)",
+      "Bash(python3 llm-dlc/tools/run_records.py:*)",
+      "Bash(jj status:*)",
+      "Bash(jj st:*)",
+      "Bash(jj diff:*)",
+      "Bash(jj log:*)",
+      "Bash(jj show:*)",
+      "Bash(jj file show:*)",
+      "Bash(jj workspace list:*)",
+      "Bash(jj resolve --list:*)"
+    ],
+    "deny": [
+      "Bash(git commit:*)"
+    ]
+  }
+}
