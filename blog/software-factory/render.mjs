@@ -366,7 +366,7 @@ function provenance(snapshot, { e, formatDate }) {
   const rows = [
     ['Source', `<a href="${REPO}/tree/${e(manifest.source.sha)}">${e(manifest.source.repository)}</a> at <code>${e(manifest.source.sha)}</code>`],
     ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e(manifest.source.inputs.length.toLocaleString('en-US'))} source files, each recorded with its SHA-256`],
-    ['Data as of', asOf ? `<time datetime="${asOf}">${e(formatDate(asOf))}</time>, the last day with activity in the data` : 'No dated activity'],
+    ['Data as of', asOf ? `<time datetime="${e(asOf)}">${e(formatDate(asOf))}</time>, the last day with activity in the data` : 'No dated activity'],
     ['Published', day(pointer.publishedAt)],
     [
       'Source last checked',
@@ -395,7 +395,7 @@ function datasetCoverage(snapshot, { e, formatDate }) {
         d.kind === 'stock'
           ? `Snapshot total at <code>${e(sha)}</code>`
           : days
-            ? `<time datetime="${days.first}">${e(formatDate(days.first))}</time> to <time datetime="${days.last}">${e(formatDate(days.last))}</time>`
+            ? `<time datetime="${e(days.first)}">${e(formatDate(days.first))}</time> to <time datetime="${e(days.last)}">${e(formatDate(days.last))}</time>`
             : '<span class="sf-muted">No data</span>';
       const used = METRIC_CONFIG.metrics.filter((m) => METRICS[m.id]?.dataset === d.id).map((m) => e(m.label));
       return `<tr><th scope="row">${e(DATASET_LABELS[d.id] ?? d.id)}</th><td>${d.kind === 'stock' ? 'Snapshot total' : 'Period'}</td><td>${window}</td><td>${e(

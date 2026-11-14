@@ -89,7 +89,7 @@ export function chartTable(points, { label, unit }) {
   const rows = points
     .map(
       (p) =>
-        `<tr><th scope="row"><time datetime="${p.day}">${escapeHtml(formatDay(p.day))}</time></th><td>${
+        `<tr><th scope="row"><time datetime="${escapeHtml(p.day)}">${escapeHtml(formatDay(p.day))}</time></th><td>${
           p.value === null ? '<span class="sf-muted">No data</span>' : escapeHtml(formatValue(p.value, unit))
         }</td></tr>`
     )

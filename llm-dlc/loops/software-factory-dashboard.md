@@ -247,9 +247,22 @@ only under `/software-factory/`).
   - For the merge: with A's `measures.mjs`, `app.js` imports `computeMeasures` from `./measures.js` (the copy
     `index.mjs` makes) and keeps `trend` and `usageBreakdown` from `measures-local.js`. Optional, for the
     coordinator: `<link rel="modulepreload">` for the modules in `layout()` would save the import round trips.
-- Next: B4. Check the render and client tests against the brief's list (numbers in the static HTML, no "Live",
-  stock and period labels, all four states, a populated analysis list, escaping; the client tests are in), and
-  fill any gap. Then B5, the full screenshot review and sizes.
+- **B4, tests** (cycle 5): checked against the brief's list; B4 is done. Numbers in the static HTML, no "Live",
+  stock and period labels ("Snapshot total" apart, "All time ·" on all four metrics), the four states (no snapshot,
+  fixture, no posts, escaping), a populated analysis list from made-up `postSummary` records (overview and analysis
+  page) and escaping were already covered in `render-overview` and `render-pages`; the client list (URL round trip,
+  first-visit fallback with filters, refusing an invalid snapshot) in `client-state` and `client-snapshot`.
+  - Gap filled: a test that ids and paths from data are escaped inside attributes (a breakdown id, an insight's
+    evidence, a collection path, the source SHA and the snapshot id, each with a quote).
+  - Hardening: the `datetime` attributes in `chart.js`, `view.js` and `render.mjs` now escape their day too. A
+    malformed day can't be tested through the page: date formatting throws on it at build time, and
+    `validate.mjs` refuses it first.
+  - 82 tests, 81 pass; the one failure is the frozen sitemap assertion above. Production build byte-identical
+    (85 files); the drafts build is made from the example and from no snapshot.
+- Next: B5. Shoot every page in each state (the example overview, no snapshot, the empty and populated analysis,
+  methodology with and without data), desktop and mobile, light and dark; fix what is wrong and shoot again; record
+  the gzip sizes of the page, `style.css` and `app.js`. The populated analysis needs a draft post in the
+  collection only in `/tmp` or a render to a scratch file, never a repo post.
 - Status: working
 
 ## Loop settings

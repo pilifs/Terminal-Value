@@ -153,3 +153,17 @@ test('everything from data is escaped', () => {
   assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
   assert.doesNotMatch(overview({ snapshot: null, unavailable: evil }), /<script>/);
 });
+
+test('ids and paths from data are escaped inside attributes too', () => {
+  const quote = 'x" onmouseover="alert(1)';
+  const hostile = structuredClone(snapshot);
+  hostile.overview.breakdowns[0].id = quote;
+  hostile.overview.insights[0].evidence = { collection: 'overview', breakdown: quote };
+  hostile.overview.insights[1].evidence = { collection: quote, breakdown: null };
+  hostile.manifest.collections.find((c) => c.name === 'changes').path = quote;
+  hostile.manifest.source.sha = quote;
+  hostile.manifest.snapshotId = quote;
+  const html = overview({ snapshot: hostile });
+  assert.doesNotMatch(html, /" onmouseover=/);
+  assert.ok(html.includes('x&quot; onmouseover=&quot;alert(1)'));
+});

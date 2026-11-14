@@ -107,9 +107,9 @@ export function freshnessHtml(snapshot, formatDate = formatDay) {
   const asOf = dataAsOf(snapshot);
   const checked = pointer.lastSourceCheck?.at ? torontoDay(pointer.lastSourceCheck.at) : null;
   return (
-    (asOf ? `Published data as of <time datetime="${asOf}">${e(formatDate(asOf))}</time>` : 'Published data, with no dated activity') +
+    (asOf ? `Published data as of <time datetime="${e(asOf)}">${e(formatDate(asOf))}</time>` : 'Published data, with no dated activity') +
     ` · in-the-loop <a href="${REPO}/tree/${e(manifest.source.sha)}"><code>${e(shortSha(manifest.source.sha))}</code></a>` +
-    (checked ? ` · source checked <time datetime="${checked}">${e(formatDate(checked))}</time>` : '')
+    (checked ? ` · source checked <time datetime="${e(checked)}">${e(formatDate(checked))}</time>` : '')
   );
 }
 
