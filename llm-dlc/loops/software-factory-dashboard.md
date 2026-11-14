@@ -168,7 +168,31 @@ only under `/software-factory/`).
     coverage table, areas and limits, unavailable, fixture banner, escaping. 52 tests, 51 pass; the one failure is
     the frozen sitemap assertion above. Production build byte-identical (85 files); drafts build renders the
     three pages from the example and from no snapshot.
-- Next: B2 styles (`style.css`), then B3 `app.js`.
+- **B2, styles** (cycle 3): `blog/assets/software-factory/style.css`, 17.1 KB (3.7 KB gzip). B2 is done.
+  - Every rule is under `body.software-factory`. The section overrides the site's own tokens there, so its header
+    and footer follow the palette. The pages are 72rem wide on a pale surface (`#f6f8f6`, dark `#0f130f`) with white
+    panels (dark `#161b16`). Text is the system font with tabular numbers.
+  - Green accents: bars `#0ca30c` (dark `#2ea043`), links `#008300` (dark `#5cc85c`). The dataviz validator passes
+    both bar greens against their surfaces, and the text contrast is at least 4.6:1.
+  - Charts and tables: hairline grids, 8px radii and thin borders. The measure control is a segmented radio group;
+    its checked option is bold and outlined, not only coloured, and it has a visible focus ring. Focus is a 2px
+    green outline. Numbers sit to the right in data tables and breakdowns; share bars are `aria-hidden`.
+  - Widths: four metrics a row on desktop, two on a tablet, one on a phone. Breakdowns and the post list use
+    `auto-fit` grids clamped with `min(…, 100%)`. Wide text tables (coverage, areas) keep a 40rem minimum and scroll
+    inside their panel. Long SHAs and paths break anywhere. Forced-colors mode draws the bars in `CanvasText`.
+  - The chart's tick text is in viewBox units, so it grows and shrinks with the SVG. Six width ranges set its size
+    so it shows at about 10–13px; at first it was 20px on desktop and 8px on a phone.
+  - The overview's footer is now the shared section navigation (Overview · Analysis · Methodology).
+  - Checked in screenshots (desktop and mobile, light and dark): the example overview, the methodology page and
+    the empty analysis page. The full review of every state is B5.
+  - Test: `test/render-style.test.mjs` (2): every selector is scoped, and there is a dark scheme and a phone
+    layout. 54 tests, 53 pass; the one failure is the frozen sitemap assertion above. The production build is
+    byte-identical (85 files). The drafts build links `style.css` only on the three section pages.
+  - For stream A: the coverage note on "Recorded changes by area" reads as "6 of 64 area mapping accepted".
+    `formatCoverage` joins `included of total` and the note, so a note that isn't a noun phrase ("changes in a
+    mapped area") reads badly.
+- Next: B3 `app.js` with its pure modules (URL state, choosing a snapshot and fallback, polling), and the client
+  tests.
 - Status: working
 
 ## Loop settings

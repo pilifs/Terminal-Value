@@ -317,7 +317,7 @@ function overviewPage({ snapshot, unavailable, fixture, posts, helpers, paths })
   const parts = snapshot
     ? [summary(snapshot, e), trendSection(snapshot, e), observations(snapshot, e), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
     : [unavailableNotice(unavailable, e), analysis(posts, { e, formatDate, route: paths.route })];
-  const footer = `      <p class="sf-foot"><a href="${e(paths.route)}methodology/">Methodology</a>: how each number is defined and measured, its coverage, and its limits.</p>`;
+  const footer = footNav(paths, e, '');
   return {
     path: 'index.html',
     title: TITLE,
