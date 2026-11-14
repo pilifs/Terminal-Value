@@ -1,0 +1,105 @@
+{
+  "version": "1",
+  "note": "Frozen in Phase 0 with schema.json. The data stream implements these definitions; the dashboard and the methodology page show them. A change here is a contract change, and bumps version.",
+  "periods": {
+    "timezone": "America/Toronto",
+    "interval": "half-open [start, end), on calendar days in the timezone, from the original UTC timestamps (never relabelled UTC days)",
+    "choices": ["all", "7d", "30d"],
+    "default": "all",
+    "note": "All time is the default while history is short. A bounded period is offered only for period metrics. Deltas against an earlier period need comparable coverage in both; a missing baseline is unavailable, and a zero baseline with new activity is shown as new, never as a percentage."
+  },
+  "metrics": [
+    {
+      "id": "usage_usd",
+      "label": "Estimated model usage",
+      "unit": "usd",
+      "kind": "period",
+      "filters": ["period", "model", "effort"],
+      "definition": "Sum of the token-priced usd of every model call in the cohort, at the list prices of pricingAsOf.",
+      "coverage": "Priced calls of all calls in the cohort; unpriced calls add nothing and are counted as missing.",
+      "notes": "An estimate from token counts, not a bill. Client-reported usage, unattributed usage and the hypothetical cost without caching are other figures, never added to this one."
+    },
+    {
+      "id": "model_calls",
+      "label": "Model calls",
+      "unit": "calls",
+      "kind": "period",
+      "filters": ["period", "model", "effort"],
+      "definition": "Number of model API calls in the cohort, subagent calls included once.",
+      "coverage": "Sessions with a metrics file of all sessions in the index.",
+      "notes": "Activity, not productivity."
+    },
+    {
+      "id": "cache_reuse",
+      "label": "Input cache reuse",
+      "unit": "ratio",
+      "kind": "period",
+      "filters": ["period", "model", "effort"],
+      "definition": "sum(cache_read_tokens) / sum(input_tokens + cache_read_tokens + cache_write_tokens) over the cohort, weighted by tokens; never an average of ratios.",
+      "coverage": "Calls with token counts of all calls in the cohort.",
+      "notes": "Unavailable when the denominator is zero. Cache reads are context processed again, not new input. Thinking tokens are part of output and play no part here."
+    },
+    {
+      "id": "verification_completed",
+      "label": "Completed verification jobs",
+      "unit": "jobs",
+      "kind": "period",
+      "filters": ["period"],
+      "definition": "Number of verification jobs with a result whose finishedAt falls in the period, passed or failed.",
+      "coverage": "Results with a finishedAt of all results.",
+      "notes": "Not filtered by model: too few jobs link to the session that submitted them. A passed job is one that ran as its steps expected; it may well have found a violation."
+    },
+    {
+      "id": "verification_duration_median",
+      "label": "Median verification duration",
+      "unit": "seconds",
+      "kind": "period",
+      "filters": ["period"],
+      "definition": "Median wallSeconds of the completed jobs in the period with a valid (positive, finite) value, shown with the number of jobs it is taken over.",
+      "coverage": "Jobs with a valid wallSeconds of the completed jobs in the period.",
+      "notes": "Per job. Summed job time is not factory wall time: jobs run in parallel."
+    },
+    {
+      "id": "changes_recorded",
+      "label": "Recorded changes",
+      "unit": "changes",
+      "kind": "stock",
+      "filters": [],
+      "definition": "Distinct jj change ids in the rollup at the source revision; trace-publication housekeeping counted apart.",
+      "coverage": "Changes with at least one session of all changes.",
+      "notes": "A total at the revision, not changes per period: the rollup has no commit times."
+    },
+    {
+      "id": "examples_catalog",
+      "label": "Examples in the catalog",
+      "unit": "examples",
+      "kind": "stock",
+      "filters": [],
+      "definition": "Examples in examples/index.json at the source revision, by origin (constructed, real-world), verdict, vacuity and freshness.",
+      "coverage": "Examples with a verdict of all examples.",
+      "notes": "A stock, never examples per period. A verified label is not a claim of a current, non-vacuous proof: freshness may be unknown and a proof may be vacuous."
+    },
+    {
+      "id": "usage_share_by_model",
+      "label": "Share of usage by model",
+      "unit": "ratio",
+      "kind": "period",
+      "filters": ["period", "effort"],
+      "definition": "Each raw model id's usage_usd divided by the cohort's usage_usd.",
+      "coverage": "As usage_usd.",
+      "notes": "Describes where usage went; says nothing about which model is better. Different task mixes make models incomparable."
+    }
+  ],
+  "summary": ["usage_usd", "model_calls", "cache_reuse", "verification_completed"],
+  "chart": ["usage_usd", "model_calls", "cache_reuse", "verification_completed"],
+  "insights": [
+    { "id": "top-model-share", "metricId": "usage_share_by_model", "template": "{label} accounts for {share} of estimated usage ({scope})." },
+    { "id": "weighted-cache-reuse", "metricId": "cache_reuse", "template": "{share} of input tokens were read from cache ({scope})." },
+    { "id": "median-verification", "metricId": "verification_duration_median", "template": "The median verification job took {duration} ({n} jobs, {scope})." }
+  ],
+  "separate": [
+    { "id": "reported_usd", "label": "Client-reported usage", "note": "Claude Code's own figure, where the session recorded one. Shown on the methodology page only." },
+    { "id": "unattributed_usd", "label": "Unattributed usage", "note": "Client-reported usage the calls don't account for. Methodology page only." },
+    { "id": "uncached_usd", "label": "Cost without caching", "note": "Hypothetical. Methodology page only." }
+  ]
+}

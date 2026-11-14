@@ -1,0 +1,27 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261107-223430-example-148-b11-advised-contracts-full-j",
+ "title": "Example 148 (B11, advised contracts): full jitter proved below the cap on an agent's contracts, the contracts and their evidence as the run reports them (closes VF-002 when it passes)",
+ "kind": "example",
+ "capabilities": [
+  "B11",
+  "jvmcontract:prove"
+ ],
+ "links": {
+  "examples": [
+   "148"
+  ],
+  "paths": [
+   "lib/src/contract_proving.rs",
+   "lib/src/contract_testing.rs"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-07T22:34:30+00:00",
+  "session": "2d24d762-29a6-4514-a681-485fd10f1c7e",
+  "by": "claude-opus-5-5"
+ },
+ "expected": "verdict verified (build.py prints 'as expected' and exits 0). What the label and result.search.gaps report is recorded, not required: since Integer.numberOfLeadingZeros is no longer a gap of the own checker, the verdict may rest on the two tested contracts for java.util.Random alone, or still count the agent's numberOfLeadingZeros contract as proved; this run says which, and 148's title and summary are reworded to match",
+ "supersedes": "20261107-165152-example-148-b11-advised-contracts-full-j"
+}

@@ -1,0 +1,25 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-091002-vf-023-s-second-probe-which-ingredient-o",
+ "title": "VF-023's second probe: which ingredient of the corpus's listSizes and listChange makes JBMC refute a one-element list's size",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:prove",
+  "B11"
+ ],
+ "links": {
+  "paths": [
+   "verification/triage/vf023-choice.sh",
+   "lib/models/java/util/ImmutableCollections.java",
+   "lib/tests/conformance/conformance/Conformance.java",
+   "llm-dlc/loops/application-core-values.md"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T09:10:02+00:00",
+  "session": "b8c9cad1-a1e9-4dff-af3c-fd39c8035d6f",
+  "by": "application-core-values stream (claude-opus-5-5)"
+ },
+ "expected": "exits 0, with summary.txt naming each of the nine probes' verdicts, and for each refutation JBMC's failed property and trace steps"
+}

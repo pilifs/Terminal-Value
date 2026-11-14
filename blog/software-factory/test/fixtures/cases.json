@@ -1,0 +1,15 @@
+{
+  "note": "Explicit failure cases over upstream/, applied to a copy by cases.mjs. Each says how refresh() must react. A failed refresh leaves the committed snapshot and latest.json exactly as they were.",
+  "cases": [
+    { "id": "missing-rollup", "remove": ["llm-dlc/traces/metrics.json"], "expect": { "outcome": "failed", "code": "missing", "path": "llm-dlc/traces/metrics.json" } },
+    { "id": "missing-verification", "remove": ["verification/results/index.json"], "expect": { "outcome": "failed", "code": "missing", "path": "verification/results/index.json" } },
+    { "id": "missing-session-metrics", "remove": ["llm-dlc/traces/8194b9db-b315-48b6-b0eb-b6280f96252b/metrics.json"], "expect": { "outcome": "new-snapshot", "note": "an optional input: that session's calls are left out and counted, model_calls coverage missing 2 of 5 sessions" } },
+    { "id": "missing-job-record", "remove": ["verification/jobs/20261108-195703-application-core-phase-5-step-3-lib-test.json"], "expect": { "outcome": "new-snapshot", "note": "an optional input: that job's expected and submittingSession are null" } },
+    { "id": "unsupported-schema", "set": { "llm-dlc/traces/metrics.json": { "schema": "llm-trace-metrics-rollup/v2" } }, "expect": { "outcome": "failed", "code": "schema", "path": "llm-dlc/traces/metrics.json" } },
+    { "id": "missing-required-field", "unset": { "verification/results/index.json": ["results"] }, "expect": { "outcome": "failed", "code": "schema", "path": "verification/results/index.json" } },
+    { "id": "malformed-json", "text": { "examples/index.json": "{\"schema\": \"examples-index/v2\", \"examples\": [" }, "expect": { "outcome": "failed", "code": "malformed", "path": "examples/index.json" } },
+    { "id": "rollup-disagrees", "set": { "llm-dlc/traces/metrics.json": { "totals.api_calls": 591 } }, "expect": { "outcome": "failed", "code": "reconcile", "note": "the rollup's calls must equal the calls of the session files it covers" } },
+    { "id": "stale-source", "repeat": true, "expect": { "outcome": "unchanged", "note": "refreshing the same revision again: the snapshot id and files stay, only latest.json's lastSourceCheck moves" } },
+    { "id": "network-error", "network": "fail", "expect": { "outcome": "failed", "code": "network" } }
+  ]
+}

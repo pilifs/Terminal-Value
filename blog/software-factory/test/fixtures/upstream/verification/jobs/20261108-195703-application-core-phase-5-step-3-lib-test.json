@@ -1,0 +1,21 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-195703-application-core-phase-5-step-3-lib-test",
+ "title": "application-core Phase 5 step 3: lib/tests/integration.rs at the merged revision, JBMC's tests included",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:equivalence",
+  "jvmcontract:prove",
+  "native:probes"
+ ],
+ "links": {
+  "paths": [
+   "lib/tests/integration.rs"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T19:57:03+00:00"
+ },
+ "expected": "cargo test --test integration exits 0: 65 passed, 0 failed"
+}

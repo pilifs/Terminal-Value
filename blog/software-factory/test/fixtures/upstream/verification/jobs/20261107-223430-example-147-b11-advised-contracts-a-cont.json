@@ -1,0 +1,27 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261107-223430-example-147-b11-advised-contracts-a-cont",
+ "title": "Example 147 (B11, advised contracts): a contract for Random.nextInt that leaves out the exception is refuted on the JVM, and the proof stops with the gap open (closes VF-002 when it passes)",
+ "kind": "example",
+ "capabilities": [
+  "B11",
+  "jvmcontract:prove"
+ ],
+ "links": {
+  "examples": [
+   "147"
+  ],
+  "paths": [
+   "lib/src/contract_proving.rs",
+   "lib/src/contract_testing.rs"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-07T22:34:30+00:00",
+  "session": "2d24d762-29a6-4514-a681-485fd10f1c7e",
+  "by": "claude-opus-5-5"
+ },
+ "expected": "verdict unverifiable (gaps-need-contracts), the advice naming jdk-primitive-method:java.util.Random.nextInt(I)I@jdk-25.0.4.1 with its refused contract and the counterexample bound=0, expected verdict met",
+ "supersedes": "20261107-165152-example-147-b11-advised-contracts-a-cont"
+}

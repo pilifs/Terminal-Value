@@ -1,0 +1,14 @@
+{
+  "schema": "software-factory-runtime/v1",
+  "producer": { "id": "factory-machine-example", "version": "0" },
+  "runId": "example-run-1",
+  "observedAt": "2026-11-14T18:00:00Z",
+  "expiresAt": "2026-11-14T18:05:00Z",
+  "sourceRevision": "7384f8c23eef441817ddb714c6ef5571cdc138bd",
+  "states": [
+    { "subject": "example-targets-runtime", "kind": "loop", "state": "active", "since": "2026-11-14T15:26:00Z" },
+    { "subject": "verification", "kind": "queue", "state": "waiting", "since": null }
+  ],
+  "counters": { "loopsActive": 1, "jobsQueued": 3 },
+  "completeness": { "complete": false, "note": "An example of the producer contract, not an observation: no producer exists yet." }
+}

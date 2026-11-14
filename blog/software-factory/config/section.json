@@ -1,0 +1,4 @@
+{
+  "published": false,
+  "note": "While false, a production build leaves out every Software Factory page, asset and data file, and the drafts build (npm run dev, build:drafts) includes them, noindex. The author sets it true at launch; no loop does."
+}

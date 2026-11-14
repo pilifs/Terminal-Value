@@ -12,6 +12,9 @@
     "build": "node blog/build.mjs",
     "build:drafts": "node blog/build.mjs --drafts",
     "dev": "node blog/build.mjs --drafts --serve",
+    "test:software-factory": "node --test 'blog/software-factory/test/*.test.mjs'",
+    "software-factory:refresh": "node blog/software-factory/cli.mjs refresh",
+    "software-factory:validate": "node blog/software-factory/cli.mjs validate",
     "deploy": "npm run build:projects && node blog/build.mjs && wrangler pages deploy dist --project-name=terminal-value --branch=production",
     "deploy:dev": "node blog/build.mjs --drafts && wrangler pages deploy dist --project-name=terminal-value --branch=dev"
   },

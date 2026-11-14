@@ -1,0 +1,22 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-195650-application-core-phase-5-step-3-deliveri",
+ "title": "application-core Phase 5 step 3: Deliveries' examples 170-172 rerun at the merged revision, each with its recorded verdict",
+ "kind": "example",
+ "capabilities": [
+  "jvmcontract:effects",
+  "B9"
+ ],
+ "links": {
+  "examples": [
+   "170",
+   "171",
+   "172"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T19:56:50+00:00"
+ },
+ "expected": "example 170 gives its expected verdict, verified: build.py prints 'as expected' and exits 0; example 171 gives its expected verdict, violation: build.py prints 'as expected' and exits 0; example 172 gives its expected verdict, violation: build.py prints 'as expected' and exits 0"
+}

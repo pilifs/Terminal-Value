@@ -1,0 +1,23 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-064305-application-core-objects-o2-a-shrunk-wit",
+ "title": "application-core objects O2: a shrunk witness is the same failure as the one found; lib/tests/integration.rs under JBMC",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:equivalence",
+  "jvmcontract:prove"
+ ],
+ "links": {
+  "paths": [
+   "lib/src/witness.rs",
+   "lib/src/equivalence.rs",
+   "lib/src/property.rs",
+   "lib/tests/integration.rs"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T06:43:05+00:00"
+ },
+ "expected": "integration tests: every non-ignored test passes (exit 0), its shrunk witnesses as asserted. A test failing on a shrunk witness that is now larger is a finding about this change, not a pass."
+}

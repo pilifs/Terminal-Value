@@ -1,0 +1,13 @@
+{
+ "repository": "pilifs/in-the-loop",
+ "rev": "7384f8c23eef441817ddb714c6ef5571cdc138bd",
+ "generator": "blog/software-factory/test/fixtures/make-upstream-fixture.mjs",
+ "changes": [
+  "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb: trimmed to calls and commits in [2026-11-01T03:00:00Z, 2026-11-01T09:00:00Z); its totals, by_model and by_effort are recomputed, and time, after_last_commit and reported are left out",
+  "per-session metrics.json: source, windows, compactions, pauses, prompts (prompt text), tools (labels and errors) and cache_events are left out; calls keep their numeric fields, model and effort",
+  "traces/metrics.json: totals, by_model, by_effort and by_day are recomputed from the calls kept (by_day by UTC date of each call start, as upstream); sessions and commits are the selected ones, commits with change_id, summary and sessions only; by_tool, by_bash_family, by_cache_cause, time, totals.reported_usd and totals.unattributed_usd are left out",
+  "llm-dlc/index.json: the selected sessions, plus 3048539b-c311-5e68-b776-b0f94623d4ac, which has no metrics.json here (a missing join); commit lists cut to the changes kept",
+  "verification: 12 results covering passed and failed jobs, attention entries and semantic signals (estimates without their notes), and their job records (6 with a submitting session) without description, requires, resources, steps or outputs",
+  "examples/index.json: 11 examples covering real-world origin, vacuous proofs, absent and unverifiable verdicts, and current, unknown and absent freshness, without summary or notes; examples/tags.json whole"
+ ]
+}

@@ -1,0 +1,391 @@
+{
+ "schema": "verification-results-index/v1",
+ "results": [
+  {
+   "id": "20261108-195650-application-core-phase-5-step-3-shop-s-e",
+   "title": "application-core Phase 5 step 3: Shop's examples 190-196 rerun at the merged revision, each with its recorded verdict",
+   "status": "passed",
+   "summary": "passed: 7 passed step(s) in 31.5s, peak 127.0 MiB (estimated 12m00s, 1.0 GiB); 24 output file(s) changed; signals: example:as-expected×1",
+   "attention": [],
+   "capabilities": [
+    "jvmcontract:compare",
+    "B9"
+   ],
+   "links": {
+    "examples": [
+     "190",
+     "191",
+     "192",
+     "193",
+     "194",
+     "195",
+     "196"
+    ]
+   },
+   "sourceCommit": "c1bc082027f95211b173e88c7c65191d009bcf4a",
+   "finishedAt": "2026-11-08T20:01:17+00:00",
+   "wallSeconds": 31.5,
+   "peakMemoryBytes": 133148672,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 1073741824,
+    "durationSeconds": 720
+   },
+   "host": "vm-1",
+   "result": "20261108-195650-application-core-phase-5-step-3-shop-s-e/result.json"
+  },
+  {
+   "id": "20261108-195650-application-core-phase-5-step-3-deliveri",
+   "title": "application-core Phase 5 step 3: Deliveries' examples 170-172 rerun at the merged revision, each with its recorded verdict",
+   "status": "passed",
+   "summary": "passed: 3 passed step(s) in 14.2s, peak 117.3 MiB (estimated 10m00s, 2.0 GiB); 10 output file(s) changed; signals: example:as-expected×1",
+   "attention": [],
+   "capabilities": [
+    "jvmcontract:effects",
+    "B9"
+   ],
+   "links": {
+    "examples": [
+     "170",
+     "171",
+     "172"
+    ]
+   },
+   "sourceCommit": "c1bc082027f95211b173e88c7c65191d009bcf4a",
+   "finishedAt": "2026-11-08T20:00:59+00:00",
+   "wallSeconds": 14.2,
+   "peakMemoryBytes": 123027456,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 2147483648,
+    "durationSeconds": 600
+   },
+   "host": "vm-1",
+   "result": "20261108-195650-application-core-phase-5-step-3-deliveri/result.json"
+  },
+  {
+   "id": "20261108-214557-application-core-phase-5-the-user-s-allo",
+   "title": "application-core Phase 5: the user's allocation bounds (basket-first-claim 2, checked-claim 3), the joint acceptance and the contract with no case held",
+   "status": "passed",
+   "summary": "passed: 5 passed step(s) in 5m57s, peak 1.9 GiB (estimated 25m00s, 3.0 GiB); signals: cargo:tests×1",
+   "attention": [],
+   "capabilities": [
+    "jvmcontract:equivalence",
+    "jvmcontract:prove",
+    "jvmcontract:effects",
+    "bmc:native"
+   ],
+   "links": {
+    "paths": [
+     "lib/tests/fixtures/application-core/golden",
+     "lib/tests/application_core_joint.rs",
+     "lib/tests/application_core.rs",
+     "llm-dlc/loops/application-core.md"
+    ]
+   },
+   "sourceCommit": "4735822943b0dae2bbd63bc8801cf28c7ffefc0d",
+   "finishedAt": "2026-11-08T22:14:14+00:00",
+   "wallSeconds": 357.3,
+   "peakMemoryBytes": 2002784256,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 1500
+   },
+   "host": "vm-1",
+   "result": "20261108-214557-application-core-phase-5-the-user-s-allo/result.json"
+  },
+  {
+   "id": "20261108-200158-application-core-phase-5-step-4-j4-s-cos",
+   "title": "application-core Phase 5 step 4: J4's cost report at the merged revision, all five cases with preparation, solving and replay apart",
+   "status": "passed",
+   "summary": "passed: 1 passed step(s) in 3m43s, peak 1.9 GiB (estimated 15m00s, 3.0 GiB); 2 output file(s) changed; signals: cargo:tests×1",
+   "attention": [
+    "step 1 (J4 benchmark, release, 7 repeats) was held back 4m50s by its 2-CPU quota in 3m43s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:compare",
+    "bmc:native"
+   ],
+   "links": {
+    "paths": [
+     "lib/tests/preparation.rs",
+     "lib/tests/fixtures/preparation",
+     "llm-dlc/loops/application-core.md"
+    ]
+   },
+   "sourceCommit": "9a1b3b3a447ebb2cad33ac1a890ee00e3b9a8932",
+   "finishedAt": "2026-11-08T20:07:29+00:00",
+   "wallSeconds": 223.8,
+   "peakMemoryBytes": 2004959232,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 900
+   },
+   "host": "vm-1",
+   "result": "20261108-200158-application-core-phase-5-step-4-j4-s-cos/result.json"
+  },
+  {
+   "id": "20261108-195703-application-core-phase-5-step-3-lib-test",
+   "title": "application-core Phase 5 step 3: lib/tests/integration.rs at the merged revision, JBMC's tests included",
+   "status": "passed",
+   "summary": "passed: 1 passed step(s) in 2m19s, peak 2.2 GiB (estimated 15m00s, 3.0 GiB); signals: cargo:tests×1",
+   "attention": [
+    "step 1 (integration tests) was held back 2m58s by its 2-CPU quota in 2m19s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:equivalence",
+    "jvmcontract:prove",
+    "native:probes"
+   ],
+   "links": {
+    "paths": [
+     "lib/tests/integration.rs"
+    ]
+   },
+   "sourceCommit": "c1bc082027f95211b173e88c7c65191d009bcf4a",
+   "finishedAt": "2026-11-08T20:03:20+00:00",
+   "wallSeconds": 139.7,
+   "peakMemoryBytes": 2314448896,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 900
+   },
+   "host": "vm-1",
+   "result": "20261108-195703-application-core-phase-5-step-3-lib-test/result.json"
+  },
+  {
+   "id": "20261108-093809-vf-023-s-third-probe-does-the-model-java",
+   "title": "VF-023's third probe: does the model java.util.List re-declaring Collection's methods fix JBMC's dispatch of size() on a choice of two lists",
+   "status": "passed",
+   "summary": "passed: 1 passed step(s) in 6.4s, peak 69.1 MiB (estimated 10m00s, 1.5 GiB); 416 output file(s) changed; signals: jvmcontract:fails×10; jvmcontract:holds×2",
+   "attention": [
+    "step 1 (VF-023 third probe under JBMC) was held back 4.1s by its 1-CPU quota in 6.4s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:prove",
+    "B11"
+   ],
+   "links": {
+    "paths": [
+     "verification/triage/vf023-dispatch.sh",
+     "lib/models/java/util/List.java",
+     "lib/tests/conformance/conformance/Conformance.java",
+     "llm-dlc/loops/application-core-values.md"
+    ]
+   },
+   "sourceCommit": "b5fd6e15044484187a5ebc18016eb24af933bcab",
+   "finishedAt": "2026-11-08T09:42:13+00:00",
+   "wallSeconds": 6.4,
+   "peakMemoryBytes": 72404992,
+   "estimate": {
+    "cpus": 1,
+    "memoryBytes": 1610612736,
+    "durationSeconds": 600
+   },
+   "host": "vm-1",
+   "result": "20261108-093809-vf-023-s-third-probe-does-the-model-java/result.json"
+  },
+  {
+   "id": "20261108-091002-vf-023-s-second-probe-which-ingredient-o",
+   "title": "VF-023's second probe: which ingredient of the corpus's listSizes and listChange makes JBMC refute a one-element list's size",
+   "status": "passed",
+   "summary": "passed: 1 passed step(s) in 5.8s, peak 69.1 MiB (estimated 10m00s, 1.5 GiB); 339 output file(s) changed; signals: jvmcontract:fails×6; jvmcontract:holds×3",
+   "attention": [
+    "step 1 (VF-023 second probe under JBMC) was held back 3.7s by its 1-CPU quota in 5.8s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:prove",
+    "B11"
+   ],
+   "links": {
+    "paths": [
+     "verification/triage/vf023-choice.sh",
+     "lib/models/java/util/ImmutableCollections.java",
+     "lib/tests/conformance/conformance/Conformance.java",
+     "llm-dlc/loops/application-core-values.md"
+    ]
+   },
+   "sourceCommit": "ec45c5dd40a2379315d99fe00ce3a94f9e02d5f4",
+   "finishedAt": "2026-11-08T09:13:40+00:00",
+   "wallSeconds": 5.8,
+   "peakMemoryBytes": 72491008,
+   "estimate": {
+    "cpus": 1,
+    "memoryBytes": 1610612736,
+    "durationSeconds": 600
+   },
+   "host": "vm-1",
+   "result": "20261108-091002-vf-023-s-second-probe-which-ingredient-o/result.json"
+  },
+  {
+   "id": "20261108-070211-application-core-values-v2-step-1-the-co",
+   "title": "application-core values V2 step 1: the conformance corpus under --engine auto and auto --confirm, now that the own checker runs the immutable-list models",
+   "status": "failed",
+   "summary": "failed: 1 passed, 1 failed step(s) in 34m30s, peak 1.7 GiB (estimated 50m00s, 3.0 GiB); 2 output file(s) changed; signals: cargo:tests×1",
+   "attention": [
+    "step 2 (conformance corpus under auto --confirm) exited 101, expected 0"
+   ],
+   "capabilities": [
+    "jvmcontract:prove",
+    "bmc:native",
+    "B11"
+   ],
+   "links": {
+    "paths": [
+     "lib/tests/conformance.rs",
+     "lib/src/bmc/mod.rs",
+     "lib/src/models.rs",
+     "llm-dlc/loops/application-core-values.md"
+    ]
+   },
+   "sourceCommit": "1fd394556a7c2647434c07c63f78a5f1c4632142",
+   "finishedAt": "2026-11-08T07:38:40+00:00",
+   "wallSeconds": 2070.7,
+   "peakMemoryBytes": 1848741888,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 3000
+   },
+   "host": "vm-1",
+   "result": "20261108-070211-application-core-values-v2-step-1-the-co/result.json"
+  },
+  {
+   "id": "20261108-064305-application-core-objects-o2-a-shrunk-wit",
+   "title": "application-core objects O2: a shrunk witness is the same failure as the one found; lib/tests/integration.rs under JBMC",
+   "status": "failed",
+   "summary": "failed: 1 failed step(s) in 2m58s, peak 2.1 GiB (estimated 20m00s, 3.0 GiB); signals: cargo:tests×1",
+   "attention": [
+    "step 1 (integration tests) exited 101, expected 0",
+    "step 1 (integration tests) was held back 2m59s by its 2-CPU quota in 2m58s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:equivalence",
+    "jvmcontract:prove"
+   ],
+   "links": {
+    "paths": [
+     "lib/src/witness.rs",
+     "lib/src/equivalence.rs",
+     "lib/src/property.rs",
+     "lib/tests/integration.rs"
+    ]
+   },
+   "sourceCommit": "ddf265db0e4373ccc8898105d816aed1ba5a840c",
+   "finishedAt": "2026-11-08T06:57:58+00:00",
+   "wallSeconds": 178.8,
+   "peakMemoryBytes": 2277117952,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 1200
+   },
+   "host": "vm-1",
+   "result": "20261108-064305-application-core-objects-o2-a-shrunk-wit/result.json"
+  },
+  {
+   "id": "20261107-223430-example-147-b11-advised-contracts-a-cont",
+   "title": "Example 147 (B11, advised contracts): a contract for Random.nextInt that leaves out the exception is refuted on the JVM, and the proof stops with the gap open (closes VF-002 when it passes)",
+   "status": "failed",
+   "summary": "failed: 1 failed step(s) in 3.6s, peak 103.8 MiB (estimated 2m00s, 1.0 GiB)",
+   "attention": [
+    "step 1 (example 147 (B11)) exited 1, expected 0",
+    "step 1 (example 147 (B11)) was held back 4.0s by its 1-CPU quota in 3.6s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "B11",
+    "jvmcontract:prove"
+   ],
+   "links": {
+    "examples": [
+     "147"
+    ],
+    "paths": [
+     "lib/src/contract_proving.rs",
+     "lib/src/contract_testing.rs"
+    ]
+   },
+   "sourceCommit": "a8b76de9c96f9bdf50650245789f440c22b22a67",
+   "finishedAt": "2026-11-07T23:25:59+00:00",
+   "wallSeconds": 3.6,
+   "peakMemoryBytes": 108806144,
+   "estimate": {
+    "cpus": 1,
+    "memoryBytes": 1073741824,
+    "durationSeconds": 120
+   },
+   "host": "vm-1",
+   "result": "20261107-223430-example-147-b11-advised-contracts-a-cont/result.json"
+  },
+  {
+   "id": "20261107-223430-example-148-b11-advised-contracts-full-j",
+   "title": "Example 148 (B11, advised contracts): full jitter proved below the cap on an agent's contracts, the contracts and their evidence as the run reports them (closes VF-002 when it passes)",
+   "status": "failed",
+   "summary": "failed: 1 failed step(s) in 3.6s, peak 103.5 MiB (estimated 2m00s, 1.0 GiB)",
+   "attention": [
+    "step 1 (example 148 (B11)) exited 1, expected 0",
+    "step 1 (example 148 (B11)) was held back 4.2s by its 1-CPU quota in 3.6s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "B11",
+    "jvmcontract:prove"
+   ],
+   "links": {
+    "examples": [
+     "148"
+    ],
+    "paths": [
+     "lib/src/contract_proving.rs",
+     "lib/src/contract_testing.rs"
+    ]
+   },
+   "sourceCommit": "b521d26a73ab289b3e080d4b257b689d2f4cca2d",
+   "finishedAt": "2026-11-07T23:25:59+00:00",
+   "wallSeconds": 3.6,
+   "peakMemoryBytes": 108486656,
+   "estimate": {
+    "cpus": 1,
+    "memoryBytes": 1073741824,
+    "durationSeconds": 120
+   },
+   "host": "vm-1",
+   "result": "20261107-223430-example-148-b11-advised-contracts-full-j/result.json"
+  },
+  {
+   "id": "20261108-063512-application-core-objects-o2-the-regressi",
+   "title": "application-core objects O2: the regression harness compares the two versions' constructor admission; lib/tests/integration.rs and the record and object examples under it",
+   "status": "failed",
+   "summary": "failed: 1 failed, 20 passed step(s) in 4m30s, peak 2.1 GiB (estimated 45m00s, 3.0 GiB); signals: cargo:tests×1; example:as-expected×1",
+   "attention": [
+    "step 1 (integration tests) exited 101, expected 0",
+    "step 1 (integration tests) was held back 2m55s by its 2-CPU quota in 2m48s: it would run faster with more CPUs (a JVM needs 2)"
+   ],
+   "capabilities": [
+    "jvmcontract:equivalence",
+    "jvmcontract:prove",
+    "B9"
+   ],
+   "links": {
+    "paths": [
+     "lib/src/harness/mod.rs",
+     "lib/src/statement.rs",
+     "lib/tests/integration.rs"
+    ]
+   },
+   "sourceCommit": "d7330651d8214f5d7dc2f389678b104808eb6d65",
+   "finishedAt": "2026-11-08T06:51:27+00:00",
+   "wallSeconds": 270.2,
+   "peakMemoryBytes": 2251321344,
+   "estimate": {
+    "cpus": 2,
+    "memoryBytes": 3221225472,
+    "durationSeconds": 2700
+   },
+   "host": "vm-1",
+   "result": "20261108-063512-application-core-objects-o2-the-regressi/result.json"
+  }
+ ]
+}

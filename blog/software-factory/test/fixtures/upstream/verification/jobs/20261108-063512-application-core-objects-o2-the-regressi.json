@@ -1,0 +1,23 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-063512-application-core-objects-o2-the-regressi",
+ "title": "application-core objects O2: the regression harness compares the two versions' constructor admission; lib/tests/integration.rs and the record and object examples under it",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:equivalence",
+  "jvmcontract:prove",
+  "B9"
+ ],
+ "links": {
+  "paths": [
+   "lib/src/harness/mod.rs",
+   "lib/src/statement.rs",
+   "lib/tests/integration.rs"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T06:35:12+00:00"
+ },
+ "expected": "integration tests: every non-ignored test passes (exit 0). Each example's build.py prints 'as expected' and exits 0, its verdict unchanged: 126 violation, 127 verified, 128 violation, 129 verified, 130 violation, 131 verified, 134 violation, 135 verified, 136 violation, 137 verified, 150 verified, 151 violation, 152 verified, 190 verified, 191-194 violation, 195 verified, 196 unverifiable. Only the statement's constructible-assumption text may change, where admission is compared. A changed verdict is a finding, not a pass."
+}

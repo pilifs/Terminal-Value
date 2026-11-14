@@ -1,0 +1,789 @@
+{
+ "schema": "llm-trace-metrics-rollup/v1",
+ "pricing_as_of": "2026-10-31",
+ "totals": {
+  "sessions": 4,
+  "commits": 64,
+  "tool_calls": 764,
+  "input_tokens": 8198,
+  "output_tokens": 1107460,
+  "thinking_tokens": 440105,
+  "cache_read_tokens": 111749118,
+  "cache_write_tokens": 2615571,
+  "cache_write_5m_tokens": 146375,
+  "cache_write_1h_tokens": 2469196,
+  "usd": 101.072856,
+  "uncached_usd": 819.748464,
+  "api_calls": 590,
+  "unpriced_calls": 0
+ },
+ "by_model": [
+  {
+   "model": "claude-fable-5-1",
+   "tool_calls": 440,
+   "input_tokens": 7454,
+   "output_tokens": 590514,
+   "thinking_tokens": 234828,
+   "cache_read_tokens": 52734695,
+   "cache_write_tokens": 1393327,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 1393327,
+   "usd": 70.650444,
+   "uncached_usd": 570.88046,
+   "api_calls": 258,
+   "unpriced_calls": 0
+  },
+  {
+   "model": "claude-haiku-5-5",
+   "tool_calls": 18,
+   "input_tokens": 22,
+   "output_tokens": 14633,
+   "thinking_tokens": 4994,
+   "cache_read_tokens": 358231,
+   "cache_write_tokens": 129896,
+   "cache_write_5m_tokens": 129896,
+   "cache_write_1h_tokens": 0,
+   "usd": 0.027138,
+   "uncached_usd": 0.056132,
+   "api_calls": 11,
+   "unpriced_calls": 0
+  },
+  {
+   "model": "claude-opus-5-5",
+   "tool_calls": 297,
+   "input_tokens": 706,
+   "output_tokens": 498989,
+   "thinking_tokens": 199604,
+   "cache_read_tokens": 58573589,
+   "cache_write_tokens": 1075869,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 1075869,
+   "usd": 30.304283,
+   "uncached_usd": 248.580436,
+   "api_calls": 314,
+   "unpriced_calls": 0
+  },
+  {
+   "model": "claude-sonnet-5-5",
+   "tool_calls": 9,
+   "input_tokens": 16,
+   "output_tokens": 3324,
+   "thinking_tokens": 679,
+   "cache_read_tokens": 82603,
+   "cache_write_tokens": 16479,
+   "cache_write_5m_tokens": 16479,
+   "cache_write_1h_tokens": 0,
+   "usd": 0.090991,
+   "uncached_usd": 0.231436,
+   "api_calls": 7,
+   "unpriced_calls": 0
+  }
+ ],
+ "by_effort": [
+  {
+   "effort": "high",
+   "tool_calls": 440,
+   "input_tokens": 7454,
+   "output_tokens": 590514,
+   "thinking_tokens": 234828,
+   "cache_read_tokens": 52734695,
+   "cache_write_tokens": 1393327,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 1393327,
+   "usd": 70.650444,
+   "uncached_usd": 570.88046,
+   "api_calls": 258,
+   "unpriced_calls": 0
+  },
+  {
+   "effort": "medium",
+   "tool_calls": 324,
+   "input_tokens": 744,
+   "output_tokens": 516946,
+   "thinking_tokens": 205277,
+   "cache_read_tokens": 59014423,
+   "cache_write_tokens": 1222244,
+   "cache_write_5m_tokens": 146375,
+   "cache_write_1h_tokens": 1075869,
+   "usd": 30.422412,
+   "uncached_usd": 248.868004,
+   "api_calls": 332,
+   "unpriced_calls": 0
+  }
+ ],
+ "by_day": [
+  {
+   "date": "2026-10-31",
+   "tool_calls": 218,
+   "input_tokens": 1938,
+   "output_tokens": 301576,
+   "thinking_tokens": 125611,
+   "cache_read_tokens": 24884767,
+   "cache_write_tokens": 741586,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 741586,
+   "usd": 31.360313,
+   "uncached_usd": 236.27713,
+   "api_calls": 108,
+   "unpriced_calls": 0
+  },
+  {
+   "date": "2026-11-01",
+   "tool_calls": 361,
+   "input_tokens": 5338,
+   "output_tokens": 498031,
+   "thinking_tokens": 217465,
+   "cache_read_tokens": 48722628,
+   "cache_write_tokens": 1267744,
+   "cache_write_5m_tokens": 146375,
+   "cache_write_1h_tokens": 1121369,
+   "usd": 48.336075,
+   "uncached_usd": 389.792982,
+   "api_calls": 293,
+   "unpriced_calls": 0
+  },
+  {
+   "date": "2026-11-02",
+   "tool_calls": 94,
+   "input_tokens": 704,
+   "output_tokens": 180219,
+   "thinking_tokens": 51904,
+   "cache_read_tokens": 15132946,
+   "cache_write_tokens": 356904,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 356904,
+   "usd": 12.226461,
+   "uncached_usd": 98.092344,
+   "api_calls": 88,
+   "unpriced_calls": 0
+  },
+  {
+   "date": "2026-11-03",
+   "tool_calls": 91,
+   "input_tokens": 218,
+   "output_tokens": 127634,
+   "thinking_tokens": 45125,
+   "cache_read_tokens": 23008777,
+   "cache_write_tokens": 249337,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 249337,
+   "usd": 9.150007,
+   "uncached_usd": 95.586008,
+   "api_calls": 101,
+   "unpriced_calls": 0
+  }
+ ],
+ "sessions": [
+  {
+   "session_id": "8194b9db-b315-48b6-b0eb-b6280f96252b",
+   "title": "LLM formal verification examples",
+   "started": "2026-10-31T01:39:26.314Z",
+   "ended": "2026-10-31T12:13:55.577Z",
+   "prompts": 9,
+   "commands": 5,
+   "commits": 11,
+   "compactions": 1,
+   "subagents": 0,
+   "tool_errors": 11,
+   "peak_context_tokens": 439795,
+   "tool_calls": 218,
+   "input_tokens": 1938,
+   "output_tokens": 301576,
+   "thinking_tokens": 125611,
+   "cache_read_tokens": 24884767,
+   "cache_write_tokens": 741586,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 741586,
+   "usd": 31.360313,
+   "uncached_usd": 236.27713,
+   "api_calls": 108,
+   "unpriced_calls": 0,
+   "elapsed_ms": 38069263,
+   "agent_ms": 12295745,
+   "model_ms": 5324346,
+   "tool_ms": 6044866,
+   "busy_ms": 10624685,
+   "compaction_ms": 90541,
+   "paused_ms": 22063322,
+   "reported_usd": 32.404457
+  },
+  {
+   "session_id": "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+   "title": "Rust Java formal verification library",
+   "started": "2026-10-31T16:29:55.396Z",
+   "ended": "2026-11-04T13:14:35.836Z",
+   "commits": 1,
+   "tool_calls": 104,
+   "input_tokens": 2980,
+   "output_tokens": 156733,
+   "thinking_tokens": 63775,
+   "cache_read_tokens": 15290983,
+   "cache_write_tokens": 355124,
+   "cache_write_5m_tokens": 0,
+   "cache_write_1h_tokens": 355124,
+   "usd": 18.791672,
+   "uncached_usd": 164.32752,
+   "api_calls": 95,
+   "unpriced_calls": 0,
+   "reported_usd": null
+  },
+  {
+   "session_id": "a308f9d3-8d8a-42ca-b074-d388818c2418",
+   "title": "Feature-loop memory safeguards",
+   "started": "2026-11-01T14:42:53.464Z",
+   "ended": "2026-11-03T02:32:23.889Z",
+   "prompts": 21,
+   "commands": 9,
+   "commits": 52,
+   "compactions": 2,
+   "subagents": 2,
+   "tool_errors": 12,
+   "peak_context_tokens": 402681,
+   "tool_calls": 275,
+   "input_tokens": 640,
+   "output_tokens": 427963,
+   "thinking_tokens": 167840,
+   "cache_read_tokens": 53450588,
+   "cache_write_tokens": 938309,
+   "cache_write_5m_tokens": 45366,
+   "cache_write_1h_tokens": 892943,
+   "usd": 26.32811,
+   "uncached_usd": 225.433748,
+   "api_calls": 285,
+   "unpriced_calls": 0,
+   "elapsed_ms": 128970425,
+   "agent_ms": 12521533,
+   "model_ms": 4157865,
+   "tool_ms": 8322969,
+   "busy_ms": 12418144,
+   "compaction_ms": 100155,
+   "paused_ms": 111814262,
+   "reported_usd": 15.906288
+  },
+  {
+   "session_id": "2e359813-25c2-4259-888b-42d3a5f0eee6",
+   "title": "JVM contract bytecode verification skill",
+   "started": "2026-11-01T21:47:54.262Z",
+   "ended": "2026-11-02T00:48:50.285Z",
+   "prompts": 7,
+   "commands": 2,
+   "commits": 16,
+   "compactions": 1,
+   "subagents": 1,
+   "tool_errors": 10,
+   "peak_context_tokens": 285205,
+   "tool_calls": 167,
+   "input_tokens": 2640,
+   "output_tokens": 221188,
+   "thinking_tokens": 82879,
+   "cache_read_tokens": 18122780,
+   "cache_write_tokens": 580552,
+   "cache_write_5m_tokens": 101009,
+   "cache_write_1h_tokens": 479543,
+   "usd": 24.592761,
+   "uncached_usd": 193.710066,
+   "api_calls": 102,
+   "unpriced_calls": 0,
+   "elapsed_ms": 10856023,
+   "agent_ms": 4501456,
+   "model_ms": 3330815,
+   "tool_ms": 1571570,
+   "busy_ms": 4458215,
+   "compaction_ms": 117193,
+   "paused_ms": 2932288,
+   "reported_usd": 25.719197
+  }
+ ],
+ "commits": [
+  {
+   "change_id": "pqkrtxsktnwttqvwprxslwnklqrtvtuz",
+   "summary": "Add symbolic, capability and TLA+ verification examples 006 to 012",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "wwszokpyuvonttyqkxwlyupwqotwvlpn",
+   "summary": "Record session traces",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "nmzlvwzkkymwnqozwmyyzrpluyvsykzx",
+   "summary": "Run the trace pipeline on commit and push, not on every turn",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "mwqnvwnkrlzmyyoypyvyzpwrqxlyovro",
+   "summary": "Correct the definition of session status",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "oxumuuukwzstsvmotsrltxkulrruulnw",
+   "summary": "Credit example authors and commit the TLA+ standard modules",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "qnukuwrtmzzusknpynmokzqrsozlnqxw",
+   "summary": "Reword the note on which examples to read first",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "qpplrqkwlytqzlotyxwmnqzlwkppzrrk",
+   "summary": "Add hand-written session notes to the trace summaries",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "pyvnvqtoztywwqxvpynyvnnxtxlmsnrt",
+   "summary": "Link the blog post now that it is on GitHub",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "tmwpqnxylpyskpltyosunrnslroswxkz",
+   "summary": "Generate a traces overview at llm-dlc/traces/README.md",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "psksvmzrplmsnluwzzsyomlrsqztlxkm",
+   "summary": "Record session traces",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "xpuzrqsqqrmkomzlmztoxqprpqwknzlr",
+   "summary": "Record session traces",
+   "sessions": [
+    "8194b9db-b315-48b6-b0eb-b6280f96252b"
+   ]
+  },
+  {
+   "change_id": "lrptsmzxylylpywnyrwkrvlpntvsyrrv",
+   "summary": "Add JML \\old to property proofs, and two Mica examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb"
+   ]
+  },
+  {
+   "change_id": "wmmltomzspwxwvxrovzzqryxqvomwrkq",
+   "summary": "Cap the feature loop's memory with a systemd scope",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "rmrslsqnnwntwprwlrtxpqzssuxwuqlk",
+   "summary": "Add regression proofs over arrays",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "vxpmpxrlvyvmvzyyzrtmkmluzooqvvnz",
+   "summary": "Check liveness and refinement in TLA+ models, and two 2PC examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "znlkpzkvszprpuwpzqzstrvxusyqvnrm",
+   "summary": "Model Raft leader election around the role machine, with action properties, and three examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "pvmtrrywwqkrkvossxsmoqzqyupknwzl",
+   "summary": "Check the Raft election model under three configurations: an inductive invariant and four servers under symmetry, with two examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "zxwrqtskyqopqzurwzmkrrmolvutrnpr",
+   "summary": "Check the Raft election model for liveness under fairness, a fourth configuration, with two new examples and 063 rechecked",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "lmlzzmnllosxxwuvxvynxtwwyuyzyvpt",
+   "summary": "Check that the Raft kernel's exception is unreachable and the two-phase-commit invariant inductive, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "kxwknsopkpxuzxxzuyttqlmknoxktxls",
+   "summary": "Generate the Raft vote rule into the election model as a second operator, add a logs configuration for the election restriction, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "wyyzsllykpvltonqypumvxonptkvqqox",
+   "summary": "Report what a model-checking verdict rests on: TLC coverage read back per contract row, a vacuous label, and three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "pmplqqnqxllotqwxsnnkquxtnmtywwtl",
+   "summary": "Check the circuit-breaker model for liveness under fairness, a second configuration, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "ptpvwuqnwlslosvxnsurrvomyrkmysvo",
+   "summary": "Check the idempotent receiver's expiry rows under a second configuration in which the record's time to live can pass, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "ytvkylpzxkotsmmkzmqtmkwnoxxtokvr",
+   "summary": "Check the Raft role machine's stale-reply rows under a sixth configuration in which a vote reply waits on the wire, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "uxqolrqvspsxnnykuxssknkwkvzwxzum",
+   "summary": "Check the Raft paper's run-wide claims, one leader per term and one vote per server per term, with history variables under a seventh configuration, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "psxurpynkysvvmunzwpluvkusuryllvw",
+   "summary": "Let the two-phase-commit coordinator crash and restart on a recovery rule generated from its own contract, under two more configurations, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "vmrumsnoumpxpzzlrxvrvlpvrkvrlryw",
+   "summary": "Hold the Java two-phase-commit nodes to the model by trace validation under a fifth configuration, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "trulsvymwtqrnlswxrvkpnpkxyzvnypr",
+   "summary": "Let the two-phase-commit participants crash and restart on a rule generated from their own contract, under two more configurations, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "nwquutrorrwmlyktvrzzqpuqymqtomxw",
+   "summary": "Model Raft log replication with the follower's append rule and the leader's commit rule as two more generated operators, under two configurations, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "zontvlwrxqnzwkxxxwopnlkpkwvpurrt",
+   "summary": "Check Raft log replication for liveness under fairness, a third configuration with three temporal properties, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "mrnsmlktnxnwzkpnoyqrvkzppzvqzzym",
+   "summary": "Generate the leader's reply rule into the Raft replication model as a third operator and let replies arrive late, twice or never under a fourth configuration, with three new examples",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "qkmnrpxrqnvornqzvukllvxpxonqvvqq",
+   "summary": "Ship the JDK models inside jvmcontract: the boxing caches, a generated Character.digit and java.nio.charset, on JBMC's class path and in the interpreter, replacing the models-library fork (verification pending)",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "owxxwxnpryyrqulpksqmqspqpuxyoypq",
+   "summary": "Add the tool's own bounded model checker: the harness executed symbolically over bit-vectors and decided by a bundled CaDiCaL, behind --engine native and auto (verification pending)",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "vrylnxvkuuxxonyvmluuprquyrnkpqso",
+   "summary": "Let the feature loop be stopped after the current cycle by typing stop in its terminal",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "xpyuxqzumlkxkypxnwlqosouqwpymntq",
+   "summary": "Give the feature loop a cycle count, adjustable while it runs, in place of the stop command",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "nmvuwkzvznlmuyruqklpzupzskvxvsvr",
+   "summary": "Add verification-loop.sh: a fresh Sonnet session runs /run-verification whenever the queue has work, and the loop watches for new jobs in between",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "ttvnuonqolxlxrntztvnzntqookkqnpy",
+   "summary": "Add a spring prompt to the feature loop: make jvmcontract more useful to expert Spring Boot developers",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "nqyuxroptymrzkwmromywxutotsyvvpn",
+   "summary": "Record session traces",
+   "sessions": [
+    "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "nmtxwrlvsosrkppzursykuppssxtwxzw",
+   "summary": "Record session traces",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "qwoxmxwmqvqqxzlpnptmqmxotsolkwzu",
+   "summary": "Limit each JBMC run's memory and report a run that dies as no verdict",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "rkokwqwynkqlmxmqtwoypvkxmqllkkxy",
+   "summary": "Count only VERIFICATION SUCCESSFUL as a proof",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "orwpokpozpmyuyslyrovrxnoxzvvouns",
+   "summary": "Give every run its own temporary paths",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "zuuzotpskotxztzmsywtnkwnwtstxysy",
+   "summary": "Mark the encodeInto regression proof as pending, with a way to run it",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "sxnxlxoumsxkzqowxwvmqrxntxxovwms",
+   "summary": "Fail integration tests when a tool they need is missing",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "omkkonymrmpqztkvoymylqwsrllrympm",
+   "summary": "Name overloaded targets by parameter types, and accept -2147483648",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "sypzolsvlzwmolzlvxonqtunskxpmvwp",
+   "summary": "Add the /verify-bytecode Claude Code skill, as a plugin with a one-command installer",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "kquontmrntwpywxktxspqvztyvtmpuoo",
+   "summary": "Let the installer take the repository's default branch",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "mnvqzqmytlpmwozlzolznuwstottzklp",
+   "summary": "Tighten two lines of the verify-bytecode skill",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "powwtmwlwnyqzvrxwtlyszqtksxkxmyk",
+   "summary": "Record the finished confined-change proof on commons-numbers#223",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "xxkyuvvzvkwznvznksnsmqxxulsnpwrv",
+   "summary": "Bring the bound and verdict findings into the verify-bytecode skill",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "kznsrskvxyltvwsvmqymxzltozmuswwy",
+   "summary": "Move the redaction rules to their own file, skip checked files, and add /review-findings",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "xvwnwwtwsumypsrsyzkkmuwpusrymmnn",
+   "summary": "Mask values next to JSON escapes in review show",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "llvonvmwwwyznswksuoryqrkqvtrvutt",
+   "summary": "Record the first /review-findings decisions",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "sutqtxlkvpmyrokopxxzumkmvmlzlmmw",
+   "summary": "Add the /add-tla-model skill, with a circuit-breaker model as its worked example",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "mvulqqqownkkqzrlptmqtyymtuovqlqx",
+   "summary": "Split examples into demo/ and real-world/, with Commons Numbers #223 as the first real-world example",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418",
+    "2e359813-25c2-4259-888b-42d3a5f0eee6"
+   ]
+  },
+  {
+   "change_id": "otrqpwxqlvzysquupkozqvmomrtzsyyt",
+   "summary": "Run the feature loop seven times on TLA examples",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "nnvtskvplpskwtypsrkzpwnvvmkzymry",
+   "summary": "Choose the feature loop's prompt by argument",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "qryqotxxwnnozyoxptvzznromtptkwuk",
+   "summary": "Add four real-world examples, a fork of JBMC's JDK models for java.nio.charset, and an OutOfMemoryError for absurd arrays in the interpreter",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "mkosrmtlvylnlpllvrzmxwyopowkxnny",
+   "summary": "Record the /review-findings decision on a cut-off home path",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "wmyuwyzspmkxznlyxuwlooqqpulmuyqx",
+   "summary": "Run the tla feature loop without a cycle limit",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "yxmowupqpvnoxtppmroqrtxomqsxkxms",
+   "summary": "Add a verification pipeline: proofs and model checks queued as committed jobs and run asynchronously under resource limits",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "xoooxlutkllqpktptktrzumoszwqzwny",
+   "summary": "Record the /review-findings decision on cut-off home paths in the feature loop's logs",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "ymmvrwmnwquvkwwrvwnrtqwynpnuxrsm",
+   "summary": "Make examples a router: one folder for every example, tags in three facets, a search, and per-example notes (verification pending)",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  },
+  {
+   "change_id": "qqzwxqxonzwusxuumououoksuqkzupts",
+   "summary": "Record session traces",
+   "sessions": [
+    "a308f9d3-8d8a-42ca-b074-d388818c2418"
+   ]
+  }
+ ]
+}

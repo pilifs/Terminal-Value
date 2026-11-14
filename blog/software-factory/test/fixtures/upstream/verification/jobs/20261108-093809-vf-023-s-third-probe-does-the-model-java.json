@@ -1,0 +1,25 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-093809-vf-023-s-third-probe-does-the-model-java",
+ "title": "VF-023's third probe: does the model java.util.List re-declaring Collection's methods fix JBMC's dispatch of size() on a choice of two lists",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:prove",
+  "B11"
+ ],
+ "links": {
+  "paths": [
+   "verification/triage/vf023-dispatch.sh",
+   "lib/models/java/util/List.java",
+   "lib/tests/conformance/conformance/Conformance.java",
+   "llm-dlc/loops/application-core-values.md"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T09:38:09+00:00",
+  "session": "b8c9cad1-a1e9-4dff-af3c-fd39c8035d6f",
+  "by": "application-core-values stream (claude-opus-5-5)"
+ },
+ "expected": "exits 0; summary.txt names each variant's six verdicts and the dispatch of size() in each probe method; as-is: oneAssumed proved, the other five not verified; declared: the hypothesis holds if all six are proved"
+}

@@ -1,0 +1,24 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-200158-application-core-phase-5-step-4-j4-s-cos",
+ "title": "application-core Phase 5 step 4: J4's cost report at the merged revision, all five cases with preparation, solving and replay apart",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:compare",
+  "bmc:native"
+ ],
+ "links": {
+  "paths": [
+   "lib/tests/preparation.rs",
+   "lib/tests/fixtures/preparation",
+   "llm-dlc/loops/application-core.md"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T20:01:58+00:00",
+  "session": "6ca21bdf-4743-4500-90ea-7fe6280624b2",
+  "by": "claude-opus-5-5"
+ },
+ "expected": "The step exits 0 (the process status), and the benchmark's assertions hold, which are its verdicts: every repeat and the process reach the same verdicts; under after, unrelated-edit and helper-rewrite the route POST /quotes and Pricing#total, #withQuantity and #discount verified, POST /quotes/text unresolved, Money#cents and Quote#quantity unchecked; under offset the route and total refuted; the reruns and the unrelated edit prove nothing again; in the helper rewrite total is proved again on a new proof of discount (a key other than the cold run's), the helper's own proof a miss, withQuantity an exact hit. The report has six scenarios. The figures are for these fixtures only."
+}

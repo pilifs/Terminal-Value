@@ -1,0 +1,24 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-070211-application-core-values-v2-step-1-the-co",
+ "title": "application-core values V2 step 1: the conformance corpus under --engine auto and auto --confirm, now that the own checker runs the immutable-list models",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:prove",
+  "bmc:native",
+  "B11"
+ ],
+ "links": {
+  "paths": [
+   "lib/tests/conformance.rs",
+   "lib/src/bmc/mod.rs",
+   "lib/src/models.rs",
+   "llm-dlc/loops/application-core-values.md"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T07:02:11+00:00"
+ },
+ "expected": "exits 0: the_corpus_agrees_with_the_jvm_under_jbmc_and_auto and the_corpus_agrees_with_the_jvm_under_auto_confirm both pass"
+}

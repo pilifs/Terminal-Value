@@ -1,0 +1,613 @@
+{
+ "schema": "llm-trace-index/v1",
+ "sessions": [
+  {
+   "session_id": "3048539b-c311-5e68-b776-b0f94623d4ac",
+   "title": null,
+   "status": "ended",
+   "started": null,
+   "ended": null,
+   "models": [],
+   "turns": 0,
+   "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "manifest": "traces/3048539b-c311-5e68-b776-b0f94623d4ac/manifest.json",
+   "summary": "traces/3048539b-c311-5e68-b776-b0f94623d4ac/summary.md",
+   "commits": []
+  },
+  {
+   "session_id": "8194b9db-b315-48b6-b0eb-b6280f96252b",
+   "title": "LLM formal verification examples",
+   "status": "ended",
+   "started": "2026-10-31T01:39:26.314Z",
+   "ended": "2026-10-31T12:13:55.577Z",
+   "models": [
+    "claude-fable-5-1",
+    "claude-opus-5-5"
+   ],
+   "turns": 21,
+   "log_sha256": "5c7af483c8d0b0d085f9469026f81e130ef8809b345cc418ce7a4b1252243e8c",
+   "manifest": "traces/8194b9db-b315-48b6-b0eb-b6280f96252b/manifest.json",
+   "summary": "traces/8194b9db-b315-48b6-b0eb-b6280f96252b/summary.md",
+   "commits": [
+    {
+     "change_id": "pqkrtxsktnwttqvwprxslwnklqrtvtuz",
+     "commit_id": "68f6567ca4e36d524cf74d031be494b6c75e9973",
+     "summary": "Add symbolic, capability and TLA+ verification examples 006 to 012"
+    },
+    {
+     "change_id": "oxumuuukwzstsvmotsrltxkulrruulnw",
+     "commit_id": "94edaf9a9369b57ee1438e9f45033aafb700a4f7",
+     "summary": "Credit example authors and commit the TLA+ standard modules"
+    },
+    {
+     "change_id": "qnukuwrtmzzusknpynmokzqrsozlnqxw",
+     "commit_id": "582c96cb23427ab844375635dd773eb860edfd68",
+     "summary": "Reword the note on which examples to read first"
+    },
+    {
+     "change_id": "qpplrqkwlytqzlotyxwmnqzlwkppzrrk",
+     "commit_id": "74ba0f5b0d58bb283f2627823611e9d45f2bd9b7",
+     "summary": "Add hand-written session notes to the trace summaries"
+    },
+    {
+     "change_id": "pyvnvqtoztywwqxvpynyvnnxtxlmsnrt",
+     "commit_id": "33f6d560a9c0d68e6d4ec7697a26a4094f338146",
+     "summary": "Link the blog post now that it is on GitHub"
+    },
+    {
+     "change_id": "tmwpqnxylpyskpltyosunrnslroswxkz",
+     "commit_id": "e5859c085671a236624e10f764b05203473b5621",
+     "summary": "Generate a traces overview at llm-dlc/traces/README.md"
+    },
+    {
+     "change_id": "nmzlvwzkkymwnqozwmyyzrpluyvsykzx",
+     "commit_id": "27db4f065afa08fab62179fb901f9a1d2861a96b",
+     "summary": "Run the trace pipeline on commit and push, not on every turn"
+    },
+    {
+     "change_id": "mwqnvwnkrlzmyyoypyvyzpwrqxlyovro",
+     "commit_id": "b6c67e7d80cac0a53f5e715ad53b747be233d52c",
+     "summary": "Correct the definition of session status"
+    },
+    {
+     "change_id": "psksvmzrplmsnluwzzsyomlrsqztlxkm",
+     "commit_id": "fbeba20c6aa4c178a47f80edd8c046f1ff0b3f5b",
+     "summary": "Record session traces"
+    },
+    {
+     "change_id": "xpuzrqsqqrmkomzlmztoxqprpqwknzlr",
+     "commit_id": "fca7ebf9185b2d42e9144ccaab549341064b06b8",
+     "summary": "Record session traces"
+    },
+    {
+     "change_id": "wwszokpyuvonttyqkxwlyupwqotwvlpn",
+     "commit_id": "205acad30b4cdcf30c3e53006bba6bacb2eca270",
+     "summary": "Record session traces"
+    }
+   ]
+  },
+  {
+   "session_id": "360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb",
+   "title": "Rust Java formal verification library",
+   "status": "ended",
+   "started": "2026-10-31T16:29:55.396Z",
+   "ended": "2026-11-04T13:14:35.836Z",
+   "models": [
+    "claude-fable-5-1"
+   ],
+   "turns": 270,
+   "log_sha256": "034b5e2bcdf61ac0085bfc79613375e162c900957be603020a3c116abd8e5189",
+   "manifest": "traces/360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb/manifest.json",
+   "summary": "traces/360e8b8b-8e0c-4b2a-bd69-25b32f2a54eb/summary.md",
+   "commits": [
+    {
+     "change_id": "lrptsmzxylylpywnyrwkrvlpntvsyrrv",
+     "commit_id": "fecdf6eda270c092b27d95ef6b2829531bdc25b0",
+     "summary": "Add JML \\old to property proofs, and two Mica examples"
+    },
+    {
+     "change_id": "wmmltomzspwxwvxrovzzqryxqvomwrkq",
+     "commit_id": "6a5a1237de760dc5152339e5eaed718902794ad4",
+     "summary": "Cap the feature loop's memory with a systemd scope"
+    },
+    {
+     "change_id": "rmrslsqnnwntwprwlrtxpqzssuxwuqlk",
+     "commit_id": "9c482d83ea46ffa736d8583dd7def725659ca83b",
+     "summary": "Add regression proofs over arrays"
+    },
+    {
+     "change_id": "vxpmpxrlvyvmvzyyzrtmkmluzooqvvnz",
+     "commit_id": "ec7198e28d1d76a52e1ab42d5a7675fe3c5cab11",
+     "summary": "Check liveness and refinement in TLA+ models, and two 2PC examples"
+    },
+    {
+     "change_id": "znlkpzkvszprpuwpzqzstrvxusyqvnrm",
+     "commit_id": "412de95d305bf183aea2c2f02150030548d00df5",
+     "summary": "Model Raft leader election around the role machine, with action properties, and three examples"
+    },
+    {
+     "change_id": "pvmtrrywwqkrkvossxsmoqzqyupknwzl",
+     "commit_id": "4d1b9e76c16329e7c98e65219532b897768f2213",
+     "summary": "Check the Raft election model under three configurations: an inductive invariant and four servers under symmetry, with two examples"
+    },
+    {
+     "change_id": "zxwrqtskyqopqzurwzmkrrmolvutrnpr",
+     "commit_id": "7eb37b9d4cdd8b0a160ed87fed60bcab90a65c77",
+     "summary": "Check the Raft election model for liveness under fairness, a fourth configuration, with two new examples and 063 rechecked"
+    },
+    {
+     "change_id": "lmlzzmnllosxxwuvxvynxtwwyuyzyvpt",
+     "commit_id": "a95f7c394ef88a28af879224b6a678c86fff9d8b",
+     "summary": "Check that the Raft kernel's exception is unreachable and the two-phase-commit invariant inductive, with three new examples"
+    },
+    {
+     "change_id": "kxwknsopkpxuzxxzuyttqlmknoxktxls",
+     "commit_id": "aa18ec89864da622985b6d5e576048ccd5a7e860",
+     "summary": "Generate the Raft vote rule into the election model as a second operator, add a logs configuration for the election restriction, with three new examples"
+    },
+    {
+     "change_id": "wyyzsllykpvltonqypumvxonptkvqqox",
+     "commit_id": "40f5d51184fc7127e942e0fa8ea2b70b0c4a739c",
+     "summary": "Report what a model-checking verdict rests on: TLC coverage read back per contract row, a vacuous label, and three new examples"
+    },
+    {
+     "change_id": "pmplqqnqxllotqwxsnnkquxtnmtywwtl",
+     "commit_id": "9cca72a195d3ee511cb8b9b9b6efa0d2310220b8",
+     "summary": "Check the circuit-breaker model for liveness under fairness, a second configuration, with three new examples"
+    },
+    {
+     "change_id": "ptpvwuqnwlslosvxnsurrvomyrkmysvo",
+     "commit_id": "5d5c1f04e47eb34beebab72029d6d405e906e246",
+     "summary": "Check the idempotent receiver's expiry rows under a second configuration in which the record's time to live can pass, with three new examples"
+    },
+    {
+     "change_id": "ytvkylpzxkotsmmkzmqtmkwnoxxtokvr",
+     "commit_id": "82ee5d84d3143710f2cfd2b3d4f809cc1af6284a",
+     "summary": "Check the Raft role machine's stale-reply rows under a sixth configuration in which a vote reply waits on the wire, with three new examples"
+    },
+    {
+     "change_id": "uxqolrqvspsxnnykuxssknkwkvzwxzum",
+     "commit_id": "9edafdf30881797651c05b428cf6b24f1cecc731",
+     "summary": "Check the Raft paper's run-wide claims, one leader per term and one vote per server per term, with history variables under a seventh configuration, with three new examples"
+    },
+    {
+     "change_id": "psxurpynkysvvmunzwpluvkusuryllvw",
+     "commit_id": "9bc8b2ababd9110b397f15f934309ab44fd8d76b",
+     "summary": "Let the two-phase-commit coordinator crash and restart on a recovery rule generated from its own contract, under two more configurations, with three new examples"
+    },
+    {
+     "change_id": "vmrumsnoumpxpzzlrxvrvlpvrkvrlryw",
+     "commit_id": "dff5ae7b0be963d52c72f72cf13e7277c5c25433",
+     "summary": "Hold the Java two-phase-commit nodes to the model by trace validation under a fifth configuration, with three new examples"
+    },
+    {
+     "change_id": "trulsvymwtqrnlswxrvkpnpkxyzvnypr",
+     "commit_id": "836c5528699c1d2c705d69938537d4ea1f1ef78f",
+     "summary": "Let the two-phase-commit participants crash and restart on a rule generated from their own contract, under two more configurations, with three new examples"
+    },
+    {
+     "change_id": "nwquutrorrwmlyktvrzzqpuqymqtomxw",
+     "commit_id": "f1a366b0c7e459a054eafe32996c395e62bc3238",
+     "summary": "Model Raft log replication with the follower's append rule and the leader's commit rule as two more generated operators, under two configurations, with three new examples"
+    },
+    {
+     "change_id": "zontvlwrxqnzwkxxxwopnlkpkwvpurrt",
+     "commit_id": "e78371c09ad51f05c5b84c8127b022b2fb5b6a0e",
+     "summary": "Check Raft log replication for liveness under fairness, a third configuration with three temporal properties, with three new examples"
+    },
+    {
+     "change_id": "mrnsmlktnxnwzkpnoyqrvkzppzvqzzym",
+     "commit_id": "3da85051ffb30bbbac0479d1474d95f814e97fe5",
+     "summary": "Generate the leader's reply rule into the Raft replication model as a third operator and let replies arrive late, twice or never under a fourth configuration, with three new examples"
+    },
+    {
+     "change_id": "qkmnrpxrqnvornqzvukllvxpxonqvvqq",
+     "commit_id": "4abee307b92269414c1420282637ddfdd5461988",
+     "summary": "Ship the JDK models inside jvmcontract: the boxing caches, a generated Character.digit and java.nio.charset, on JBMC's class path and in the interpreter, replacing the models-library fork (verification pending)"
+    },
+    {
+     "change_id": "owxxwxnpryyrqulpksqmqspqpuxyoypq",
+     "commit_id": "d2a7f4f03af3f88a3536eee1b9d283a0431ec1f8",
+     "summary": "Add the tool's own bounded model checker: the harness executed symbolically over bit-vectors and decided by a bundled CaDiCaL, behind --engine native and auto (verification pending)"
+    },
+    {
+     "change_id": "vrylnxvkuuxxonyvmluuprquyrnkpqso",
+     "commit_id": "f20fcafbbf55ddea923790270da7209f9effab75",
+     "summary": "Let the feature loop be stopped after the current cycle by typing stop in its terminal"
+    },
+    {
+     "change_id": "xpyuxqzumlkxkypxnwlqosouqwpymntq",
+     "commit_id": "fe28c530d3b204bfdf726ca1adf181e664344901",
+     "summary": "Give the feature loop a cycle count, adjustable while it runs, in place of the stop command"
+    },
+    {
+     "change_id": "nmvuwkzvznlmuyruqklpzupzskvxvsvr",
+     "commit_id": "ba71115cf3d4ae41f1579ff12460283a32defbf6",
+     "summary": "Add verification-loop.sh: a fresh Sonnet session runs /run-verification whenever the queue has work, and the loop watches for new jobs in between"
+    },
+    {
+     "change_id": "ttvnuonqolxlxrntztvnzntqookkqnpy",
+     "commit_id": "da4ce8b65470a2298904c398a7249a42f1f0fe72",
+     "summary": "Add a spring prompt to the feature loop: make jvmcontract more useful to expert Spring Boot developers"
+    },
+    {
+     "change_id": "nqyuxroptymrzkwmromywxutotsyvvpn",
+     "commit_id": "b736a57a26b06db7ec3ded909dca11ea9e17f18e",
+     "summary": "Record session traces"
+    }
+   ]
+  },
+  {
+   "session_id": "a308f9d3-8d8a-42ca-b074-d388818c2418",
+   "title": "Feature-loop memory safeguards",
+   "status": "ended",
+   "started": "2026-11-01T14:42:53.464Z",
+   "ended": "2026-11-03T02:32:23.889Z",
+   "models": [
+    "claude-opus-5-5"
+   ],
+   "turns": 45,
+   "log_sha256": "021aafd86a2410020e3deb34be71fb8507b7b24da8d7a253823dd54821e65942",
+   "manifest": "traces/a308f9d3-8d8a-42ca-b074-d388818c2418/manifest.json",
+   "summary": "traces/a308f9d3-8d8a-42ca-b074-d388818c2418/summary.md",
+   "commits": [
+    {
+     "change_id": "wmmltomzspwxwvxrovzzqryxqvomwrkq",
+     "commit_id": "6a5a1237de760dc5152339e5eaed718902794ad4",
+     "summary": "Cap the feature loop's memory with a systemd scope"
+    },
+    {
+     "change_id": "qwoxmxwmqvqqxzlpnptmqmxotsolkwzu",
+     "commit_id": "91a89c35d7395a95479ea14e24d43c58157cdb1d",
+     "summary": "Limit each JBMC run's memory and report a run that dies as no verdict"
+    },
+    {
+     "change_id": "rmrslsqnnwntwprwlrtxpqzssuxwuqlk",
+     "commit_id": "9c482d83ea46ffa736d8583dd7def725659ca83b",
+     "summary": "Add regression proofs over arrays"
+    },
+    {
+     "change_id": "rkokwqwynkqlmxmqtwoypvkxmqllkkxy",
+     "commit_id": "e3086ba7a293573dddbc8e58724cb1b08ed8aaec",
+     "summary": "Count only VERIFICATION SUCCESSFUL as a proof"
+    },
+    {
+     "change_id": "orwpokpozpmyuyslyrovrxnoxzvvouns",
+     "commit_id": "4e71db472f5620ac570d6a3ecb8dd2b2711d0fdb",
+     "summary": "Give every run its own temporary paths"
+    },
+    {
+     "change_id": "zuuzotpskotxztzmsywtnkwnwtstxysy",
+     "commit_id": "faf718e7a57b132e3f1fd04a64fa6ebcbfb1d7eb",
+     "summary": "Mark the encodeInto regression proof as pending, with a way to run it"
+    },
+    {
+     "change_id": "sxnxlxoumsxkzqowxwvmqrxntxxovwms",
+     "commit_id": "27d000c4086eda3821bb8d68d77852c2083706b9",
+     "summary": "Fail integration tests when a tool they need is missing"
+    },
+    {
+     "change_id": "omkkonymrmpqztkvoymylqwsrllrympm",
+     "commit_id": "3d9e150f198d521a2e20083b6a610a06368d6e86",
+     "summary": "Name overloaded targets by parameter types, and accept -2147483648"
+    },
+    {
+     "change_id": "sypzolsvlzwmolzlvxonqtunskxpmvwp",
+     "commit_id": "56e5956a75e54246c1968db53567581921de7be8",
+     "summary": "Add the /verify-bytecode Claude Code skill, as a plugin with a one-command installer"
+    },
+    {
+     "change_id": "kquontmrntwpywxktxspqvztyvtmpuoo",
+     "commit_id": "d067b4aa6d0ad623f441bffb9462d4a29f3d38cc",
+     "summary": "Let the installer take the repository's default branch"
+    },
+    {
+     "change_id": "mnvqzqmytlpmwozlzolznuwstottzklp",
+     "commit_id": "63d28609173282d7e2889ceb3fb443020e722b81",
+     "summary": "Tighten two lines of the verify-bytecode skill"
+    },
+    {
+     "change_id": "powwtmwlwnyqzvrxwtlyszqtksxkxmyk",
+     "commit_id": "463d1f2f9060de209128eb2c067a6a603956302b",
+     "summary": "Record the finished confined-change proof on commons-numbers#223"
+    },
+    {
+     "change_id": "xxkyuvvzvkwznvznksnsmqxxulsnpwrv",
+     "commit_id": "e040de4fb621f3d7ac1cdfd9343ddb326256ba74",
+     "summary": "Bring the bound and verdict findings into the verify-bytecode skill"
+    },
+    {
+     "change_id": "kznsrskvxyltvwsvmqymxzltozmuswwy",
+     "commit_id": "f85d0be5ef5b2bb1d9daa729f53e5a9ca4130d83",
+     "summary": "Move the redaction rules to their own file, skip checked files, and add /review-findings"
+    },
+    {
+     "change_id": "xvwnwwtwsumypsrsyzkkmuwpusrymmnn",
+     "commit_id": "a0e84b7cbf0a8d5629409eec2d0fd81ee25cc8a7",
+     "summary": "Mask values next to JSON escapes in review show"
+    },
+    {
+     "change_id": "llvonvmwwwyznswksuoryqrkqvtrvutt",
+     "commit_id": "2144089190d4de03af688d160d178143ef55efda",
+     "summary": "Record the first /review-findings decisions"
+    },
+    {
+     "change_id": "nmtxwrlvsosrkppzursykuppssxtwxzw",
+     "commit_id": "c877432df1a48d831c12572edfd6abbd691dc667",
+     "summary": "Record session traces"
+    },
+    {
+     "change_id": "sutqtxlkvpmyrokopxxzumkmvmlzlmmw",
+     "commit_id": "2ed4b44369e81a22b2e1ddebb8529f433f5a675c",
+     "summary": "Add the /add-tla-model skill, with a circuit-breaker model as its worked example"
+    },
+    {
+     "change_id": "mvulqqqownkkqzrlptmqtyymtuovqlqx",
+     "commit_id": "112bd52cfe842909b57355d891e8564d0a5d116c",
+     "summary": "Split examples into demo/ and real-world/, with Commons Numbers #223 as the first real-world example"
+    },
+    {
+     "change_id": "otrqpwxqlvzysquupkozqvmomrtzsyyt",
+     "commit_id": "61b7a5f18fd86a362b5796a3503eac064e8e125c",
+     "summary": "Run the feature loop seven times on TLA examples"
+    },
+    {
+     "change_id": "nnvtskvplpskwtypsrkzpwnvvmkzymry",
+     "commit_id": "c3f17f6613ed58ff1c7718364eb71c829cb45f41",
+     "summary": "Choose the feature loop's prompt by argument"
+    },
+    {
+     "change_id": "qryqotxxwnnozyoxptvzznromtptkwuk",
+     "commit_id": "710eabfd13d4a27872d2e50ebd96c7fe1ca747d1",
+     "summary": "Add four real-world examples, a fork of JBMC's JDK models for java.nio.charset, and an OutOfMemoryError for absurd arrays in the interpreter"
+    },
+    {
+     "change_id": "mkosrmtlvylnlpllvrzmxwyopowkxnny",
+     "commit_id": "b5d023a4171c4f284cc430f800370f81160c3775",
+     "summary": "Record the /review-findings decision on a cut-off home path"
+    },
+    {
+     "change_id": "wmyuwyzspmkxznlyxuwlooqqpulmuyqx",
+     "commit_id": "29efa9cfce464961c53bda4bc62cdd17a7601a4f",
+     "summary": "Run the tla feature loop without a cycle limit"
+    },
+    {
+     "change_id": "vxpmpxrlvyvmvzyyzrtmkmluzooqvvnz",
+     "commit_id": "ec7198e28d1d76a52e1ab42d5a7675fe3c5cab11",
+     "summary": "Check liveness and refinement in TLA+ models, and two 2PC examples"
+    },
+    {
+     "change_id": "znlkpzkvszprpuwpzqzstrvxusyqvnrm",
+     "commit_id": "412de95d305bf183aea2c2f02150030548d00df5",
+     "summary": "Model Raft leader election around the role machine, with action properties, and three examples"
+    },
+    {
+     "change_id": "pvmtrrywwqkrkvossxsmoqzqyupknwzl",
+     "commit_id": "4d1b9e76c16329e7c98e65219532b897768f2213",
+     "summary": "Check the Raft election model under three configurations: an inductive invariant and four servers under symmetry, with two examples"
+    },
+    {
+     "change_id": "zxwrqtskyqopqzurwzmkrrmolvutrnpr",
+     "commit_id": "7eb37b9d4cdd8b0a160ed87fed60bcab90a65c77",
+     "summary": "Check the Raft election model for liveness under fairness, a fourth configuration, with two new examples and 063 rechecked"
+    },
+    {
+     "change_id": "lmlzzmnllosxxwuvxvynxtwwyuyzyvpt",
+     "commit_id": "a95f7c394ef88a28af879224b6a678c86fff9d8b",
+     "summary": "Check that the Raft kernel's exception is unreachable and the two-phase-commit invariant inductive, with three new examples"
+    },
+    {
+     "change_id": "kxwknsopkpxuzxxzuyttqlmknoxktxls",
+     "commit_id": "aa18ec89864da622985b6d5e576048ccd5a7e860",
+     "summary": "Generate the Raft vote rule into the election model as a second operator, add a logs configuration for the election restriction, with three new examples"
+    },
+    {
+     "change_id": "wyyzsllykpvltonqypumvxonptkvqqox",
+     "commit_id": "40f5d51184fc7127e942e0fa8ea2b70b0c4a739c",
+     "summary": "Report what a model-checking verdict rests on: TLC coverage read back per contract row, a vacuous label, and three new examples"
+    },
+    {
+     "change_id": "pmplqqnqxllotqwxsnnkquxtnmtywwtl",
+     "commit_id": "9cca72a195d3ee511cb8b9b9b6efa0d2310220b8",
+     "summary": "Check the circuit-breaker model for liveness under fairness, a second configuration, with three new examples"
+    },
+    {
+     "change_id": "ptpvwuqnwlslosvxnsurrvomyrkmysvo",
+     "commit_id": "5d5c1f04e47eb34beebab72029d6d405e906e246",
+     "summary": "Check the idempotent receiver's expiry rows under a second configuration in which the record's time to live can pass, with three new examples"
+    },
+    {
+     "change_id": "ytvkylpzxkotsmmkzmqtmkwnoxxtokvr",
+     "commit_id": "82ee5d84d3143710f2cfd2b3d4f809cc1af6284a",
+     "summary": "Check the Raft role machine's stale-reply rows under a sixth configuration in which a vote reply waits on the wire, with three new examples"
+    },
+    {
+     "change_id": "uxqolrqvspsxnnykuxssknkwkvzwxzum",
+     "commit_id": "9edafdf30881797651c05b428cf6b24f1cecc731",
+     "summary": "Check the Raft paper's run-wide claims, one leader per term and one vote per server per term, with history variables under a seventh configuration, with three new examples"
+    },
+    {
+     "change_id": "psxurpynkysvvmunzwpluvkusuryllvw",
+     "commit_id": "9bc8b2ababd9110b397f15f934309ab44fd8d76b",
+     "summary": "Let the two-phase-commit coordinator crash and restart on a recovery rule generated from its own contract, under two more configurations, with three new examples"
+    },
+    {
+     "change_id": "vmrumsnoumpxpzzlrxvrvlpvrkvrlryw",
+     "commit_id": "dff5ae7b0be963d52c72f72cf13e7277c5c25433",
+     "summary": "Hold the Java two-phase-commit nodes to the model by trace validation under a fifth configuration, with three new examples"
+    },
+    {
+     "change_id": "trulsvymwtqrnlswxrvkpnpkxyzvnypr",
+     "commit_id": "836c5528699c1d2c705d69938537d4ea1f1ef78f",
+     "summary": "Let the two-phase-commit participants crash and restart on a rule generated from their own contract, under two more configurations, with three new examples"
+    },
+    {
+     "change_id": "nwquutrorrwmlyktvrzzqpuqymqtomxw",
+     "commit_id": "f1a366b0c7e459a054eafe32996c395e62bc3238",
+     "summary": "Model Raft log replication with the follower's append rule and the leader's commit rule as two more generated operators, under two configurations, with three new examples"
+    },
+    {
+     "change_id": "zontvlwrxqnzwkxxxwopnlkpkwvpurrt",
+     "commit_id": "e78371c09ad51f05c5b84c8127b022b2fb5b6a0e",
+     "summary": "Check Raft log replication for liveness under fairness, a third configuration with three temporal properties, with three new examples"
+    },
+    {
+     "change_id": "mrnsmlktnxnwzkpnoyqrvkzppzvqzzym",
+     "commit_id": "3da85051ffb30bbbac0479d1474d95f814e97fe5",
+     "summary": "Generate the leader's reply rule into the Raft replication model as a third operator and let replies arrive late, twice or never under a fourth configuration, with three new examples"
+    },
+    {
+     "change_id": "yxmowupqpvnoxtppmroqrtxomqsxkxms",
+     "commit_id": "e8187afbe3f36b1dc6b9fc4de116bf2fbc457f69",
+     "summary": "Add a verification pipeline: proofs and model checks queued as committed jobs and run asynchronously under resource limits"
+    },
+    {
+     "change_id": "xoooxlutkllqpktptktrzumoszwqzwny",
+     "commit_id": "8ce748dc3acb32664a28139a932d2a4b288e88f4",
+     "summary": "Record the /review-findings decision on cut-off home paths in the feature loop's logs"
+    },
+    {
+     "change_id": "ymmvrwmnwquvkwwrvwnrtqwynpnuxrsm",
+     "commit_id": "32ce00803797c0bd4b5fc8661a6af64ba5704703",
+     "summary": "Make examples a router: one folder for every example, tags in three facets, a search, and per-example notes (verification pending)"
+    },
+    {
+     "change_id": "qqzwxqxonzwusxuumououoksuqkzupts",
+     "commit_id": "d60616a87567e8dfc4b9ff26eec47352b4962b2d",
+     "summary": "Record session traces"
+    },
+    {
+     "change_id": "qkmnrpxrqnvornqzvukllvxpxonqvvqq",
+     "commit_id": "4abee307b92269414c1420282637ddfdd5461988",
+     "summary": "Ship the JDK models inside jvmcontract: the boxing caches, a generated Character.digit and java.nio.charset, on JBMC's class path and in the interpreter, replacing the models-library fork (verification pending)"
+    },
+    {
+     "change_id": "owxxwxnpryyrqulpksqmqspqpuxyoypq",
+     "commit_id": "d2a7f4f03af3f88a3536eee1b9d283a0431ec1f8",
+     "summary": "Add the tool's own bounded model checker: the harness executed symbolically over bit-vectors and decided by a bundled CaDiCaL, behind --engine native and auto (verification pending)"
+    },
+    {
+     "change_id": "vrylnxvkuuxxonyvmluuprquyrnkpqso",
+     "commit_id": "f20fcafbbf55ddea923790270da7209f9effab75",
+     "summary": "Let the feature loop be stopped after the current cycle by typing stop in its terminal"
+    },
+    {
+     "change_id": "xpyuxqzumlkxkypxnwlqosouqwpymntq",
+     "commit_id": "fe28c530d3b204bfdf726ca1adf181e664344901",
+     "summary": "Give the feature loop a cycle count, adjustable while it runs, in place of the stop command"
+    },
+    {
+     "change_id": "nmvuwkzvznlmuyruqklpzupzskvxvsvr",
+     "commit_id": "ba71115cf3d4ae41f1579ff12460283a32defbf6",
+     "summary": "Add verification-loop.sh: a fresh Sonnet session runs /run-verification whenever the queue has work, and the loop watches for new jobs in between"
+    },
+    {
+     "change_id": "ttvnuonqolxlxrntztvnzntqookkqnpy",
+     "commit_id": "da4ce8b65470a2298904c398a7249a42f1f0fe72",
+     "summary": "Add a spring prompt to the feature loop: make jvmcontract more useful to expert Spring Boot developers"
+    },
+    {
+     "change_id": "nqyuxroptymrzkwmromywxutotsyvvpn",
+     "commit_id": "b736a57a26b06db7ec3ded909dca11ea9e17f18e",
+     "summary": "Record session traces"
+    }
+   ]
+  },
+  {
+   "session_id": "2e359813-25c2-4259-888b-42d3a5f0eee6",
+   "title": "JVM contract bytecode verification skill",
+   "status": "ended",
+   "started": "2026-11-01T21:47:54.262Z",
+   "ended": "2026-11-02T00:48:50.285Z",
+   "models": [
+    "claude-fable-5-1"
+   ],
+   "turns": 12,
+   "log_sha256": "4e63b53eff6e08ad53da41b80349dee876fd7a7e62cd15172d4302175da1f5e3",
+   "manifest": "traces/2e359813-25c2-4259-888b-42d3a5f0eee6/manifest.json",
+   "summary": "traces/2e359813-25c2-4259-888b-42d3a5f0eee6/summary.md",
+   "commits": [
+    {
+     "change_id": "rmrslsqnnwntwprwlrtxpqzssuxwuqlk",
+     "commit_id": "9c482d83ea46ffa736d8583dd7def725659ca83b",
+     "summary": "Add regression proofs over arrays"
+    },
+    {
+     "change_id": "rkokwqwynkqlmxmqtwoypvkxmqllkkxy",
+     "commit_id": "e3086ba7a293573dddbc8e58724cb1b08ed8aaec",
+     "summary": "Count only VERIFICATION SUCCESSFUL as a proof"
+    },
+    {
+     "change_id": "orwpokpozpmyuyslyrovrxnoxzvvouns",
+     "commit_id": "4e71db472f5620ac570d6a3ecb8dd2b2711d0fdb",
+     "summary": "Give every run its own temporary paths"
+    },
+    {
+     "change_id": "zuuzotpskotxztzmsywtnkwnwtstxysy",
+     "commit_id": "faf718e7a57b132e3f1fd04a64fa6ebcbfb1d7eb",
+     "summary": "Mark the encodeInto regression proof as pending, with a way to run it"
+    },
+    {
+     "change_id": "sxnxlxoumsxkzqowxwvmqrxntxxovwms",
+     "commit_id": "27d000c4086eda3821bb8d68d77852c2083706b9",
+     "summary": "Fail integration tests when a tool they need is missing"
+    },
+    {
+     "change_id": "sypzolsvlzwmolzlvxonqtunskxpmvwp",
+     "commit_id": "56e5956a75e54246c1968db53567581921de7be8",
+     "summary": "Add the /verify-bytecode Claude Code skill, as a plugin with a one-command installer"
+    },
+    {
+     "change_id": "kquontmrntwpywxktxspqvztyvtmpuoo",
+     "commit_id": "d067b4aa6d0ad623f441bffb9462d4a29f3d38cc",
+     "summary": "Let the installer take the repository's default branch"
+    },
+    {
+     "change_id": "mnvqzqmytlpmwozlzolznuwstottzklp",
+     "commit_id": "63d28609173282d7e2889ceb3fb443020e722b81",
+     "summary": "Tighten two lines of the verify-bytecode skill"
+    },
+    {
+     "change_id": "powwtmwlwnyqzvrxwtlyszqtksxkxmyk",
+     "commit_id": "463d1f2f9060de209128eb2c067a6a603956302b",
+     "summary": "Record the finished confined-change proof on commons-numbers#223"
+    },
+    {
+     "change_id": "xxkyuvvzvkwznvznksnsmqxxulsnpwrv",
+     "commit_id": "e040de4fb621f3d7ac1cdfd9343ddb326256ba74",
+     "summary": "Bring the bound and verdict findings into the verify-bytecode skill"
+    },
+    {
+     "change_id": "kznsrskvxyltvwsvmqymxzltozmuswwy",
+     "commit_id": "f85d0be5ef5b2bb1d9daa729f53e5a9ca4130d83",
+     "summary": "Move the redaction rules to their own file, skip checked files, and add /review-findings"
+    },
+    {
+     "change_id": "xvwnwwtwsumypsrsyzkkmuwpusrymmnn",
+     "commit_id": "a0e84b7cbf0a8d5629409eec2d0fd81ee25cc8a7",
+     "summary": "Mask values next to JSON escapes in review show"
+    },
+    {
+     "change_id": "llvonvmwwwyznswksuoryqrkqvtrvutt",
+     "commit_id": "2144089190d4de03af688d160d178143ef55efda",
+     "summary": "Record the first /review-findings decisions"
+    },
+    {
+     "change_id": "nmtxwrlvsosrkppzursykuppssxtwxzw",
+     "commit_id": "c877432df1a48d831c12572edfd6abbd691dc667",
+     "summary": "Record session traces"
+    },
+    {
+     "change_id": "sutqtxlkvpmyrokopxxzumkmvmlzlmmw",
+     "commit_id": "2ed4b44369e81a22b2e1ddebb8529f433f5a675c",
+     "summary": "Add the /add-tla-model skill, with a circuit-breaker model as its worked example"
+    },
+    {
+     "change_id": "mvulqqqownkkqzrlptmqtyymtuovqlqx",
+     "commit_id": "112bd52cfe842909b57355d891e8564d0a5d116c",
+     "summary": "Split examples into demo/ and real-world/, with Commons Numbers #223 as the first real-world example"
+    }
+   ]
+  }
+ ]
+}

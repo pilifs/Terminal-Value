@@ -1,0 +1,9 @@
+{
+  "aliases": {
+    "claude-opus-5-5": "Opus 5.5",
+    "claude-sonnet-5-5": "Sonnet 5.5",
+    "claude-haiku-5-5": "Haiku 5.5",
+    "claude-fable-5-1": "Fable 5.1"
+  },
+  "note": "Display labels only; data keeps raw model ids. A raw id with no alias shows as itself. No id maps to Fable 5.2 until the author supplies a documented cohort mapping."
+}

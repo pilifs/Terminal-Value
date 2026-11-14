@@ -1,0 +1,27 @@
+{
+ "$schema": "../schema/job.schema.json",
+ "schema": "verification-job/v1",
+ "id": "20261108-214557-application-core-phase-5-the-user-s-allo",
+ "title": "application-core Phase 5: the user's allocation bounds (basket-first-claim 2, checked-claim 3), the joint acceptance and the contract with no case held",
+ "kind": "library",
+ "capabilities": [
+  "jvmcontract:equivalence",
+  "jvmcontract:prove",
+  "jvmcontract:effects",
+  "bmc:native"
+ ],
+ "links": {
+  "paths": [
+   "lib/tests/fixtures/application-core/golden",
+   "lib/tests/application_core_joint.rs",
+   "lib/tests/application_core.rs",
+   "llm-dlc/loops/application-core.md"
+  ]
+ },
+ "submitted": {
+  "at": "2026-11-08T21:45:57+00:00",
+  "session": "6ca21bdf-4743-4500-90ea-7fe6280624b2",
+  "by": "claude-opus-5-5"
+ },
+ "expected": "every step exits 0: all six joint tests, the contract's 14 and value_parameters' 10 pass, and the last step finds no call of jbmc"
+}

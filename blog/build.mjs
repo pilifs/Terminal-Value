@@ -4,6 +4,7 @@
 //   node blog/build.mjs            production build (drafts excluded)
 //   node blog/build.mjs --drafts   include drafts, mark the site noindex
 //   node blog/build.mjs --serve    also serve dist/ at http://localhost:8788
+//                                  (PORT=8791 serves on another port)
 
 import fs from 'node:fs';
 import http from 'node:http';
@@ -13,6 +14,8 @@ import { imageSize } from 'image-size';
 import { Marked } from 'marked';
 import markedFootnote from 'marked-footnote';
 import { createHighlighter } from 'shiki';
+import { loadPosts } from './posts.mjs';
+import { buildSection } from './software-factory/index.mjs';
 
 const SITE = {
   title: 'Terminal Value',
@@ -73,27 +76,6 @@ const slugify = (s) =>
     .replace(/<[^>]+>/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-
-// Front matter is a flat `key: value` block between --- lines.
-function parsePost(source) {
-  const match = source.match(/^---\n([\s\S]*?)\n---\n?/);
-  if (!match) throw new Error('Missing front matter');
-  const meta = {};
-  for (const line of match[1].split('\n')) {
-    const i = line.indexOf(':');
-    if (i === -1) continue;
-    const value = line
-      .slice(i + 1)
-      .trim()
-      .replace(/^["']|["']$/g, '');
-    meta[line.slice(0, i).trim()] =
-      value === 'true' ? true : value === 'false' ? false : value;
-  }
-  for (const key of ['title', 'date', 'description']) {
-    if (!meta[key]) throw new Error(`Missing front matter field: ${key}`);
-  }
-  return { meta, body: source.slice(match[0].length) };
-}
 
 function createMarkdown(highlighter, postDir) {
   const markdown = new Marked();
@@ -167,22 +149,6 @@ function createMarkdown(highlighter, postDir) {
   return markdown;
 }
 
-function loadPosts(highlighter) {
-  if (!fs.existsSync(POSTS_DIR)) return [];
-  return fs
-    .readdirSync(POSTS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const dir = path.join(POSTS_DIR, entry.name);
-      const source = fs.readFileSync(path.join(dir, 'index.md'), 'utf8');
-      const { meta, body } = parsePost(source);
-      const html = createMarkdown(highlighter, dir).parse(body);
-      return { slug: entry.name, dir, source, meta, html };
-    })
-    .filter((post) => includeDrafts || !post.meta.draft)
-    .sort((a, b) => b.meta.date.localeCompare(a.meta.date));
-}
-
 function layout({
   title,
   description,
@@ -192,6 +158,9 @@ function layout({
   home,
   image,
   type = 'website',
+  pageClass, // a class on <body>, for a section's own styles
+  styles = [], // extra stylesheets, after /style.css
+  scripts = [], // extra ES modules
 }) {
   const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
   return `<!doctype html>
@@ -218,7 +187,9 @@ function layout({
         : ''
     }
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.css">${styles
+      .map((href) => `\n    <link rel="stylesheet" href="${href}">`)
+      .join('')}
     <link rel="alternate" type="application/rss+xml" title="${
       SITE.title
     }" href="/feed.xml">
@@ -227,9 +198,11 @@ function layout({
         ? `<link rel="alternate" type="text/markdown" href="${markdownUrl}">`
         : ''
     }
-    <script src="/zoom.js" defer></script>
+    <script src="/zoom.js" defer></script>${scripts
+      .map((src) => `\n    <script type="module" src="${src}"></script>`)
+      .join('')}
   </head>
-  <body>
+  <body${pageClass ? ` class="${escapeHtml(pageClass)}"` : ''}>
     ${
       home ? '' : `<header class="site"><a href="/">${SITE.title}</a></header>`
     }
@@ -311,22 +284,26 @@ function renderIndex(posts) {
   return layout({ description: SITE.tagline, canonical: '/', body, home: true });
 }
 
-function renderLlmsTxt(posts) {
+function renderLlmsTxt(posts, sections = []) {
   const lines = posts.map(
     ({ slug, meta }) =>
       `- [${meta.title}](${SITE.url}/posts/${slug}/index.md): ${meta.description}`
   );
+  const more = sections.length
+    ? `\n## Sections\n\n${sections.join('\n')}\n`
+    : '';
   return `# ${SITE.title}\n\n> ${SITE.tagline} By ${
     SITE.author
   }.\n\nEvery post is available as Markdown at /posts/<slug>/index.md.\n\n## Posts\n\n${lines.join(
     '\n'
-  )}\n`;
+  )}\n${more}`;
 }
 
-function renderSitemap(posts) {
+function renderSitemap(posts, sectionUrls = []) {
   const urls = [
     '/',
     ...posts.map(({ slug }) => `/posts/${slug}/`),
+    ...sectionUrls,
     ...PROJECTS.flatMap((name) => [
       `/projects/${name}/`,
       ...(fs.existsSync(path.join(ASSETS_DIR, 'projects', name, 'compare'))
@@ -379,7 +356,10 @@ async function build() {
     themes: ['min-light', 'min-dark'],
     langs: CODE_LANGS,
   });
-  const posts = loadPosts(highlighter);
+  const posts = loadPosts(POSTS_DIR, {
+    includeDrafts,
+    render: (dir, body) => createMarkdown(highlighter, dir).parse(body),
+  });
 
   for (const name of PROJECTS) {
     if (!fs.existsSync(path.join(PROJECTS_DIR, name, 'dist', 'index.html')))
@@ -403,8 +383,18 @@ async function build() {
     fs.cpSync(post.dir, out, { recursive: true }); // images and the Markdown source
     write(path.join(out, 'index.html'), renderPost(post));
   }
+  // After the assets and projects are copied: the section writes into dist/
+  // and, while it is unpublished, removes its own files from a production build.
+  const section = buildSection({
+    outDir: OUT_DIR,
+    posts,
+    includeDrafts,
+    site: SITE,
+    layout,
+    helpers: { escapeHtml, formatDate, postImage },
+  });
   write(path.join(OUT_DIR, 'index.html'), renderIndex(posts));
-  write(path.join(OUT_DIR, 'llms.txt'), renderLlmsTxt(posts));
+  write(path.join(OUT_DIR, 'llms.txt'), renderLlmsTxt(posts, section.llms));
   write(path.join(OUT_DIR, 'feed.xml'), renderFeed(posts));
   write(
     path.join(OUT_DIR, '404.html'),
@@ -418,9 +408,10 @@ async function build() {
   // Show raw JSONL data files in the browser instead of downloading them.
   write(
     path.join(OUT_DIR, '_headers'),
-    '/posts/*.jsonl\n  Content-Type: text/plain; charset=utf-8\n'
+    '/posts/*.jsonl\n  Content-Type: text/plain; charset=utf-8\n' +
+      section.headers
   );
-  write(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(posts));
+  write(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(posts, section.sitemap));
   write(
     path.join(OUT_DIR, 'robots.txt'),
     includeDrafts
@@ -442,6 +433,7 @@ const TYPES = {
   '.js': 'text/javascript; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8',
   '.jsonl': 'text/plain; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
   '.png': 'image/png',
@@ -480,4 +472,4 @@ function serve(port = 8788) {
 }
 
 await build();
-if (args.has('--serve')) serve();
+if (args.has('--serve')) serve(Number(process.env.PORT) || 8788);
