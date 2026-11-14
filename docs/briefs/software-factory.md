@@ -1,8 +1,15 @@
-# Terminal Value: Factory page execution brief
+# Terminal Value: Software Factory page execution brief
+
+> [!NOTE]
+> **Naming (decided 2026-11-14):** the section is **Software Factory**, never "Factory" alone, in titles, routes,
+> folders, front matter and schema names, to avoid confusion with the company Factory AI. Where this brief says
+> "Factory", read "Software Factory": `/software-factory/`, `blog/software-factory/`, `collection: software-factory`,
+> `software-factory:refresh`. The decisions taken since, and the frozen contract, are in
+> [`docs/software-factory.md`](../software-factory.md) and `llm-dlc/loops/software-factory.md`.
 
 **Prepared:** 2026-11-14  
 **Implementation repository:** `pilifs/Terminal-Value`  
-**Suggested repository location:** `docs/briefs/factory.md`  
+**Repository location:** `docs/briefs/software-factory.md`  
 **Purpose:** A shared brief for a coordinator and three parallel implementation agents. Build the data contract first, then an aggregate-first Factory page and a section for Filip's authored analysis.
 
 ## 1. Product direction and agreed preferences
