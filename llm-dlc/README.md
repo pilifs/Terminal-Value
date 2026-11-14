@@ -20,6 +20,8 @@ llm-dlc/
   tools/site-integration.sh  the integration check for streams: install, build, test
   tools/prune_workspaces.py  lists jj workspaces no longer used, and whether deleting each loses nothing;
                              test_prune_workspaces.py tests it
+  tools/screenshot.sh        desktop and mobile, light and dark screenshots of a page, in headless Chromium
+                             (Playwright pinned, run with npx; --setup installs the browser)
 ```
 
 ## Set up
