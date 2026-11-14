@@ -117,7 +117,27 @@ Test it in Node.
 
 ## Progress
 
-- Nothing yet.
+- **A1 importer: done.** `readSources` reads at one sha from a checkout (`git show`), from GitHub (ref resolved once
+  through the API, files from raw.githubusercontent.com, run records listed through the contents and trees API), or
+  from a plain directory (`dir`, for the fixtures). `normalizeSources` checks schema names and required fields,
+  selects public fields, flags subagent calls, parses signals (only `tool:outcome×N` tokens), takes `expected` and
+  `submitted.session` from job records, and gives sessions, changes and jobs their campaign (run record names; a
+  summary's or title's leading campaign; else the campaign of the change's sessions or the job's submitting
+  session). Reconcile: the rollup's totals equal the sum of its sessions, and each session's entry equals its file.
+  `test/data-import.test.mjs`: 24 tests, every case of `cases.json` (refresh outcomes themselves come with A4),
+  prose markers planted in every prose field never reach a record, GitHub reading against a fake server.
+  - Real source at `7384f8c2`: GitHub and `../in-the-loop` give byte-identical files (399 inputs, 37 run records).
+    It normalizes and reconciles: 19,963 calls (260 subagent), $1,936.419143, 84 rollup sessions of 85 in the index,
+    599 changes, 309 results (103 with a submitting session), 164 examples.
+- **For the merge** (the coordinator decides):
+  - `config/source.json`, `areas.json` and `models.json` are hashed into every snapshot id, the frozen example's
+    included, so editing one fails `contract.test.mjs` until the example is regenerated. The inputs' required fields
+    are therefore in `import.mjs` (`FIELDS`); they could move into `source.json` at the merge, with the example
+    regenerated.
+  - Additions to `import.mjs`'s interface, all optional: `readSources({ dir, fetchImpl, config })`, `RawSources.runs`,
+    `loadConfig()`, and `campaign` and `rollup` on normalized records. A job's linked examples count as paths
+    `examples/<id>` for the area rule.
+- Next: A2, `aggregate` in `metrics.mjs`, with the golden test against `snapshot-example`.
 - Status: working
 
 ## Loop settings
