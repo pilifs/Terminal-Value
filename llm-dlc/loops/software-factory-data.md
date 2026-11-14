@@ -129,6 +129,26 @@ Test it in Node.
   - Real source at `7384f8c2`: GitHub and `../in-the-loop` give byte-identical files (399 inputs, 37 run records).
     It normalizes and reconciles: 19,963 calls (260 subagent), $1,936.419143, 84 rollup sessions of 85 in the index,
     599 changes, 309 results (103 with a submitting session), 164 examples.
+- **A2 aggregation: done.** `aggregate(normalized, { config, configSha256, metricDefinitions })` in `metrics.mjs`
+  builds the manifest, overview and four detail collections, all schema-valid, with the id from `identity.mjs`.
+  `test/data-metrics.test.mjs`, 13 tests:
+  - Golden: for `test/fixtures/upstream` the days, models, efforts, usage and verification tables, measures, stocks
+    and datasets deep-equal `snapshot-example`'s, and the insight texts too.
+  - One small hand-checkable input per rule: subagent calls once (and the fixture's totals equal its rollup's),
+    mixed-model sessions split by model, zero denominators (null, weighted not averaged), partial coverage (a session
+    without metrics, an unpriced call, a job without `finishedAt`, a 0-second duration, an example without verdict),
+    half-open day boundaries with gaps filled, the DST day (25 hours; spring's 23), changes with housekeeping and the
+    area rule, process apart from signals, stocks apart from periods, insights from the templates, no activity.
+  - Beyond the example, within the schema: a value with nothing to compute over is null (usage with no priced call,
+    calls with no metrics file, no jobs), and its insight is left out; a session without metrics keeps the index's
+    models and has null calls and usd; verification details hold completed jobs only (the schema needs
+    `finishedAt`); areas use the importer's campaigns (sessions' run records) and job paths; an extra
+    `examples-by-verdict` breakdown; catalog rows by count; Unassigned always shown; durations over 90 seconds in
+    minutes. Generator version stays `1`: nothing has been published yet.
+  - Real source at `7384f8c2`: valid; $1,936.419143 and 19,963 calls, as the rollup; cache reuse 97.9%; 309 jobs,
+    median 10.4 s; 22 days (2026-10-24 to 2026-11-14). Areas place 229 of 599 changes (370 Unassigned) and 209 of
+    309 jobs. Gzipped: overview 3.6 KB; details 6.9 (sessions), 41.9 (changes), 36.4 (verification) and 10.1 KB
+    (examples).
 - **For the merge** (the coordinator decides):
   - `config/source.json`, `areas.json` and `models.json` are hashed into every snapshot id, the frozen example's
     included, so editing one fails `contract.test.mjs` until the example is regenerated. The inputs' required fields
@@ -137,7 +157,7 @@ Test it in Node.
   - Additions to `import.mjs`'s interface, all optional: `readSources({ dir, fetchImpl, config })`, `RawSources.runs`,
     `loadConfig()`, and `campaign` and `rollup` on normalized records. A job's linked examples count as paths
     `examples/<id>` for the area rule.
-- Next: A2, `aggregate` in `metrics.mjs`, with the golden test against `snapshot-example`.
+- Next: A3, `computeMeasures` and `series` in `measures.mjs`, matching `aggregate`'s all-time measures unfiltered.
 - Status: working
 
 ## Loop settings
