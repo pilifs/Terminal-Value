@@ -229,6 +229,50 @@ Settled by the author on 2026-11-14:
 ## Progress
 
 - Phase 0 done interactively in session `60c94760`: commit `woxwyrxkkzmm`.
+- **M0 merge: done** (cycle 1). The three streams had stopped (`is-active` inactive for all three scopes), each
+  `done`, each working copy clean. `jj new` of `@-` and the three `@-` merged with no conflict. One test failed on
+  the merge, the frozen sitemap assertion stream B asked to change (below), and passed once changed. Then
+  `site-integration.sh` passed: `npm ci`, `build:projects`, `build` (2 posts), `build:drafts` (3 posts), 188 of 188
+  Software Factory tests, the three Python suites. `software-factory:validate`: valid. The production build is byte
+  for byte its parent `d4d33a0`'s (85 files, same sha256). The workspaces are forgotten; their directories stay
+  for the author (`prune_workspaces.py`).
+  - Each stream's full Progress is now in `llm-dlc/loops/software-factory-{data,dashboard,editorial}.md`. No stream
+    deferred anything by the timebox.
+  - **A, data** (`software-factory-data.md`): A1 importer `lnmzstnzoqrt`; A2 aggregation `uolsnvpqksnk`; A3 browser
+    measures `wtolwwvvsour`; A4 refresh `nmxxoutuylzp`; A5 first real snapshot `nzoxrqzlmyyv`, `sf1-95bf08f3ebdea3fa`
+    of in-the-loop `7384f8c2` (19,963 calls, $1,936.419143, reconciled with the rollup; first load about 29 KB gzip).
+  - **B, dashboard** (`software-factory-dashboard.md`): B1 overview `xrpswrwsmpxm`, analysis and methodology
+    `mkxwywproyvp`; B2 styles `ytuvrukrtoqk`; B3 client module `mllrslyoyyxv`; B4 tests `szuvpsotkuso`; B5 screenshot
+    review `rzlsxuxwyqvt`.
+  - **C, editorial** (`software-factory-editorial.md`): C1 selection and bylines `omtnqyxuusmq`; C2 evidence checks
+    `xswtzwpvuzlk`; C3 template `vxlpnsvvtkrm`; C4 Fable 5.1 vs. 5.2 scaffold `lpyyltmqnnls`; C5 production-leak tests
+    `wyllrqpvrmnz`; C6 the coordinator's diffs `usrxuoksolpk`.
+  - **Contract requests, decided:**
+    - B: `test/build.test.mjs` asserts the published sitemap is exactly `/software-factory/`. **Applied**: it now
+      asserts the three pages' URLs, which is what `index.mjs` lists since the analysis and methodology pages exist.
+      No version bump: no schema or record changed.
+    - A: move the inputs' required fields from `import.mjs` into `config/source.json`. **Refused**: `source.json` is
+      hashed into every snapshot id, so the move would change the committed real snapshot's id and the example's
+      for no reader-visible gain. They stay in `import.mjs` (`FIELDS`).
+    - A: optional additions to `import.mjs`'s interface (`readSources({ dir, fetchImpl, config })`,
+      `RawSources.runs`, `loadConfig()`, `campaign` and `rollup`, `refresh`'s options and result) and `measures.mjs`'s
+      `METRICS` export. **Accepted**: additive, documented in the module headers, and `METRICS` is tested equal to
+      `config/metrics.json`.
+    - A: move `source.inputs` (most of the 25 KB gzip manifest) to a detail file in a later schema version.
+      **Refused for now**: the first load is about 29 KB of the ~150 KB budget; M1 measures it again.
+    - B: "factory wall time" in `config/metrics.json`'s note on the median duration. **Refused**: it is the plain
+      word for the factory's elapsed time, not the section's name, and changing the note changes the metric
+      definitions' hash and so every snapshot id.
+  - **Carried to M1** (coordinator's files, or B's and A's now this loop's): C's five changes (export `SECTION`;
+    byline, evidence links and the evidence check in `build.mjs`; `npm run new -- --software-factory`; the
+    `AGENTS.md` section); switch B's `measures-local.js` to A's `computeMeasures` and `series` (browser and
+    `render.mjs`), keeping `trend`, `periodRange`, `torontoDay`, `datasetDays` and `usageBreakdown`; optional
+    `modulepreload` for the client modules; B's note that the area coverage reads "229 of 599 area mapping accepted"
+    (A's generator writes that note, so rewording it makes a new snapshot).
+  - **For the author** (not this loop's): at launch, add `related: software-factory` to
+    `blog/posts/reading-the-trace/index.md` (C's change 4); the Fable 5.1 vs. 5.2 draft's content, evidence and
+    cover; a Software Factory cover for the template, if wanted.
+- Next: M1.1, carry out C's coordinator changes and the switch to A's measures.
 - Status: working
 
 ## Loop settings

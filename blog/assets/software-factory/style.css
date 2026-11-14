@@ -1,0 +1,777 @@
+/* Software Factory pages. Every rule is scoped under body.software-factory, so
+   articles and the rest of the site keep their look. Colours: white and pale
+   surfaces, green accents; dark mode has its own steps, not an inversion.
+   Bars: #0ca30c on white and #2ea043 on #161b16 both pass 3:1; links #008300
+   and #5cc85c pass 4.5:1 on their surfaces. */
+
+body.software-factory {
+  --sf-bg: #f6f8f6;
+  --sf-surface: #ffffff;
+  --sf-raised: #fbfcfb;
+  --sf-text: #1b201b;
+  --sf-muted: #555d55;
+  --sf-rule: #e1e7e1;
+  --sf-rule-strong: #c9d2c9;
+  --sf-grid: #edf1ed;
+  --sf-accent: #008300;
+  --sf-mark: #0ca30c;
+  --sf-mark-hover: #087f08;
+  --sf-accent-bg: #eaf6ea;
+  --sf-note-bg: #fbf6e4;
+  --sf-note-rule: #e9dcae;
+  --sf-scroll-shadow: rgba(27, 32, 27, 0.18);
+  --sf-radius: 8px;
+  --sf-shell: 72rem;
+
+  /* The site chrome (header, footer, code) follows the section's palette. */
+  --bg: var(--sf-bg);
+  --text: var(--sf-text);
+  --muted: var(--sf-muted);
+  --rule: var(--sf-rule);
+  --accent: var(--sf-accent);
+  --code-bg: #eef2ee;
+
+  font-size: 16px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark) {
+  body.software-factory {
+    --sf-bg: #0f130f;
+    --sf-surface: #161b16;
+    --sf-raised: #1a201a;
+    --sf-text: #ecf1ec;
+    --sf-muted: #a3aca3;
+    --sf-rule: #263026;
+    --sf-rule-strong: #364236;
+    --sf-grid: #212921;
+    --sf-accent: #5cc85c;
+    --sf-mark: #2ea043;
+    --sf-mark-hover: #46b65a;
+    --sf-accent-bg: #18301a;
+    --sf-note-bg: #29250f;
+    --sf-note-rule: #4a4220;
+    --sf-scroll-shadow: rgba(0, 0, 0, 0.65);
+    --code-bg: #1f261f;
+  }
+}
+
+/* Shell: wider than the reading measure, for the site chrome too. */
+body.software-factory header.site,
+body.software-factory main,
+body.software-factory footer.site {
+  width: min(var(--sf-shell), 100%);
+}
+body.software-factory main {
+  padding: 2rem 0 2.5rem;
+}
+body.software-factory .sf-shell {
+  overflow-wrap: break-word;
+}
+body.software-factory .sf-shell code {
+  overflow-wrap: anywhere;
+}
+body.software-factory .sf-shell a {
+  color: var(--sf-accent);
+}
+body.software-factory :focus-visible {
+  outline: 2px solid var(--sf-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+body.software-factory .sf-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+body.software-factory .sf-muted {
+  color: var(--sf-muted);
+}
+body.software-factory .sf-shell h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+body.software-factory .sf-shell h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+body.software-factory .sf-shell p {
+  margin: 0 0 0.6rem;
+}
+body.software-factory .sf-caption,
+body.software-factory .sf-coverage {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+
+/* Introduction */
+body.software-factory .sf-intro {
+  margin: 0 0 1.5rem;
+}
+body.software-factory .sf-crumb {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+body.software-factory .sf-crumb a {
+  text-decoration: none;
+}
+body.software-factory .sf-intro h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+}
+body.software-factory .sf-lede {
+  max-width: 44rem;
+  color: var(--sf-muted);
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-banner {
+  max-width: 44rem;
+  margin: 1rem 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--sf-note-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-note-bg);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-controls p {
+  margin: 0;
+}
+body.software-factory .sf-range-static,
+body.software-factory .sf-freshness {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-freshness a {
+  color: inherit;
+}
+
+/* Form controls (filled in by app.js) */
+body.software-factory .sf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+body.software-factory .sf-filters[hidden],
+body.software-factory .sf-measure[hidden] {
+  display: none;
+}
+body.software-factory .sf-filters label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-shell select,
+body.software-factory .sf-shell button {
+  min-height: 2.25rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--sf-rule-strong);
+  border-radius: 6px;
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font: inherit;
+  font-size: 0.875rem;
+}
+body.software-factory .sf-shell button {
+  cursor: pointer;
+}
+body.software-factory .sf-shell button:hover {
+  border-color: var(--sf-accent);
+}
+body.software-factory .sf-view-link {
+  font-size: 0.875rem;
+}
+
+/* The new-data notice: a live region, shown with its count and a refresh
+   button only when a newer snapshot is waiting. */
+body.software-factory .sf-update {
+  flex-basis: 100%;
+}
+body.software-factory .sf-update p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--sf-accent);
+  border-radius: var(--sf-radius);
+  background: var(--sf-accent-bg);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-update p:has([data-text]:empty) {
+  display: none;
+}
+body.software-factory .sf-update [data-text]:focus {
+  outline: none;
+}
+
+/* Segmented control: the chart's measure, a radio group. The checked option
+   is bold and outlined, not only coloured. */
+body.software-factory .sf-measure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.2rem;
+  border: 1px solid var(--sf-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-raised);
+}
+body.software-factory .sf-measure label {
+  position: relative;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+body.software-factory .sf-measure input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+body.software-factory .sf-measure label:has(input:checked) {
+  border-color: var(--sf-accent);
+  background: var(--sf-accent-bg);
+  color: var(--sf-text);
+  font-weight: 600;
+}
+body.software-factory .sf-measure label:has(input:focus-visible) {
+  outline: 2px solid var(--sf-accent);
+  outline-offset: 2px;
+}
+
+/* Summary metrics: four tiles, two on a tablet, stacked on a phone. */
+body.software-factory .sf-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+body.software-factory .sf-metric,
+body.software-factory .sf-panel {
+  border: 1px solid var(--sf-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface);
+}
+body.software-factory .sf-metric {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.1rem 0.8rem;
+}
+body.software-factory .sf-metric .sf-metric-label {
+  margin: 0 0 0.3rem;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+body.software-factory .sf-metric-value {
+  margin: 0 0 0.15rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+body.software-factory .sf-metric-scope {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-metric .sf-coverage {
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-definition {
+  margin-top: auto;
+  font-size: 0.875rem;
+}
+body.software-factory .sf-shell summary {
+  color: var(--sf-accent);
+  cursor: pointer;
+}
+body.software-factory .sf-definition[open] summary {
+  margin-bottom: 0.4rem;
+}
+body.software-factory .sf-definition p {
+  color: var(--sf-muted);
+}
+body.software-factory .sf-filter-scope {
+  color: var(--sf-text) !important;
+  font-weight: 500;
+}
+
+/* Panels */
+body.software-factory .sf-panel {
+  margin: 1.25rem 0 0;
+  padding: 1.25rem 1.35rem;
+}
+body.software-factory .sf-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.4rem;
+}
+body.software-factory .sf-panel-head h2 {
+  margin: 0;
+}
+body.software-factory .sf-tag {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--sf-rule-strong);
+  border-radius: 999px;
+  background: var(--sf-raised);
+  color: var(--sf-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: 0.1em;
+}
+
+/* The trend chart: one series, so no legend; muted hairline grid. */
+body.software-factory .sf-chart-wrap {
+  margin: 0.75rem 0 0.5rem;
+}
+body.software-factory .sf-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+body.software-factory .sf-chart .sf-grid {
+  stroke: var(--sf-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+body.software-factory .sf-chart .sf-axis {
+  stroke: var(--sf-rule-strong);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+/* The wide chart, or under 30rem the compact one (taller, fewer day labels). */
+body.software-factory .sf-chart-compact {
+  display: none;
+}
+@media (max-width: 30rem) {
+  body.software-factory .sf-chart-wide { display: none; }
+  body.software-factory .sf-chart-compact { display: block; }
+}
+/* Tick text is in viewBox units (640 or 360 wide), so it scales with the
+   chart; each width range sets it to render at about 10-13px. */
+body.software-factory .sf-chart .sf-tick {
+  fill: var(--sf-muted);
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 69rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 8px; }
+}
+@media (max-width: 56rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 10px; }
+}
+@media (max-width: 44rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 13px; }
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 16px; }
+}
+@media (max-width: 30rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 12px; }
+}
+@media (max-width: 22rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 14px; }
+}
+body.software-factory .sf-chart .sf-bar {
+  fill: var(--sf-mark);
+}
+body.software-factory .sf-chart .sf-none {
+  stroke: var(--sf-rule-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+body.software-factory .sf-chart .sf-hit {
+  fill: transparent;
+}
+body.software-factory .sf-chart .sf-day:hover .sf-hit {
+  fill: var(--sf-accent);
+  fill-opacity: 0.06;
+}
+body.software-factory .sf-chart .sf-day:hover .sf-bar {
+  fill: var(--sf-mark-hover);
+}
+
+/* Tables */
+body.software-factory .sf-data-table {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+/* Wide text tables keep readable columns and scroll inside their panel. */
+/* A scrollable region is focusable (arrow keys scroll it), and a soft shadow
+   at an edge shows there is more to that side. */
+body.software-factory .sf-table-wrap {
+  overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--sf-surface) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--sf-surface) 30%, transparent) right / 2rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--sf-scroll-shadow), transparent) left / 0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--sf-scroll-shadow), transparent) right / 0.75rem 100% no-repeat scroll;
+}
+body.software-factory .sf-table-wrap > .sf-table {
+  min-width: 40rem;
+}
+body.software-factory .sf-table {
+  width: 100%;
+  margin: 0.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+body.software-factory .sf-table th,
+body.software-factory .sf-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--sf-rule);
+  text-align: left;
+  vertical-align: top;
+}
+body.software-factory .sf-table th:first-child,
+body.software-factory .sf-table td:first-child {
+  padding-left: 0;
+}
+body.software-factory .sf-table thead th {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-bottom-color: var(--sf-rule-strong);
+}
+body.software-factory .sf-table tbody th {
+  font-weight: 500;
+}
+/* Numbers line up on the right in data tables and breakdowns. */
+body.software-factory .sf-data-table .sf-table :is(td, thead th:not(:first-child)),
+body.software-factory .sf-breakdown .sf-table :is(td, thead th:not(:first-child)) {
+  text-align: right;
+  white-space: nowrap;
+}
+body.software-factory .sf-share {
+  display: inline-block;
+  width: 3.5rem;
+  height: 6px;
+  margin-left: 0.5rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--sf-grid);
+  vertical-align: 0.1em;
+}
+body.software-factory .sf-share > span {
+  display: block;
+  height: 100%;
+  background: var(--sf-mark);
+}
+/* On a phone the share bar gives the label column room. */
+@media (max-width: 30rem) {
+  body.software-factory .sf-share { width: 2.25rem; margin-left: 0.375rem; }
+  body.software-factory .sf-breakdown .sf-table :is(th, td) { padding-inline: 0.375rem; }
+  body.software-factory .sf-breakdown .sf-table :is(th, td):first-child { padding-left: 0; }
+}
+body.software-factory .sf-areas-table td {
+  min-width: 9rem;
+}
+body.software-factory .sf-areas-table code {
+  display: inline-block;
+  margin: 0 0.2rem 0.2rem 0;
+}
+
+/* Observations */
+body.software-factory .sf-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+body.software-factory .sf-insights li {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--sf-rule);
+  border-left: 3px solid var(--sf-mark);
+  border-radius: 6px;
+  background: var(--sf-raised);
+}
+body.software-factory .sf-insights li p:last-child {
+  margin: 0;
+}
+
+/* Analysis & notes: a featured post, a short list, or the empty state. */
+body.software-factory .sf-post {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+body.software-factory .sf-post:not(:has(.sf-cover)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+body.software-factory .sf-post-featured {
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  margin: 0.5rem 0 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-post-featured h2,
+body.software-factory .sf-post-featured h3 {
+  font-size: 1.25rem;
+}
+body.software-factory .sf-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border: 1px solid var(--sf-rule);
+  border-radius: 6px;
+}
+body.software-factory .sf-post :is(h2, h3) {
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-post :is(h2, h3) a {
+  color: var(--sf-text);
+  text-decoration: none;
+}
+body.software-factory .sf-post :is(h2, h3) a:hover {
+  color: var(--sf-accent);
+  text-decoration: underline;
+}
+body.software-factory .sf-post-meta {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-post-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
+  gap: 1.25rem 1.5rem;
+  margin: 0.5rem 0 1rem;
+}
+body.software-factory .sf-post-archive {
+  grid-template-columns: minmax(0, 1fr);
+}
+body.software-factory .sf-post-archive .sf-post + .sf-post {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sf-rule);
+}
+/* In the archive the featured post is one of the list: the list's rules only. */
+body.software-factory .sf-post-archive .sf-post-featured {
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+body.software-factory .sf-featured {
+  color: var(--sf-text);
+  font-weight: 600;
+}
+body.software-factory .sf-empty {
+  margin: 0.5rem 0 0;
+  padding: 1.25rem;
+  border: 1px solid var(--sf-rule);
+  border-radius: 6px;
+  background: var(--sf-raised);
+  color: var(--sf-muted);
+}
+
+/* Output and breakdowns: snapshot totals first, apart from period activity. */
+body.software-factory .sf-stocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: 1rem;
+  margin: 0.5rem 0 1.5rem;
+}
+body.software-factory .sf-stock {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--sf-rule);
+  border-radius: 6px;
+  background: var(--sf-raised);
+}
+body.software-factory .sf-stock h3 {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+body.software-factory .sf-stock .sf-coverage {
+  margin: 0;
+}
+body.software-factory .sf-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+  gap: 1.5rem 2rem;
+}
+body.software-factory .sf-breakdown {
+  min-width: 0;
+}
+
+/* Deeper exploration: closed by default, loaded when opened. */
+body.software-factory .sf-detail {
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-detail:last-child {
+  border-bottom: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-detail > summary {
+  padding: 0.6rem 0;
+  font-weight: 600;
+}
+body.software-factory .sf-detail > p {
+  margin: 0 0 0.5rem;
+}
+body.software-factory .sf-detail > div {
+  padding: 0 0 0.75rem;
+  overflow-x: auto;
+}
+body.software-factory .sf-detail-table td,
+body.software-factory .sf-detail-table th {
+  vertical-align: top;
+}
+body.software-factory .sf-detail-table tbody th {
+  font-weight: 400;
+}
+body.software-factory .sf-detail-table :is(td, th):not(.sf-wrap) {
+  white-space: nowrap;
+}
+body.software-factory .sf-detail-table .sf-wrap {
+  min-width: 14rem;
+}
+body.software-factory .sf-detail [data-shown] button {
+  margin-left: 0.5rem;
+}
+
+/* Methodology */
+body.software-factory .sf-toc {
+  margin: 0 0 0.5rem;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-facts {
+  margin: 0.5rem 0 0;
+}
+body.software-factory .sf-facts > div {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-facts > div:last-child {
+  border-bottom: 0;
+}
+body.software-factory .sf-facts dt {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-facts dd {
+  margin: 0;
+}
+body.software-factory .sf-method {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sf-rule);
+}
+/* The separate figures follow the last metric as one more ruled block. */
+body.software-factory .sf-method + h3 {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-method h3 code {
+  margin-left: 0.4rem;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+body.software-factory .sf-method .sf-facts {
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+body.software-factory .sf-list li {
+  margin: 0 0 0.4rem;
+}
+body.software-factory .sf-unavailable {
+  background: var(--sf-raised);
+}
+body.software-factory .sf-unavailable p:last-child {
+  margin: 0;
+  color: var(--sf-muted);
+}
+
+/* Section navigation at the foot of each page */
+body.software-factory .sf-foot {
+  margin: 2rem 0 0;
+  color: var(--sf-muted);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-foot [aria-current='page'] {
+  color: var(--sf-text);
+  font-weight: 600;
+}
+
+/* Tablet: two metrics a row. */
+@media (max-width: 60rem) {
+  body.software-factory .sf-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phone: everything stacked, nothing wider than the screen. */
+@media (max-width: 36rem) {
+  body.software-factory {
+    font-size: 15px;
+  }
+  body.software-factory main {
+    padding-top: 1.5rem;
+  }
+  body.software-factory .sf-intro h1 {
+    font-size: 1.625rem;
+  }
+  body.software-factory .sf-metrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+  body.software-factory .sf-panel {
+    padding: 1rem;
+  }
+  body.software-factory .sf-post,
+  body.software-factory .sf-post-featured {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.software-factory .sf-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (forced-colors: active) {
+  body.software-factory .sf-chart .sf-bar,
+  body.software-factory .sf-share > span {
+    fill: CanvasText;
+    background: CanvasText;
+  }
+}

@@ -63,7 +63,11 @@ test('a drafts build gets the section, kept out of the sitemap while unpublished
 
 test('a published section is listed in the sitemap and llms.txt', () => {
   const result = buildSection({ outDir: tmp(), posts: [], includeDrafts: false, site, layout, helpers, published: true });
-  assert.deepEqual(result.sitemap, ['/software-factory/']);
+  assert.deepEqual(result.sitemap, [
+    '/software-factory/',
+    '/software-factory/analysis/',
+    '/software-factory/methodology/',
+  ]);
   assert.match(result.llms[0], /^- \[Software Factory\]\(https:\/\/example\.invalid\/software-factory\/\)/);
 });
 

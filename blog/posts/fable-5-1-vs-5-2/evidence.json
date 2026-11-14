@@ -1,0 +1,15 @@
+{
+  "schema": "software-factory-evidence/v1",
+  "status": "incomplete",
+  "source": null,
+  "snapshotId": null,
+  "metricDefinitionsVersion": "1",
+  "pricingAsOf": null,
+  "interval": null,
+  "cohort": null,
+  "models": [{ "raw": "claude-fable-5-1", "alias": "Fable 5.1" }],
+  "exclusions": [],
+  "coverage": null,
+  "configuration": null,
+  "files": []
+}

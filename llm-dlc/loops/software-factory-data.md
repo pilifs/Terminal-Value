@@ -117,8 +117,119 @@ Test it in Node.
 
 ## Progress
 
-- Nothing yet.
-- Status: working
+- **A1 importer: done.** `readSources` reads at one sha from a checkout (`git show`), from GitHub (ref resolved once
+  through the API, files from raw.githubusercontent.com, run records listed through the contents and trees API), or
+  from a plain directory (`dir`, for the fixtures). `normalizeSources` checks schema names and required fields,
+  selects public fields, flags subagent calls, parses signals (only `tool:outcome×N` tokens), takes `expected` and
+  `submitted.session` from job records, and gives sessions, changes and jobs their campaign (run record names; a
+  summary's or title's leading campaign; else the campaign of the change's sessions or the job's submitting
+  session). Reconcile: the rollup's totals equal the sum of its sessions, and each session's entry equals its file.
+  `test/data-import.test.mjs`: 24 tests, every case of `cases.json` (refresh outcomes themselves come with A4),
+  prose markers planted in every prose field never reach a record, GitHub reading against a fake server.
+  - Real source at `7384f8c2`: GitHub and `../in-the-loop` give byte-identical files (399 inputs, 37 run records).
+    It normalizes and reconciles: 19,963 calls (260 subagent), $1,936.419143, 84 rollup sessions of 85 in the index,
+    599 changes, 309 results (103 with a submitting session), 164 examples.
+- **A2 aggregation: done.** `aggregate(normalized, { config, configSha256, metricDefinitions })` in `metrics.mjs`
+  builds the manifest, overview and four detail collections, all schema-valid, with the id from `identity.mjs`.
+  `test/data-metrics.test.mjs`, 13 tests:
+  - Golden: for `test/fixtures/upstream` the days, models, efforts, usage and verification tables, measures, stocks
+    and datasets deep-equal `snapshot-example`'s, and the insight texts too.
+  - One small hand-checkable input per rule: subagent calls once (and the fixture's totals equal its rollup's),
+    mixed-model sessions split by model, zero denominators (null, weighted not averaged), partial coverage (a session
+    without metrics, an unpriced call, a job without `finishedAt`, a 0-second duration, an example without verdict),
+    half-open day boundaries with gaps filled, the DST day (25 hours; spring's 23), changes with housekeeping and the
+    area rule, process apart from signals, stocks apart from periods, insights from the templates, no activity.
+  - Beyond the example, within the schema: a value with nothing to compute over is null (usage with no priced call,
+    calls with no metrics file, no jobs), and its insight is left out; a session without metrics keeps the index's
+    models and has null calls and usd; verification details hold completed jobs only (the schema needs
+    `finishedAt`); areas use the importer's campaigns (sessions' run records) and job paths; an extra
+    `examples-by-verdict` breakdown; catalog rows by count; Unassigned always shown; durations over 90 seconds in
+    minutes. Generator version stays `1`: nothing has been published yet.
+  - Real source at `7384f8c2`: valid; $1,936.419143 and 19,963 calls, as the rollup; cache reuse 97.9%; 309 jobs,
+    median 10.4 s; 22 days (2026-10-24 to 2026-11-14). Areas place 229 of 599 changes (370 Unassigned) and 209 of
+    309 jobs. Gzipped: overview 3.6 KB; details 6.9 (sessions), 41.9 (changes), 36.4 (verification) and 10.1 KB
+    (examples).
+- **For the merge** (the coordinator decides):
+  - `config/source.json`, `areas.json` and `models.json` are hashed into every snapshot id, the frozen example's
+    included, so editing one fails `contract.test.mjs` until the example is regenerated. The inputs' required fields
+    are therefore in `import.mjs` (`FIELDS`); they could move into `source.json` at the merge, with the example
+    regenerated.
+  - `measures.mjs` also exports `METRICS` (its copy of the filter scopes, tested against `config/metrics.json`).
+  - Additions to `import.mjs`'s interface, all optional: `readSources({ dir, fetchImpl, config })`, `RawSources.runs`,
+    `loadConfig()`, and `campaign` and `rollup` on normalized records. A job's linked examples count as paths
+    `examples/<id>` for the area rule.
+- **A3 browser measures: done.** `computeMeasures` and `series` in `measures.mjs`, a plain module (no imports, no
+  Node APIs; a test imports it from its text alone, as the browser loads `/software-factory/measures.js`). They read
+  the overview's usage and verification tables by column name. `test/data-measures.test.mjs`, 10 tests:
+  - Unfiltered, every value, numerator, denominator and coverage equals the overview's all-time measure: for the
+    published example, `aggregate` on the fixture, and a hand input. On the real source at `7384f8c2` too
+    ($1,936.419143, 19,963 calls, 97.9%, 309 jobs, 10.4 s, 599 changes, 164 examples), checked by hand: summing the
+    rounded usage cells gives the same usd as `aggregate`'s single sum.
+  - Filter scopes: an exported `METRICS` table, which a test holds equal to `config/metrics.json` (units, kinds,
+    filters) and to the overview's order. A filter a metric doesn't take is not applied and gives `filtered: false`:
+    verification with a model or effort, stocks with anything. `filtered` is true when every asked-for filter was
+    applied, so also with none asked.
+  - Empty means null: a range that shares no day with the metric's dataset (its table's first row to its last) is
+    null, a reversed or empty range too. Inside the span a quiet day is a real 0 (calls, usd); usd is null when calls
+    exist and none is priced; cache reuse is null for a zero denominator.
+  - `series` gives every calendar day in `[from, to)` (an unbounded side stops at the overview's first or last
+    day), and sums back to the measure on the fixture; it throws for a stock or an unknown metric.
+  - Coverage: `model_calls` keeps the overview's (sessions with a metrics file: the overview has no per-session
+    rows); `verification_completed` counts results without `finishedAt` as missing from every period.
+  - One change to `aggregate` to keep the two consistent: with results but no completed job,
+    `verification_completed` is null (the verification dataset has no span; its manifest bounds were null already),
+    where it was 0.
+  - `usage_share_by_model` is a value per model, so it is not one of the records. The dashboard can take a model's
+    period share as `usage_usd` with `models: [id]` over `usage_usd` unfiltered by model.
+- **A4 refresh: done.** `refresh` in `import.mjs`: read, normalize, aggregate, write the snapshot and a pointer to a
+  staging directory beside `data/` (same filesystem, so renames are atomic; removed in every case), check it with
+  `validateSnapshotDir`, then rename the snapshot into `data/snapshots/` and the pointer over `data/latest.json`.
+  `test/data-refresh.test.mjs`, 17 tests:
+  - Every case of `cases.json`, against a `data/` holding the published example: each failing case gives its code
+    and path and leaves `data/` byte for byte as it was (and a missing `data/` missing); the two optional-input cases
+    give a valid new snapshot; `stale-source` refreshed again a day later is `unchanged`, with the same snapshot
+    files and a pointer that differs only in `lastSourceCheck` (`publishedAt` stays).
+  - Other failures, also leaving `data/` untouched: aggregation throwing (code `error`), output refused by
+    `validateSnapshotDir` (`invalid`), and an existing snapshot directory of the same id with other bytes
+    (`conflict`: the same id must mean the same files).
+  - Deterministic: two refreshes of the same input and clock give identical trees, compact JSON.
+  - Retention, after a new pointer only: the current snapshot and every `sf1-` id written in any post's
+    `evidence.json` stay (read as text, so a draft's or a malformed file's still count); other `sf1-` directories go,
+    listed in `pruned`; anything else in `snapshots/` is left alone. An existing snapshot the pointer doesn't name
+    becomes current again without being rewritten.
+  - From a local checkout (a throwaway repository): its commit gives a snapshot, an unknown sha fails as `missing`.
+    That needed one importer fix: a given sha is now checked to be a commit of the checkout (it failed later, as a
+    raw git error).
+  - `refresh` also takes `dir`, `fetchImpl`, `postsDir` (default `blog/posts`), `config` and `now`, and returns
+    `{ outcome, snapshotId, sha, pruned, error }`, plus `code` and `path` on failure (documented in the header).
+  - The CLI, tried on the real checkout and then removed (A5 makes and commits it): `software-factory:refresh --sha
+    7384f8c2… --checkout ../in-the-loop` gave `new-snapshot` `sf1-95bf08f3ebdea3fa` in 1.6 s, `software-factory:validate`
+    said valid, a second refresh `unchanged`; an unknown sha exited 1 with `data/` unchanged.
+- For the merge: a failed refresh doesn't write `latest.json`, so the pointer's `lastSourceCheck.outcome: failed` is
+  never written locally (the case notes require `data/` untouched); the R2 publisher may use it.
+- **A5 first real snapshot: done.** `data/` holds `sf1-95bf08f3ebdea3fa`, of in-the-loop at `7384f8c2`, current in
+  `latest.json`.
+  - `software-factory:refresh -- --sha 7384f8c2… --checkout ../in-the-loop` gave `new-snapshot` `sf1-95bf08f3ebdea3fa`
+    (1.6 s). The same without `--checkout`, from GitHub, gave `unchanged` with the same id, and a GitHub refresh
+    into an empty directory gave byte-identical snapshot files. `software-factory:validate`: valid.
+  - Reconciled with the source, read with `git show` outside the importer: the rollup's totals are 19,963 calls,
+    $1,936.419143, 84 sessions. The index's 85 session files sum to 19,963 calls (19,963 call rows) and
+    $1,936.419143, and each of the rollup's 84 entries equals its file; the 85th session is empty (0 turns, 0
+    calls), so coverage 85 of 85 adds nothing. The overview gives `usage_usd` 1936.419143 (19,963 of 19,963 calls
+    priced), `model_calls` 19,963, cache reuse 0.979 = 3,065,744,452 / 3,132,065,529 (cache read over cache read,
+    cache write 66,189,208 and input 131,869, as the rollup's token totals), `verification_completed` 309 of the
+    results index's 309, median 10.4 s, changes 599 (the rollup's 599 commits; 53 housekeeping), examples 164 of
+    the examples index's 164 (157 with a verdict).
+  - Sizes, gzip -9 (raw): `latest.json` 0.2 KB; `overview.json` 3.6 KB (11.5); `manifest.json` 25.4 KB (84.7);
+    details: `changes` 42.3 KB (176.1), `verification` 36.0 KB (244.4), `examples` 10.1 KB (66.5), `sessions`
+    7.0 KB (37.8). The overview carries the day tables `series` reads, so the overview and series are 3.6 KB of
+    the ~150 KB budget; the first load (pointer, manifest, overview) is about 29 KB, everything 124.7 KB. Nothing
+    split or trimmed.
+  - The test suite (84) passes with `data/` in place; `npm run build` and `build:drafts` copy it to
+    `/software-factory/static-data/`.
+- For the merge: most of the manifest's size is its 399 input hashes (`source.inputs`, required by the schema). If
+  the dashboard reads the manifest on first load, a later schema version could move that list to a detail file.
+- Status: done
 
 ## Loop settings
 
