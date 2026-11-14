@@ -207,9 +207,29 @@ Test it in Node.
     said valid, a second refresh `unchanged`; an unknown sha exited 1 with `data/` unchanged.
 - For the merge: a failed refresh doesn't write `latest.json`, so the pointer's `lastSourceCheck.outcome: failed` is
   never written locally (the case notes require `data/` untouched); the R2 publisher may use it.
-- Next: A5, the first real snapshot of `7384f8c2` from the checkout and from GitHub (same id), reconciled, its gzipped
-  sizes measured, `data/` committed.
-- Status: working
+- **A5 first real snapshot: done.** `data/` holds `sf1-95bf08f3ebdea3fa`, of in-the-loop at `7384f8c2`, current in
+  `latest.json`.
+  - `software-factory:refresh -- --sha 7384f8c2… --checkout ../in-the-loop` gave `new-snapshot` `sf1-95bf08f3ebdea3fa`
+    (1.6 s). The same without `--checkout`, from GitHub, gave `unchanged` with the same id, and a GitHub refresh
+    into an empty directory gave byte-identical snapshot files. `software-factory:validate`: valid.
+  - Reconciled with the source, read with `git show` outside the importer: the rollup's totals are 19,963 calls,
+    $1,936.419143, 84 sessions. The index's 85 session files sum to 19,963 calls (19,963 call rows) and
+    $1,936.419143, and each of the rollup's 84 entries equals its file; the 85th session is empty (0 turns, 0
+    calls), so coverage 85 of 85 adds nothing. The overview gives `usage_usd` 1936.419143 (19,963 of 19,963 calls
+    priced), `model_calls` 19,963, cache reuse 0.979 = 3,065,744,452 / 3,132,065,529 (cache read over cache read,
+    cache write 66,189,208 and input 131,869, as the rollup's token totals), `verification_completed` 309 of the
+    results index's 309, median 10.4 s, changes 599 (the rollup's 599 commits; 53 housekeeping), examples 164 of
+    the examples index's 164 (157 with a verdict).
+  - Sizes, gzip -9 (raw): `latest.json` 0.2 KB; `overview.json` 3.6 KB (11.5); `manifest.json` 25.4 KB (84.7);
+    details: `changes` 42.3 KB (176.1), `verification` 36.0 KB (244.4), `examples` 10.1 KB (66.5), `sessions`
+    7.0 KB (37.8). The overview carries the day tables `series` reads, so the overview and series are 3.6 KB of
+    the ~150 KB budget; the first load (pointer, manifest, overview) is about 29 KB, everything 124.7 KB. Nothing
+    split or trimmed.
+  - The test suite (84) passes with `data/` in place; `npm run build` and `build:drafts` copy it to
+    `/software-factory/static-data/`.
+- For the merge: most of the manifest's size is its 399 input hashes (`source.inputs`, required by the schema). If
+  the dashboard reads the manifest on first load, a later schema version could move that list to a detail file.
+- Status: done
 
 ## Loop settings
 
