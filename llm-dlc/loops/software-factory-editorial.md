@@ -105,7 +105,21 @@ Under Progress, the exact changes for files you don't own:
 
 ## Progress
 
-- Nothing yet.
+- **C1 done** (2026-11-14). `editorial.mjs` implements `postSummary`, `selectPosts`, and adds `byline(post)` and
+  `evidenceLinks(post, { section })`. Tested in `test/editorial-selection.test.mjs` (12 tests); production build
+  unchanged (85 files), drafts build still builds.
+  - Front matter read: `collection: software-factory`, `author`, `featured: true` (boolean only), `evidence: FILE`,
+    and `related: software-factory`, which marks background the section links but never lists as an item.
+  - Items need the collection and a non-blank `author` of their own. `featured` is also one of `items`. Ties go to
+    the first slug, whatever the input order.
+  - A `draft: true` post is never selected, even in a drafts build: `postSummary` has no draft flag, so a page
+    couldn't mark it. The author previews a draft at its own URL.
+  - `evidenceLinks` returns '' while `section` is false, so no page links to `/software-factory/` before the
+    section is built. The coordinator passes `section: SECTION.published || includeDrafts` (C6 gives the code).
+  - **Deferred on purpose:** adding `related: software-factory` to `blog/posts/reading-the-trace/index.md`. The
+    build copies the post's Markdown into `dist/`, so the line would change a published file while the section is
+    unpublished. The coordinator adds that one line when `config/section.json` turns `published: true`.
+- Next: C2, `validateEvidence` and the evidence convention.
 - Status: working
 
 ## Loop settings
