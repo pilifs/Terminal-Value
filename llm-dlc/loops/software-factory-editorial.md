@@ -136,7 +136,19 @@ Under Progress, the exact changes for files you don't own:
   - For the coordinator (C6 will repeat it): in `build.mjs`, after `loadPosts`,
     `const problems = posts.flatMap(validateEvidence); if (problems.length) throw new Error(problems.join('\n'));`
     so every build, drafts included, fails on a problem.
-- Next: C3, the template `blog/templates/software-factory-post/`.
+- **C3 done** (2026-11-14). `blog/templates/software-factory-post/` holds `index.md` and `cover.png` (a copy of
+  `blog/templates/post/cover.png`, to be replaced). Tested in `test/editorial-template.test.mjs` (5 tests, 51 in
+  the suite). A temporary copy in `blog/posts/` built with `--drafts` (3 posts, page with cover and footnote),
+  then was removed; the production build is unchanged (85 files).
+  - Front matter: `collection: software-factory`, `author: Filip Stankovic`, `featured: false`,
+    `# evidence: evidence.json`, `image: cover.png`, `draft: true`. `parsePost` has no comments, so the commented
+    line becomes an unused key `# evidence`; nothing reads it, and `meta.evidence` stays undefined until the author
+    removes the `# `. The test pins this.
+  - The body is a NOTE box with the guidance (frozen evidence copied from `evidence.incomplete.json`, unknowns
+    null, measured versus interpreted, raw id beside display name), one opening prompt, one heading, and a
+    footnote linking `evidence.json`. It has no example images, so only `cover.png` must exist.
+  - The template is never selected and never built without drafts (tested on a copy).
+- Next: C4, the draft `blog/posts/fable-5-1-vs-5-2/`.
 - Status: working
 
 ## Loop settings
