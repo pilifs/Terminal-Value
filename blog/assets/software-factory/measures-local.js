@@ -202,3 +202,44 @@ export function trend(overview, manifest, metricId, opts = {}) {
     bounds && (p.day < bounds.first || p.day > bounds.last) ? { day: p.day, value: null } : p
   );
 }
+
+const DIMENSION_COLUMN = { model: 'model', effort: 'effort' };
+
+/**
+ * A usage breakdown (by model or by effort) recomputed for a range and filters,
+ * in the shape of overview.breakdowns rows: [{ key, label, value, share }],
+ * in the snapshot's order of models or efforts, leaving out a key with no calls
+ * in the cohort. The metric's filters decide which options apply: usage share
+ * by model doesn't take the model filter. The dashboard's own (stream A's
+ * module has no breakdowns); it stays after the merge.
+ */
+export function usageBreakdown(overview, breakdown, opts = {}) {
+  const column = DIMENSION_COLUMN[breakdown.dimension];
+  if (!column) throw new Error(`measures-local: no usage breakdown by ${breakdown.dimension}`);
+  const t = overview.usage;
+  const rows = usageRows(overview, breakdown.metricId, opts);
+  const [cKey, cCalls, cPriced, cUsd] = [col(t, column), col(t, 'calls'), col(t, 'pricedCalls'), col(t, 'usd')];
+  const keys = column === 'model' ? overview.models.map((m) => m.id) : overview.efforts;
+  const keyOf = (r) => (column === 'model' ? overview.models[r[cKey]]?.id : overview.efforts[r[cKey]]);
+  const groups = new Map(keys.map((k) => [k, { calls: 0, usd: 0 }]));
+  for (const r of rows) {
+    const g = groups.get(keyOf(r));
+    if (!g) continue;
+    g.calls += r[cCalls] ?? 0;
+    g.usd += r[cUsd] ?? 0;
+  }
+  const total = rows.reduce((s, r) => s + (r[cUsd] ?? 0), 0);
+  const calls = sum(rows, cCalls);
+  const priced = sum(rows, cPriced);
+  return {
+    rows: keys
+      .filter((k) => groups.get(k).calls > 0)
+      .map((k) => ({
+        key: k,
+        label: column === 'model' ? overview.models.find((m) => m.id === k).label : k,
+        value: groups.get(k).usd,
+        share: total > 0 ? groups.get(k).usd / total : null,
+      })),
+    coverage: { included: priced, total: calls, missing: calls - priced },
+  };
+}

@@ -191,8 +191,65 @@ only under `/software-factory/`).
   - For stream A: the coverage note on "Recorded changes by area" reads as "6 of 64 area mapping accepted".
     `formatCoverage` joins `included of total` and the note, so a note that isn't a noun phrase ("changes in a
     mapped area") reads badly.
-- Next: B3 `app.js` with its pure modules (URL state, choosing a snapshot and fallback, polling), and the client
-  tests.
+- **B3, client module** (cycle 4): `app.js` and its pure modules in `blog/assets/software-factory/`. B3 is done.
+  - Modules: `state.js` (URL state: parse, serialize, fit to a snapshot, the view in words), `snapshot.js` (loading,
+    checks and fallback), `poll.js` (the poller, with its clock and visibility passed in), `view.js` (pieces drawn
+    by both the build and the browser) and `details.js` (the exploration's tables). `measures-local.js` gains
+    `usageBreakdown`, which recomputes the by-model and by-effort breakdowns for a view; A's module has no
+    breakdowns, so it stays after the merge. `app.js` only reads and writes the page.
+  - Controls: date range (all time, last 7 or 30 days, ending on the snapshot's last day), model and effort
+    selects, the chart's measure, and "Link to this view". The URL is canonical (`?period=7d&model=…`, defaults
+    left out, unknown values dropped). Each change is a `pushState`, and back and forward redraw the view.
+    Focus stays on the control the reader used.
+  - Filter reach: each summary metric's scope line names the period and filters it follows, and the ones that
+    don't apply ("Last 7 days · jobs · the model filter doesn't apply"). The chart caption does the same. The two
+    usage breakdowns follow the view, tagged with what they follow. Snapshot breakdowns, stocks ("no filter
+    applies"), observations ("the filters don't change them") and the exploration say the filters don't reach
+    them. The unfiltered view shows the snapshot's own all-time values, as the static page does.
+  - Data: `firstSnapshot` tries `/software-factory/data/`, and on a 404, an HTML answer, an HTTP or network error,
+    a timeout (8 s) or any failed check loads the bundled snapshot, whole. The checks: pointer, manifest and
+    overview structure, one snapshot id throughout, and each file's bytes and SHA-256 against its manifest
+    (SubtleCrypto). The full schema check stays in `validate.mjs`, because `schema.json` isn't public.
+  - Polling: every 45 s while the tab is visible. It sends `If-None-Match`, and fetches the manifest and overview
+    only for a new snapshot id. A new check or a hidden tab aborts the request in flight. Errors keep the view.
+    It polls the remote pointer unless that route was missing; otherwise the bundled pointer, which changes on a
+    redeploy. A newer snapshot is announced in a live region with its count ("New data published (as of …): 6
+    more recorded changes.") and a "Show the new data" button. Nothing changes until the reader clicks; then
+    the filters are kept and open details reload from the new snapshot. A new source check of the same snapshot
+    only updates the quiet freshness line.
+  - Lazy details: a `details/*.json` loads when its panel is first opened, from the snapshot's own base, checked
+    against the manifest. It shows 20 rows, then "Show all" (focus moves to the count line). A failed load says
+    so and offers "Try again"; it is never replaced with other data.
+  - `render.mjs` now draws the metric scopes, chart caption, breakdown rows and tags, observations, freshness,
+    stocks and exploration caption with `view.js`, and carries the hooks `app.js` updates (`data-sf-freshness`,
+    `data-sf-insights`, `data-breakdown` with `data-rows`, `data-tag` and `data-coverage`, `data-stock`,
+    `data-sf-source`, `data-count`, `data-json`). The page without a snapshot has no `data-snapshot`, so
+    `app.js` leaves it static.
+  - Tests: `client-state` (6: the round trip of all 180 states, canonical links, unknown values, periods, the
+    sentence), `client-snapshot` (11: remote whole; fallback on 404, HTML, 503 and network failure; six refused
+    tampered remotes with nothing of them used; neither loadable; the first visit with filters on the fallback;
+    abort; the client refusing what `validate.mjs` refuses; conditional polling; details from their own base;
+    the announcement), `client-poll` (5) and `client-view` (5: labels against config, breakdowns against the
+    snapshot's, filter reach, the detail tables and their escaping). 81 tests, 80 pass; the one failure is the
+    frozen sitemap assertion above.
+  - In headless Chromium (Playwright) on the example:
+    - a first visit with `?period=7d&model=claude-opus-5-5&measure=model_calls` fell back to the bundled data
+      with those filters;
+    - filters, the measure (by arrow keys too), back and forward worked;
+    - all four details loaded on opening;
+    - a simulated new snapshot was announced with focus left on a select, and applied on the click with the
+      filters kept;
+    - no horizontal overflow at 390px with every detail open.
+    The browser logs the remote route's 404 while no Function serves it; that is expected.
+  - Production build byte-identical (85 files). The drafts build is made from the example and from no snapshot.
+  - Sizes, gzip -9: `index.html` 5.0 KB, `style.css` 3.9 KB, `app.js` 4.2 KB. All nine client modules come to
+    18.8 KB gzipped, unbundled ES modules up to three imports deep.
+  - For the merge: with A's `measures.mjs`, `app.js` imports `computeMeasures` from `./measures.js` (the copy
+    `index.mjs` makes) and keeps `trend` and `usageBreakdown` from `measures-local.js`. Optional, for the
+    coordinator: `<link rel="modulepreload">` for the modules in `layout()` would save the import round trips.
+- Next: B4. Check the render and client tests against the brief's list (numbers in the static HTML, no "Live",
+  stock and period labels, all four states, a populated analysis list, escaping; the client tests are in), and
+  fill any gap. Then B5, the full screenshot review and sizes.
 - Status: working
 
 ## Loop settings

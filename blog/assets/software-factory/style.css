@@ -194,6 +194,32 @@ body.software-factory .sf-shell button {
 body.software-factory .sf-shell button:hover {
   border-color: var(--sf-accent);
 }
+body.software-factory .sf-view-link {
+  font-size: 0.875rem;
+}
+
+/* The new-data notice: a live region, shown with its count and a refresh
+   button only when a newer snapshot is waiting. */
+body.software-factory .sf-update {
+  flex-basis: 100%;
+}
+body.software-factory .sf-update p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--sf-accent);
+  border-radius: var(--sf-radius);
+  background: var(--sf-accent-bg);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-update p:has([data-text]:empty) {
+  display: none;
+}
+body.software-factory .sf-update [data-text]:focus {
+  outline: none;
+}
 
 /* Segmented control: the chart's measure, a radio group. The checked option
    is bold and outlined, not only coloured. */
@@ -577,9 +603,28 @@ body.software-factory .sf-detail > summary {
   padding: 0.6rem 0;
   font-weight: 600;
 }
+body.software-factory .sf-detail > p {
+  margin: 0 0 0.5rem;
+}
 body.software-factory .sf-detail > div {
   padding: 0 0 0.75rem;
   overflow-x: auto;
+}
+body.software-factory .sf-detail-table td,
+body.software-factory .sf-detail-table th {
+  vertical-align: top;
+}
+body.software-factory .sf-detail-table tbody th {
+  font-weight: 400;
+}
+body.software-factory .sf-detail-table :is(td, th):not(.sf-wrap) {
+  white-space: nowrap;
+}
+body.software-factory .sf-detail-table .sf-wrap {
+  min-width: 14rem;
+}
+body.software-factory .sf-detail [data-shown] button {
+  margin-left: 0.5rem;
 }
 
 /* Methodology */

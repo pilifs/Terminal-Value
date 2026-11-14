@@ -26,6 +26,20 @@ import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
+import {
+  breakdownRows,
+  breakdownTag,
+  breakdownUnit,
+  chartCaption,
+  dataAsOf,
+  exploreSourceHtml,
+  freshnessHtml,
+  insightItems,
+  metricScope,
+  REPO,
+  shortSha,
+  stockTexts,
+} from '../assets/software-factory/view.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const METRIC_CONFIG = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'metrics.json'), 'utf8'));
@@ -35,7 +49,6 @@ const AREAS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'areas.json')
 const TITLE = 'Software Factory';
 const DESCRIPTION =
   'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches.';
-const REPO = 'https://github.com/pilifs/in-the-loop';
 
 const FILTER_WORDS = { period: 'date range', model: 'model', effort: 'effort' };
 const DIMENSION_WORDS = {
@@ -73,14 +86,7 @@ export function filterScope(metricId) {
     .join(' and ')} filter${missing.length > 1 ? 's do' : ' does'} not apply.`;
 }
 
-const scopeLabel = (scope) => (scope === 'snapshot' ? 'Snapshot total' : 'All time');
-const shortSha = (sha) => String(sha).slice(0, 7);
-
-/** The last calendar day with data in the snapshot: its own date, never the reader's clock. */
-export function dataAsOf(snapshot) {
-  const days = snapshot.overview.days;
-  return days.length ? days[days.length - 1] : null;
-}
+export { dataAsOf };
 
 function banner(fixture, e) {
   return fixture
@@ -91,18 +97,7 @@ function banner(fixture, e) {
 }
 
 function intro({ snapshot, fixture, e, formatDate }) {
-  let freshness = '';
-  if (snapshot) {
-    const { pointer, manifest } = snapshot;
-    const asOf = dataAsOf(snapshot);
-    const checked = pointer.lastSourceCheck?.at ? torontoDay(pointer.lastSourceCheck.at) : null;
-    freshness =
-      `<p class="sf-freshness">` +
-      (asOf ? `Published data as of <time datetime="${asOf}">${e(formatDate(asOf))}</time>` : 'Published data, with no dated activity') +
-      ` · in-the-loop <a href="${REPO}/tree/${e(manifest.source.sha)}"><code>${e(shortSha(manifest.source.sha))}</code></a>` +
-      (checked ? ` · source checked <time datetime="${checked}">${e(formatDate(checked))}</time>` : '') +
-      `</p>`;
-  }
+  const freshness = snapshot ? `<p class="sf-freshness" data-sf-freshness>${freshnessHtml(snapshot, formatDate)}</p>` : '';
   return `      <header class="sf-intro">
         <h1>${TITLE}</h1>
         <p class="sf-lede">${e(
@@ -122,7 +117,7 @@ function metricCard(measure, e) {
   return `          <article class="sf-metric" id="metric-${e(measure.id)}" data-metric="${e(measure.id)}">
             <h3 class="sf-metric-label">${e(m.label)}</h3>
             <p class="sf-metric-value" data-value>${e(formatValue(measure.value, measure.unit))}</p>
-            <p class="sf-metric-scope" data-scope>${e(scopeLabel(measure.scope))} · ${e(UNIT_WORDS[measure.unit])}</p>
+            <p class="sf-metric-scope" data-scope>${e(metricScope(measure))}</p>
             <p class="sf-coverage" data-coverage>Coverage: ${e(formatCoverage(measure.coverage))}</p>
             <details class="sf-definition">
               <summary>Definition</summary>
@@ -163,7 +158,7 @@ function trendSection(snapshot, e) {
           <h2 id="sf-trend-heading">Trend</h2>
           <fieldset class="sf-measure" data-sf-measure hidden><legend class="sf-visually-hidden">Measure</legend>${options}</fieldset>
         </div>
-        <p class="sf-caption" data-sf-caption>${e(m.label)} per day, in ${e(UNIT_WORDS[m.unit])}. Days are calendar days in Toronto; a day the data doesn't cover shows no column.</p>
+        <p class="sf-caption" data-sf-caption>${e(chartCaption(id))}</p>
         <div class="sf-chart-wrap" data-sf-chart>${chartSvg(points, { label: m.label, unit: m.unit })}</div>
         <details class="sf-data-table">
           <summary>Data table</summary>
@@ -172,26 +167,12 @@ function trendSection(snapshot, e) {
       </section>`;
 }
 
-function insightTarget(insight) {
-  if (insight.evidence.breakdown) return `#breakdown-${insight.evidence.breakdown}`;
-  if (insight.evidence.collection !== 'overview') return `#explore-${insight.evidence.collection}`;
-  return `#metric-${insight.metricId}`;
-}
-
-function observations(snapshot, e) {
-  const items = snapshot.overview.insights
-    .slice(0, 3)
-    .map(
-      (i) =>
-        `<li><p>${e(i.text)}</p><p class="sf-coverage">Coverage: ${e(formatCoverage(i.coverage))} · <a href="${e(
-          insightTarget(i)
-        )}">See the data</a></p></li>`
-    )
-    .join('\n          ');
+function observations(snapshot) {
+  const items = insightItems(snapshot.overview.insights);
   return `      <section class="sf-panel sf-observations" aria-labelledby="sf-observations-title">
         <h2 id="sf-observations-title">Observations</h2>
-        <p class="sf-caption">Calculated from the data. They describe; they don't explain or rank.</p>
-        <ul class="sf-insights">
+        <p class="sf-caption">Calculated from all the data in the snapshot; the filters don't change them. They describe; they don't explain or rank.</p>
+        <ul class="sf-insights" data-sf-insights>
           ${items}
         </ul>
       </section>`;
@@ -227,51 +208,39 @@ function analysis(posts, { e, formatDate, route }) {
 }
 
 function breakdownTable(b, e) {
-  const valueUnit = b.metricId === 'usage_share_by_model' ? 'usd' : METRIC[b.metricId].unit;
+  const valueUnit = breakdownUnit(b);
   const title = `${BREAKDOWN_BASE[b.metricId] ?? METRIC[b.metricId].label} ${DIMENSION_WORDS[b.dimension] ?? ''}`.trim();
-  const rows = b.rows
-    .map((r) => {
-      const share = r.share === null || r.share === undefined ? null : r.share;
-      const bar = share === null ? '' : `<span class="sf-share" aria-hidden="true"><span style="width:${(share * 100).toFixed(1)}%"></span></span>`;
-      return `<tr><th scope="row">${e(r.label)}</th><td>${e(formatValue(r.value, valueUnit))}</td><td>${
-        share === null ? '<span class="sf-muted">No data</span>' : e(formatValue(share, 'ratio'))
-      }${bar}</td></tr>`;
-    })
-    .join('');
+  const rows = breakdownRows(b.rows, valueUnit);
   const note = b.dimension === 'area' ? ' Changes no area rule places are Unassigned.' : '';
-  return `          <section class="sf-breakdown" id="breakdown-${e(b.id)}" aria-labelledby="breakdown-${e(b.id)}-title">
+  return `          <section class="sf-breakdown" id="breakdown-${e(b.id)}" data-breakdown="${e(b.id)}" aria-labelledby="breakdown-${e(b.id)}-title">
             <h3 id="breakdown-${e(b.id)}-title">${e(title)}</h3>
-            <p class="sf-caption"><span class="sf-tag">${e(scopeLabel(b.scope))}</span> ${e(filterScope(b.metricId))}${e(note)}</p>
+            <p class="sf-caption"><span class="sf-tag" data-tag>${e(breakdownTag(b))}</span> ${e(filterScope(b.metricId))}${e(note)}</p>
             <table class="sf-table"><thead><tr><th scope="col">${e(DIMENSION_WORDS[b.dimension]?.replace(/^by /, '') ?? b.dimension)}</th><th scope="col">${e(
               UNIT_WORDS[valueUnit][0].toUpperCase() + UNIT_WORDS[valueUnit].slice(1)
-            )}</th><th scope="col">Share</th></tr></thead><tbody>${rows}</tbody></table>
-            <p class="sf-coverage">Coverage: ${e(formatCoverage(b.coverage))}</p>
+            )}</th><th scope="col">Share</th></tr></thead><tbody data-rows>${rows}</tbody></table>
+            <p class="sf-coverage" data-coverage>Coverage: ${e(formatCoverage(b.coverage))}</p>
           </section>`;
 }
-
-const counts = (obj) =>
-  Object.entries(obj)
-    .map(([k, n]) => `${n} ${k}`)
-    .join(', ');
 
 function output(snapshot, e) {
   const { stocks, breakdowns } = snapshot.overview;
   const sha = snapshot.manifest.source.sha;
-  const ex = stocks.examples;
+  const text = stockTexts(stocks);
+  const at = `<span class="sf-tag">Snapshot total</span> at <code>${e(shortSha(sha))}</code>`;
   return `      <section class="sf-panel sf-output" id="output" aria-labelledby="sf-output-title">
         <h2 id="sf-output-title">Output and breakdowns</h2>
         <div class="sf-stocks">
-          <article class="sf-stock" id="metric-changes_recorded">
+          <article class="sf-stock" id="metric-changes_recorded" data-stock="changes">
             <h3>${e(METRIC.changes_recorded.label)}</h3>
-            <p class="sf-metric-value">${e(formatValue(stocks.changes.total, 'changes'))}</p>
-            <p class="sf-metric-scope"><span class="sf-tag">Snapshot total</span> at <code>${e(shortSha(sha))}</code>, not activity over a period</p>
-            <p class="sf-coverage">${e(`${stocks.changes.housekeeping} of them trace-publication housekeeping, counted apart`)}</p>
+            <p class="sf-metric-value" data-value>${e(text.changes.value)}</p>
+            <p class="sf-metric-scope">${at}, not activity over a period; no filter applies</p>
+            <p class="sf-coverage" data-coverage>${e(text.changes.note)}</p>
           </article>
-          <article class="sf-stock" id="metric-examples_catalog">
+          <article class="sf-stock" id="metric-examples_catalog" data-stock="examples">
             <h3>${e(METRIC.examples_catalog.label)}</h3>
-            <p class="sf-metric-value">${e(formatValue(ex.total, 'examples'))}</p>
-            <p class="sf-metric-scope"><span class="sf-tag">Snapshot total</span> at <code>${e(shortSha(sha))}</code>, not examples per period</p>
-            <p class="sf-coverage">${e(`Origin: ${counts(ex.origin)}. Verdict: ${counts(ex.verdict)}. Vacuous: ${ex.vacuous}. Freshness: ${counts(ex.freshness)}.`)}</p>
+            <p class="sf-metric-value" data-value>${e(text.examples.value)}</p>
+            <p class="sf-metric-scope">${at}, not examples per period; no filter applies</p>
+            <p class="sf-coverage" data-coverage>${e(text.examples.note)}</p>
           </article>
         </div>
         <div class="sf-breakdowns">
@@ -287,15 +256,14 @@ function explore(snapshot, { e, paths }) {
     const c = manifest.collections.find((x) => x.name === d.name);
     if (!c) return '';
     return `          <details class="sf-detail" id="explore-${d.name}" data-sf-detail="${d.name}" data-path="${e(c.path)}">
-            <summary>${e(d.label)} <span class="sf-muted">(${e(c.records.toLocaleString('en-US'))})</span></summary>
-            <div data-sf-detail-body><p class="sf-caption">${e(d.note)}. Loaded when opened; also as <a href="${e(base + c.path)}">JSON</a>.</p></div>
+            <summary>${e(d.label)} <span class="sf-muted">(<span data-count>${e(c.records.toLocaleString('en-US'))}</span>)</span></summary>
+            <p class="sf-caption">${e(d.note)}. Loaded when opened; also as <a data-json href="${e(base + c.path)}">JSON</a>.</p>
+            <div data-sf-detail-body></div>
           </details>`;
   }).join('\n');
   return `      <section class="sf-panel sf-explore" id="explore" aria-labelledby="sf-explore-title">
         <h2 id="sf-explore-title">Deeper exploration</h2>
-        <p class="sf-caption">Raw ids and records, from in-the-loop at <a href="${REPO}/tree/${e(manifest.source.sha)}"><code>${e(
-          manifest.source.sha
-        )}</code></a>. Snapshot <code>${e(manifest.snapshotId)}</code>.</p>
+        <p class="sf-caption" data-sf-source>${exploreSourceHtml(manifest)}</p>
 ${items}
       </section>`;
 }
@@ -315,7 +283,7 @@ function overviewPage({ snapshot, unavailable, fixture, posts, helpers, paths })
     ? ` data-snapshot="${e(snapshot.manifest.snapshotId)}" data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`
     : ` data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`;
   const parts = snapshot
-    ? [summary(snapshot, e), trendSection(snapshot, e), observations(snapshot, e), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
+    ? [summary(snapshot, e), trendSection(snapshot, e), observations(snapshot), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
     : [unavailableNotice(unavailable, e), analysis(posts, { e, formatDate, route: paths.route })];
   const footer = footNav(paths, e, '');
   return {
