@@ -1,6 +1,6 @@
 # Brief: Software Factory, stream C (editorial)
 
-**Status of the brief**: drafted 2026-11-14 after Phase 0; awaiting the author's review.
+**Status of the brief**: drafted 2026-11-14 after Phase 0; approved by the author on 2026-11-14.
 
 One stream of [`software-factory.md`](software-factory.md), run by `run-streams.sh software-factory` in the jj
 workspace `software-factory-editorial`, on a branch of its own. It makes the author's analysis a first-class part of

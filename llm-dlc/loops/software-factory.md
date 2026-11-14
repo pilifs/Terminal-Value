@@ -1,7 +1,7 @@
 # Brief: Software Factory section
 
-**Status of the brief**: drafted 2026-11-14 after Phase 0; awaiting the author's review before
-`run-streams.sh software-factory`.
+**Status of the brief**: drafted 2026-11-14 after Phase 0; approved by the author on 2026-11-14, with the decisions
+[below](#decisions).
 
 A brief for [`tools/feature-loop.sh`](../tools/feature-loop.sh), run as three parallel streams and then this loop,
 which merges them, finishes Milestone 1 and builds Milestone 2. Run it all, from the default workspace in tmux, with
@@ -65,7 +65,7 @@ The [standing rules](brief-template.md#standing-rules), the [timebox](brief-temp
 - **Network**: npm installs, GitHub (raw files and the API, for in-the-loop at a pinned SHA), and fetching the
   design references named in the plan for their look only. No credentials, no Cloudflare API, no uploads.
 - **What needs the author** goes under Progress with what they must do, and the work around it goes on. Examples:
-  creating buckets, tokens, secrets, deploying, publishing the section, the area mapping's review.
+  running `blog/software-factory/ops/setup-r2.sh`, creating the R2 token, deploying, publishing the section.
 
 ## Streams
 
@@ -137,9 +137,11 @@ cycle of this loop does nothing and makes no commit, which stops the loop.
    - the empty analysis state, a populated one (on a temporary published copy in a test, never committed), the
      unavailable-data state and the fixture banner all render;
    - existing posts and the project demo are unchanged.
-5. **Visual review**: desktop and mobile, light and dark, for the four states above. Use screenshots if a headless
-   browser can be run without adding a dependency to `package.json` (for example `npx -y playwright@<a version at
-   least two weeks old> screenshot`). Otherwise list exactly what the author should look at.
+5. **Visual review**: desktop and mobile, light and dark, for the four states above.
+   - Take the shots with `llm-dlc/tools/screenshot.sh URL OUT_PREFIX` against a local preview (`PORT=8790 npm run
+     dev`), into the scratchpad or `/tmp`, never the repo.
+   - Look at every shot.
+   - Fix what is wrong in B's files (this loop's after the merge), and record what was checked.
 
 ### M2. Milestone 2: published-data updates without rebuilding
 
@@ -154,8 +156,15 @@ Built to the R2 decision under [Decisions](#decisions), with tests that need no 
 
    Test it with a fake binding under `node --test`, and with Wrangler Pages local development if it runs without an
    account.
-2. **Configuration**: the binding for preview and production, in the form Pages reads, with the bucket names the
-   decision gives. Note under Progress anything that only the dashboard or an account can set.
+2. **Configuration**: a repo `wrangler.toml` for the Pages project, with `pages_build_output_dir = "dist"` and
+   `SOFTWARE_FACTORY_DATA` bound to `software-factory-data` (production) and `software-factory-data-preview`
+   (preview).
+   - Once that file exists, Pages takes its bindings from it, so it must carry the project's existing settings. Build
+     on `blog/software-factory/ops/terminal-value.pages-config.toml` if the author has copied it in (made by
+     `setup-r2.sh`).
+   - Otherwise write the file and record under Progress that the author must compare it with the project's
+     settings before the first deploy.
+   - `npm run deploy` and `deploy:dev` must keep working with it.
 3. **Publisher** `blog/software-factory/publish.mjs` (coordinator-owned):
    - runs A's `refresh` into staging and validates it;
    - uploads a new snapshot's files, then reads them back and checks their sha256;
@@ -163,8 +172,13 @@ Built to the R2 decision under [Decisions](#decisions), with tests that need no 
    - never replaces a pointer whose snapshot comes from a newer source commit than its own;
    - an unchanged source updates only `lastSourceCheck`.
 
-   Separate preview and production destinations; credentials only from the environment. Test it against a fake
-   store: failure at each step leaves the previous pointer, and an older run never overwrites a newer pointer.
+   - Destinations: separate preview and production.
+   - Uploads: R2's S3-compatible API (`https://ACCOUNT.r2.cloudflarestorage.com`), signed with SigV4 in Node, with
+     no new dependency.
+   - Credentials: only from `SOFTWARE_FACTORY_R2_ACCOUNT_ID`, `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and
+     `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY` (a bucket-scoped token).
+   - Tests against a fake store: failure at each step leaves the previous pointer, and an older run never overwrites
+     a newer pointer.
 4. **Workflow** `.github/workflows/software-factory-refresh.yml`: `workflow_dispatch`, plus a 15-minute schedule
    that does nothing unless the repository variable `SOFTWARE_FACTORY_SCHEDULE` is `on`. A concurrency group
    serializes runs. Secrets are named, never valued, in docs/software-factory.md.
@@ -189,7 +203,6 @@ Built to the R2 decision under [Decisions](#decisions), with tests that need no 
 - **A runtime producer on the factory machine**: only the contract (`runtime` in schema.json) and its examples.
 - **The Fable 5.1 vs. 5.2 comparison**: data imported later from the other project. Here, only the general
   editorial capability and the draft scaffold.
-- **Reviewing the area mapping**: the author's. The data stream applies the proposed one, with Unassigned.
 
 ## Decisions
 
@@ -200,12 +213,18 @@ Settled by the author on 2026-11-14:
 2. Phase 0 was done interactively before the streams.
 3. Three streams (data, dashboard, editorial); this loop merges them and builds Milestone 2.
 4. Loops run on `claude-opus-5-5` at high effort. The Fable comparison comes later, with data from another project.
-5. Phase 0 proposed an area mapping for direction; the data stream starts with Unassigned for whatever the mapping
-   doesn't place.
+5. The area mapping Phase 0 proposed (`config/areas.json`) is accepted as the initial mapping. What it doesn't
+   place goes to Unassigned.
 6. `/verify-bytecode/` stays unseen: no deploys from here until the author brings in its source.
-7. **R2 (to confirm before running)**: new buckets `software-factory-data` (production) and
-   `software-factory-data-preview` (preview), bound as `SOFTWARE_FACTORY_DATA`. Option 1 in docs/software-factory.md.
-   The author creates them later.
+7. **R2**: new buckets `software-factory-data` (production) and `software-factory-data-preview` (preview), bound as
+   `SOFTWARE_FACTORY_DATA`. Option 1 in docs/software-factory.md.
+   - The author creates them on another machine with `blog/software-factory/ops/setup-r2.sh`, which also saves the
+     Pages project's current settings.
+   - The author also creates a bucket-scoped R2 API token, stored as the three `SOFTWARE_FACTORY_R2_*` GitHub
+     secrets.
+   - This machine gets updated over ssh when they are ready.
+8. A headless browser is set up on this machine (Playwright 1.64.1's Chromium, run by
+   `llm-dlc/tools/screenshot.sh`) for visual review; `screenshot.sh --setup` prepares another machine.
 
 ## Progress
 

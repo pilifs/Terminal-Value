@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "status": "proposed",
-  "note": "Direction from Phase 0, for the author to review. Areas of the factory's work in in-the-loop, separate from the example tags (payments, consensus, ...), which are a taxonomy of examples. Anything no rule places goes to Unassigned, which is always shown.",
+  "status": "accepted",
+  "note": "Proposed in Phase 0 and accepted by the author on 2026-11-14 as the initial mapping. Areas of the factory's work in in-the-loop, separate from the example tags (payments, consensus, ...), which are a taxonomy of examples. Anything no rule places goes to Unassigned, which is always shown.",
   "rule": "A record's area is the area of its longest matching campaign (a campaign matches the record's campaign when equal, or when the record's starts with it followed by '-'); else the area whose paths contain every path the record links (a path matches when it starts with one of the area's paths); else unassigned. A record's campaign is the loop brief a session's runs name, or a change summary's leading campaign name, as in 'application-core Phase 5 step 3: ...'.",
   "unassigned": { "id": "unassigned", "label": "Unassigned" },
   "areas": [

@@ -1,6 +1,6 @@
 # Brief: Software Factory, stream B (dashboard)
 
-**Status of the brief**: drafted 2026-11-14 after Phase 0; awaiting the author's review.
+**Status of the brief**: drafted 2026-11-14 after Phase 0; approved by the author on 2026-11-14.
 
 One stream of [`software-factory.md`](software-factory.md), run by `run-streams.sh software-factory` in the jj
 workspace `software-factory-dashboard`, on a branch of its own. It builds the three Software Factory pages, their
@@ -108,9 +108,12 @@ only under `/software-factory/`).
 
 1. Build the drafts site on the example (`SOFTWARE_FACTORY_DATA_DIR=blog/software-factory/test/fixtures/snapshot-example
    PORT=8791 npm run dev`).
-2. Look at desktop and mobile, light and dark, if a headless browser can be run without a `package.json` dependency
-   (for example `npx -y playwright@<a version at least two weeks old> screenshot`). Otherwise write down what the
-   author should check.
+2. Look at desktop and mobile, light and dark, with `llm-dlc/tools/screenshot.sh URL OUT_PREFIX` (headless
+   Chromium, set up on this machine).
+   - Shoot every page in each state: the example, no snapshot, the empty and populated analysis.
+   - Write the shots to the scratchpad or `/tmp`, never the repo.
+   - Look at every image, fix what is wrong, and shoot again.
+   - Record under Progress what was checked.
 3. Measure the gzipped sizes of the page, `style.css` and `app.js`, and record them.
 
 ## Done when
@@ -121,7 +124,7 @@ only under `/software-factory/`).
 | B2 | Scoped styles; existing pages unchanged; usable at phone width in both themes |
 | B3 | URL state, fallback, conditional polling and lazy details work, with logic in tested pure modules |
 | B4 | Render and client tests pass |
-| B5 | Sizes recorded; screenshots taken or a precise checklist left for the author |
+| B5 | Sizes recorded; every page and state looked at in screenshots, in both widths and themes |
 
 ## Progress
 

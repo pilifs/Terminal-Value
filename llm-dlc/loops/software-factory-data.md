@@ -1,6 +1,6 @@
 # Brief: Software Factory, stream A (data)
 
-**Status of the brief**: drafted 2026-11-14 after Phase 0; awaiting the author's review.
+**Status of the brief**: drafted 2026-11-14 after Phase 0; approved by the author on 2026-11-14.
 
 One stream of [`software-factory.md`](software-factory.md), run by `run-streams.sh software-factory` in the jj
 workspace `software-factory-data`, on a branch of its own. It turns in-the-loop's published metadata into the
@@ -19,7 +19,7 @@ snapshot the pages show: importer, aggregation, browser measures, refresh, and t
 ## What you own
 
 `blog/software-factory/import.mjs`, `metrics.mjs`, `measures.mjs`, `config/source.json`, `config/areas.json`
-(applying it; its review is the author's), `config/models.json`, `data/`, and `test/data-*.test.mjs`. Nothing else.
+(accepted by the author as the initial mapping: apply it as written), `config/models.json`, `data/`, and `test/data-*.test.mjs`. Nothing else.
 Record any need for another file (a `package.json` script, a `build.mjs` change, a contract change) under Progress.
 
 ## The plan

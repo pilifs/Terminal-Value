@@ -66,7 +66,7 @@ what it needs under its Progress, and the merge does it.
 
 | Owner | Files |
 | --- | --- |
-| Coordinator (Phase 0, then the merge loop) | `blog/build.mjs`, `blog/posts.mjs`, `blog/new-post.mjs`, `blog/assets/style.css`, `package.json`, `package-lock.json`, `blog/software-factory/index.mjs`, `cli.mjs`, `functions/`, `wrangler.toml`, `.github/workflows/`, `docs/software-factory.md`, site navigation and the home page |
+| Coordinator (Phase 0, then the merge loop) | `blog/build.mjs`, `blog/posts.mjs`, `blog/new-post.mjs`, `blog/assets/style.css`, `package.json`, `package-lock.json`, `blog/software-factory/index.mjs`, `cli.mjs`, `ops/`, `functions/`, `wrangler.toml`, `.github/workflows/`, `docs/software-factory.md`, site navigation and the home page |
 | Contract (frozen; changes only at the merge) | `schema.json`, `validate.mjs`, `identity.mjs`, `config/metrics.json`, `config/section.json`, `test/contract.test.mjs`, `test/build.test.mjs`, `test/fixtures/upstream/`, `snapshot-example/`, `cases.*`, `make-*.mjs` |
 | A, data | `import.mjs`, `metrics.mjs`, `measures.mjs`, `config/source.json`, `config/areas.json`, `config/models.json`, `data/`, `test/data-*.test.mjs` |
 | B, dashboard | `render.mjs`, `blog/assets/software-factory/`, `test/render-*.test.mjs`, `test/client-*.test.mjs` |
@@ -121,7 +121,8 @@ session. Stocks take none. Calendar days are America/Toronto, rebucketed from UT
 
 ## Areas
 
-`config/areas.json` is a proposed mapping, for the author to review. It has six areas of the factory's work
+`config/areas.json` was proposed in Phase 0 and accepted by the author on 2026-11-14 as the initial mapping. It
+has six areas of the factory's work
 (verification engine, example catalog, runtime evidence, verification pipeline, agent process, skills and plugins),
 matched by campaign (loop brief names, change summaries) and then by path. Anything else goes to **Unassigned**,
 which is always shown. The data stream applies the rule as written, and the example already puts 58 of its 64
@@ -136,19 +137,21 @@ npm run software-factory:refresh -- --sha <sha> [--checkout ../in-the-loop]
 npm run software-factory:validate    # the committed snapshot
 npm run build && npm run build:drafts
 PORT=8791 npm run dev                # a second preview beside another on 8788
+llm-dlc/tools/screenshot.sh http://localhost:8791/software-factory/ /tmp/sf/overview   # 4 shots: desktop/mobile x light/dark
+llm-dlc/tools/screenshot.sh --setup  # headless Chromium on another machine (prints the apt line if libraries are missing)
 SOFTWARE_FACTORY_DATA_DIR=blog/software-factory/test/fixtures/snapshot-example npm run dev   # preview on the fixture
 ```
 
-## Milestone 2: serving from R2 (decision pending)
+## Milestone 2: serving from R2
 
 The Pages Function serves `/software-factory/data/*` with GET and HEAD only, from one R2 bucket binding:
 `latest.json` with `Cache-Control: no-cache` and a correct ETag, and immutable caching under `snapshots/`. A
 publisher job runs the same importer, uploads a new snapshot's files, checks them, and only then replaces
 `latest.json`. The job runs one at a time, and never lets an older run overwrite a newer pointer.
 
-Options for the bucket:
+**Decided on 2026-11-14: option 1.** The options were:
 
-1. **New buckets, one per environment (recommended):** `software-factory-data` for production and
+1. **New buckets, one per environment (chosen):** `software-factory-data` for production and
    `software-factory-data-preview` for preview, both bound as `SOFTWARE_FACTORY_DATA` in the Pages project. They
    stay apart from `llm-traces`, which holds redacted session logs behind the in-the-loop CDN Worker. A
    publishing token scoped to these two buckets can't touch the logs.
@@ -157,6 +160,15 @@ Options for the bucket:
 3. **No R2:** each refresh commits a snapshot and redeploys the site (Milestone 1 only). Simplest, but every data
    update is a deploy.
 
-Whichever is chosen, the merge loop writes the function, its config and the workflow, with tests that run without
-credentials. The author creates the buckets and the token (wrangler isn't logged in on this machine) and adds the
-workflow's secrets.
+The merge loop writes the function, its config and the workflow, with tests that run without credentials. The
+author's part happens on a machine where wrangler is logged in:
+
+1. `blog/software-factory/ops/setup-r2.sh` (`--dry-run` first, if you like). It creates both buckets in `enam` if
+   missing, and checks each by writing, reading back and deleting an object. It saves the Pages project's current
+   settings as `terminal-value.pages-config.toml`: copy that into `blog/software-factory/ops/`, so the repo's
+   `wrangler.toml` keeps them.
+2. In the dashboard, create an R2 API token with Object Read & Write on these two buckets only.
+3. Store its values as the GitHub secrets `SOFTWARE_FACTORY_R2_ACCOUNT_ID`, `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and
+   `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY` (`setup-r2.sh --github` asks for them with hidden input and sets them
+   with `gh`).
+4. Turn the schedule on with the repository variable `SOFTWARE_FACTORY_SCHEDULE=on` once a manual run has worked.
