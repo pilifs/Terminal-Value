@@ -81,6 +81,8 @@ test('values are formatted in their unit, and missing is never 0', () => {
   assert.equal(formatValue(85.6, 'seconds'), '86 s');
   assert.equal(formatValue(null, 'usd'), 'No data');
   assert.equal(formatTick(20000, 'calls'), '20K');
+  assert.deepEqual([0, 5, 10, 15].map((t) => formatTick(t, 'usd')), ['$0', '$5', '$10', '$15']);
+  assert.deepEqual([2.5, 0.01].map((t) => formatTick(t, 'usd')), ['$2.50', '$0.01']);
   assert.equal(formatCoverage({ included: 4, total: 5, note: 'sessions with a metrics file' }), '4 of 5 sessions with a metrics file');
 });
 
@@ -88,7 +90,14 @@ test('the chart has clean ticks and an accessible name', () => {
   assert.deepEqual(niceTicks(41, 'usd'), [0, 20, 40, 60]);
   assert.deepEqual(niceTicks(10, 'jobs'), [0, 5, 10]);
   assert.deepEqual(niceTicks(0, 'jobs'), [0, 1]);
+  // A count never gets a tick at a fraction (it would print 0, 1, 1).
+  assert.deepEqual(niceTicks(1, 'jobs'), [0, 1]);
+  assert.deepEqual(niceTicks(2, 'calls'), [0, 1, 2]);
+  assert.deepEqual(niceTicks(0.03, 'usd'), [0, 0.01, 0.02, 0.03]);
   const svg = chartSvg([{ day: '2026-11-01', value: 3 }, { day: '2026-11-02', value: null }], { label: 'Model calls', unit: 'calls' });
   assert.match(svg, /<title id="sf-trend-title">Model calls per day<\/title>/);
   assert.match(svg, /1 of 2 days with a value; highest 3/);
+  // A compact shape for phones, with ids of its own.
+  assert.match(svg, /<svg class="sf-chart sf-chart-compact" viewBox="0 0 360 240"[^>]*aria-labelledby="sf-trend-compact-title sf-trend-compact-desc"/);
+  assert.equal(new Set(svg.match(/id="[^"]+"/g)).size, 4);
 });

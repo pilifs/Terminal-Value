@@ -4,9 +4,13 @@
 
 import { escapeHtml, formatDay, formatTick, formatValue } from './format.js';
 
-const W = 640;
-const H = 220;
-const PAD = { top: 12, right: 8, bottom: 28, left: 52 };
+// Two shapes of the same chart: wide for most screens, and compact (taller,
+// fewer day labels) for phones, where the wide one would be a thin strip.
+// CSS shows one of them; the other is display: none, out of the a11y tree.
+const SHAPES = {
+  wide: { W: 640, H: 220, PAD: { top: 12, right: 8, bottom: 28, left: 52 }, labels: 8 },
+  compact: { W: 360, H: 240, PAD: { top: 12, right: 6, bottom: 28, left: 44 }, labels: 4 },
+};
 
 /** Clean ticks from 0 to at least max, stepping 1, 2 or 5 times a power of ten. */
 export function niceTicks(max, unit, count = 4) {
@@ -14,7 +18,8 @@ export function niceTicks(max, unit, count = 4) {
   if (!(max > 0)) return [0, 1];
   const raw = max / count;
   const pow = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw);
+  // Counts (calls, jobs, seconds, ...) step by whole units: no tick at half a job.
+  const step = Math.max(unit === 'usd' ? 0 : 1, [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw));
   const ticks = [];
   for (let v = 0; v < max + step * 0.999; v += step) ticks.push(Number(v.toPrecision(12)));
   return ticks;
@@ -30,10 +35,15 @@ const fixed = (n) => Number(n.toFixed(1));
 
 /**
  * points: [{ day, value }], value null when the day wasn't measured or has no
- * value. label and unit name the measure. Returns the <svg>; the data table
- * beside it is the text equivalent.
+ * value. label and unit name the measure. Returns the wide and the compact
+ * <svg>; the data table beside them is the text equivalent.
  */
 export function chartSvg(points, { label, unit, id = 'sf-trend' }) {
+  return chartShape(points, { label, unit, id, shape: 'wide' }) + chartShape(points, { label, unit, id: `${id}-compact`, shape: 'compact' });
+}
+
+function chartShape(points, { label, unit, id, shape }) {
+  const { W, H, PAD, labels } = SHAPES[shape];
   const values = points.map((p) => p.value).filter((v) => v !== null && Number.isFinite(v));
   const ticks = niceTicks(Math.max(0, ...values), unit);
   const top = ticks[ticks.length - 1];
@@ -42,7 +52,7 @@ export function chartSvg(points, { label, unit, id = 'sf-trend' }) {
   const y = (v) => PAD.top + plotH - (v / top) * plotH;
   const band = plotW / Math.max(points.length, 1);
   const barW = Math.max(2, Math.min(24, band - 2));
-  const every = Math.ceil(points.length / 8);
+  const every = Math.ceil(points.length / labels);
 
   const grid = ticks
     .map((t) => {
@@ -75,7 +85,7 @@ export function chartSvg(points, { label, unit, id = 'sf-trend' }) {
   const measured = points.filter((p) => p.value !== null).length;
   const desc = `${measured} of ${points.length} days with a value${values.length ? `; highest ${formatValue(Math.max(...values), unit)}` : ''}. The table below lists every day.`;
   return (
-    `<svg class="sf-chart" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc">` +
+    `<svg class="sf-chart sf-chart-${shape}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc">` +
     `<title id="${id}-title">${escapeHtml(label)} per day</title><desc id="${id}-desc">${escapeHtml(desc)}</desc>` +
     `<line class="sf-axis" x1="${PAD.left}" x2="${W - PAD.right}" y1="${PAD.top + plotH}" y2="${PAD.top + plotH}"/>` +
     grid +

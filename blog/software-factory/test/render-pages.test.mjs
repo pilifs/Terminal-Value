@@ -62,6 +62,8 @@ test('analysis: every post newest first, featured marked, bylines only with an a
   const at = (s) => body.indexOf(s);
   assert.ok(at('/posts/newest/') < at('/posts/featured-one/') && at('/posts/featured-one/') < at('/posts/older/'), 'the order selectPosts gave');
   assert.match(body, /class="sf-post sf-post-featured"><img class="sf-cover" src="\/posts\/featured-one\/cover\.png"/);
+  assert.match(body, /Title of featured-one<\/a><\/h2>\s*<p class="sf-post-meta"><strong class="sf-featured">Featured<\/strong> · /, 'featured in words');
+  assert.equal((body.match(/>Featured</g) ?? []).length, 1);
   assert.match(body, /<h2><a href="\/posts\/newest\/">Title of newest<\/a><\/h2>\s*<p class="sf-post-meta"><span class="sf-byline">By Filip Stankovic<\/span> · <time datetime="2026-11-12">Nov 12, 2026<\/time>/);
   assert.match(body, /<h2><a href="\/posts\/older\/">Title of older<\/a><\/h2>\s*<p class="sf-post-meta"><time/);
   assert.ok(body.includes('About older.'));

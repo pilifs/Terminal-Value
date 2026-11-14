@@ -259,11 +259,41 @@ only under `/software-factory/`).
     `validate.mjs` refuses it first.
   - 82 tests, 81 pass; the one failure is the frozen sitemap assertion above. Production build byte-identical
     (85 files); the drafts build is made from the example and from no snapshot.
-- Next: B5. Shoot every page in each state (the example overview, no snapshot, the empty and populated analysis,
-  methodology with and without data), desktop and mobile, light and dark; fix what is wrong and shoot again; record
-  the gzip sizes of the page, `style.css` and `app.js`. The populated analysis needs a draft post in the
-  collection only in `/tmp` or a render to a scratch file, never a repo post.
-- Status: working
+- **B5, review** (cycle 6): every page in each state shot at 1280×900 and 390×844 in light and dark with
+  `llm-dlc/tools/screenshot.sh` (shots in `/tmp/sf-b5/`), looked at, fixed and shot again. B5 is done.
+  - Shot: the example overview (default, and `?period=7d&model=claude-opus-5-5&measure=model_calls`), the
+    overview and the analysis page with posts, the empty analysis page, methodology with data, and all three
+    pages with no snapshot. `selectPosts` is still the Phase 0 placeholder, so the populated states came from a
+    scratch script (`/tmp/sf-b5/populate.mjs`): it renders `renderPages` with made-up `postSummary` records into
+    the built page under `dist/`. No repo post.
+  - Fixed:
+    - On a phone the trend chart was a 100px strip with the first day label running into "$0". The chart now has
+      two shapes from `chartSvg`, wide (640×220) and compact (360×240, four day labels), and CSS shows the compact
+      one under 30rem. The other is `display: none`, so out of the accessibility tree; each has its own ids.
+    - Long breakdown labels ("Apache Commons Numbers") wrapped to three lines. Breakdowns are now two columns on
+      desktop (22rem minimum), and on a phone the share bar and cell padding are narrower.
+    - In the archive, the featured post had a double rule and was marked only by size. It now says "Featured" in
+      its meta line (overview too) and shares the list's rules.
+    - "Figures kept separate" ran into the last metric's table on the methodology page: now a ruled block.
+    - The coverage and areas tables scroll sideways on a phone with no sign of more columns. They now show an edge
+      shadow on the side with more, and the scroll region takes focus with a name (the exploration's tables too).
+    - With no snapshot, the overview said "Showing all time, all models and efforts" about data it doesn't
+      have. The view line and controls render only with a snapshot.
+    - Chart ticks: a count of 1 got ticks 0, 0.5, 1, printed "0, 1, 1"; counts now step by whole units. Money
+      ticks were "$5.0" beside "$10"; now "$5", "$10", and "$2.50" or "$0.01" only where needed.
+  - Checked in headless Chromium (Playwright): no horizontal overflow at 320 and 390px, light and dark, on all
+    five pages, with every detail open on the overview; a filter change redraws the compact chart (7 days).
+  - Sizes, gzip -9, drafts build on the example: `index.html` 5.5 KB (26.8 KB raw; the compact chart added about
+    0.4 KB), `style.css` 4.4 KB, `app.js` 4.2 KB, `analysis/index.html` 1.0 KB, `methodology/index.html` 4.9 KB.
+    The nine client modules come to 22.4 KB gzipped. Cycle 4's 18.8 KB was wrong: the same nine measured 21.9 KB
+    at that revision.
+  - Tests: 82, 81 pass; the one failure is the frozen sitemap assertion above. Production build byte-identical
+    (85 files). The drafts build is made from the example (with the compact chart) and from no snapshot (no
+    `data-snapshot`, no controls).
+- For the coordinator, beyond the notes above: the frozen `config/metrics.json` note on the median duration says
+  "factory wall time", which the methodology page shows. It is a plain word, not the name; change it at the
+  merge if the "Software Factory" rule is meant to cover it.
+- Status: done
 
 ## Loop settings
 

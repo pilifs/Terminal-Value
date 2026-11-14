@@ -82,7 +82,7 @@ export function detailTable(name, records, { limit = FIRST_ROWS } = {}) {
         })
         .join('')
     : `<tr><td colspan="${t.head.length}" class="sf-muted">No records in this snapshot</td></tr>`;
-  return `<div class="sf-table-wrap"><table class="sf-table sf-detail-table"><caption class="sf-visually-hidden">${e(t.caption)}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  return `<div class="sf-table-wrap" tabindex="0" role="region" aria-label="${e(t.caption)}"><table class="sf-table sf-detail-table"><caption class="sf-visually-hidden">${e(t.caption)}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 /** The line under a table: how many are shown. */

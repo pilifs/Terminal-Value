@@ -43,7 +43,7 @@ test('the static overview carries the all-time numbers without script', () => {
   const html = overview();
   for (const text of ['$101.07', '>590<', '97.7%', '>12<', 'Coverage: 4 of 5 sessions with a metrics file'])
     assert.ok(html.includes(text), `missing ${text}`);
-  assert.match(html, /<svg class="sf-chart"[^>]*role="img"/);
+  assert.match(html, /<svg class="sf-chart sf-chart-wide"[^>]*role="img"/);
   assert.match(html, /<table class="sf-table">/);
 });
 
@@ -93,9 +93,12 @@ test('each observation links to its breakdown or records', () => {
 
 test('days the data does not cover are no data, never a zero column', () => {
   const html = overview();
-  // Usage covers Oct 30 to Nov 2; the overview's days run to Nov 8.
-  assert.equal((html.match(/class="sf-day sf-day-none"/g) ?? []).length, 6);
-  assert.equal((html.match(/class="sf-bar"/g) ?? []).length, 4);
+  // Usage covers Oct 30 to Nov 2; the overview's days run to Nov 8. Both shapes of the chart (wide, compact) agree.
+  for (const shape of ['wide', 'compact']) {
+    const svg = html.match(new RegExp(`<svg class="sf-chart sf-chart-${shape}"[\\s\\S]*?</svg>`))?.[0] ?? '';
+    assert.equal((svg.match(/class="sf-day sf-day-none"/g) ?? []).length, 6, shape);
+    assert.equal((svg.match(/class="sf-bar"/g) ?? []).length, 4, shape);
+  }
   assert.match(html, /Nov 5, 2026<\/time><\/th><td><span class="sf-muted">No data<\/span>/);
 });
 
@@ -118,7 +121,7 @@ test('with no snapshot: an honest message, the layout kept, posts still listed',
   assert.ok(html.includes('No Software Factory data has been published yet.'));
   assert.ok(html.includes('class="sf-intro"'));
   assert.match(html, /<a href="\/posts\/a-note\/">Title of a-note<\/a>/);
-  assert.doesNotMatch(html, /sf-metric-value|Published data as of|\$/);
+  assert.doesNotMatch(html, /sf-metric-value|Published data as of|sf-controls|Showing all time|\$/);
 });
 
 test('no published posts: the empty state keeps the analysis section', () => {

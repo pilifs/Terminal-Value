@@ -51,7 +51,8 @@ export function formatTick(value, unit) {
   if (unit === 'ratio') return `${Math.round(value * 100)}%`;
   const prefix = unit === 'usd' ? '$' : '';
   if (Math.abs(value) >= 10000) return `${prefix}${Math.round(value / 1000).toLocaleString('en-US')}K`;
-  if (unit === 'usd' && value !== 0 && Math.abs(value) < 10) return `${prefix}${value.toFixed(value < 1 ? 2 : 1)}`;
+  // Decimals only on a tick that needs them: $5, $10, $15, but $2.50 and $0.01.
+  if (!Number.isInteger(value)) return `${prefix}${unit === 'usd' ? value.toFixed(2) : Number(value.toFixed(2))}`;
   return `${prefix}${integer(value)}`;
 }
 

@@ -97,18 +97,21 @@ function banner(fixture, e) {
 }
 
 function intro({ snapshot, fixture, e, formatDate }) {
-  const freshness = snapshot ? `<p class="sf-freshness" data-sf-freshness>${freshnessHtml(snapshot, formatDate)}</p>` : '';
+  // Without a snapshot there is no view to describe or filter.
+  const controls = snapshot
+    ? `
+        <div class="sf-controls">
+          <p class="sf-range-static" data-sf-static>Showing all time, all models and efforts.</p>
+          <form class="sf-filters" data-sf-filters hidden aria-label="Filters"></form>
+          <p class="sf-freshness" data-sf-freshness>${freshnessHtml(snapshot, formatDate)}</p>
+        </div>`
+    : '';
   return `      <header class="sf-intro">
         <h1>${TITLE}</h1>
         <p class="sf-lede">${e(
           'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches. Agents build and verify software there; these are the numbers they leave behind.'
         )}</p>
-        ${banner(fixture, e)}
-        <div class="sf-controls">
-          <p class="sf-range-static" data-sf-static>Showing all time, all models and efforts.</p>
-          <form class="sf-filters" data-sf-filters hidden aria-label="Filters"></form>
-          ${freshness}
-        </div>
+        ${banner(fixture, e)}${controls}
       </header>`;
 }
 
@@ -184,9 +187,11 @@ export function postCard(post, { e, formatDate, featured = false, level = 3 }) {
     ? `<img class="sf-cover" src="${e(post.cover.url)}" width="${post.cover.width}" height="${post.cover.height}" alt="" loading="lazy">`
     : '';
   const byline = post.author ? `<span class="sf-byline">By ${e(post.author)}</span> · ` : '';
+  // Said in words, not only by the larger card.
+  const mark = featured ? '<strong class="sf-featured">Featured</strong> · ' : '';
   return `<article class="sf-post${featured ? ' sf-post-featured' : ''}">${cover}<div>
               <h${level}><a href="${e(post.url)}">${e(post.title)}</a></h${level}>
-              <p class="sf-post-meta">${byline}<time datetime="${e(post.date)}">${e(formatDate(post.date))}</time></p>
+              <p class="sf-post-meta">${mark}${byline}<time datetime="${e(post.date)}">${e(formatDate(post.date))}</time></p>
               <p>${e(post.description)}</p>
             </div></article>`;
 }
@@ -406,7 +411,7 @@ function datasetCoverage(snapshot, { e, formatDate }) {
   return `      <section class="sf-panel sf-coverage-panel" id="coverage" aria-labelledby="sf-coverage-title">
         <h2 id="sf-coverage-title">Coverage by dataset</h2>
         <p class="sf-caption">What each dataset measured. Days outside a period dataset's window are unknown, not zero, and show no value.</p>
-        <div class="sf-table-wrap">
+        <div class="sf-table-wrap" tabindex="0" role="region" aria-labelledby="sf-coverage-title">
           <table class="sf-table">
             <thead><tr><th scope="col">Dataset</th><th scope="col">Kind</th><th scope="col">Measured (Toronto days)</th><th scope="col">Coverage</th><th scope="col">Metrics</th></tr></thead>
             <tbody>
@@ -453,7 +458,7 @@ function areasSection(e) {
         <h2 id="sf-areas-title">Areas of work</h2>
         <p><span class="sf-tag">Mapping ${e(AREAS.status)}</span> version ${e(AREAS.version)}. ${e(AREAS.note)}</p>
         <p>${e(AREAS.rule)}</p>
-        <div class="sf-table-wrap">
+        <div class="sf-table-wrap" tabindex="0" role="region" aria-labelledby="sf-areas-title">
           <table class="sf-table sf-areas-table">
             <thead><tr><th scope="col">Area</th><th scope="col">What it covers</th><th scope="col">Paths</th><th scope="col">Campaigns</th></tr></thead>
             <tbody>${AREAS.areas.map(row).join('')}${row({ ...AREAS.unassigned, description: 'Anything no rule places. Always shown.' })}</tbody>

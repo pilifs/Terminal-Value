@@ -19,6 +19,7 @@ body.software-factory {
   --sf-accent-bg: #eaf6ea;
   --sf-note-bg: #fbf6e4;
   --sf-note-rule: #e9dcae;
+  --sf-scroll-shadow: rgba(27, 32, 27, 0.18);
   --sf-radius: 8px;
   --sf-shell: 72rem;
 
@@ -50,6 +51,7 @@ body.software-factory {
     --sf-accent-bg: #18301a;
     --sf-note-bg: #29250f;
     --sf-note-rule: #4a4220;
+    --sf-scroll-shadow: rgba(0, 0, 0, 0.65);
     --code-bg: #1f261f;
   }
 }
@@ -367,8 +369,16 @@ body.software-factory .sf-chart .sf-axis {
   stroke-width: 1;
   shape-rendering: crispEdges;
 }
-/* Tick text is in viewBox units (640 wide), so it scales with the chart; each
-   width range sets it to render at about 10-13px. */
+/* The wide chart, or under 30rem the compact one (taller, fewer day labels). */
+body.software-factory .sf-chart-compact {
+  display: none;
+}
+@media (max-width: 30rem) {
+  body.software-factory .sf-chart-wide { display: none; }
+  body.software-factory .sf-chart-compact { display: block; }
+}
+/* Tick text is in viewBox units (640 or 360 wide), so it scales with the
+   chart; each width range sets it to render at about 10-13px. */
 body.software-factory .sf-chart .sf-tick {
   fill: var(--sf-muted);
   font-size: 7px;
@@ -386,8 +396,11 @@ body.software-factory .sf-chart .sf-tick {
 @media (max-width: 36rem) {
   body.software-factory .sf-chart .sf-tick { font-size: 16px; }
 }
-@media (max-width: 28rem) {
-  body.software-factory .sf-chart .sf-tick { font-size: 20px; }
+@media (max-width: 30rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 12px; }
+}
+@media (max-width: 22rem) {
+  body.software-factory .sf-chart .sf-tick { font-size: 14px; }
 }
 body.software-factory .sf-chart .sf-bar {
   fill: var(--sf-mark);
@@ -414,8 +427,15 @@ body.software-factory .sf-data-table {
   font-size: 0.875rem;
 }
 /* Wide text tables keep readable columns and scroll inside their panel. */
+/* A scrollable region is focusable (arrow keys scroll it), and a soft shadow
+   at an edge shows there is more to that side. */
 body.software-factory .sf-table-wrap {
   overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--sf-surface) 30%, transparent) left / 2rem 100% no-repeat local,
+    linear-gradient(to left, var(--sf-surface) 30%, transparent) right / 2rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--sf-scroll-shadow), transparent) left / 0.75rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--sf-scroll-shadow), transparent) right / 0.75rem 100% no-repeat scroll;
 }
 body.software-factory .sf-table-wrap > .sf-table {
   min-width: 40rem;
@@ -467,6 +487,12 @@ body.software-factory .sf-share > span {
   display: block;
   height: 100%;
   background: var(--sf-mark);
+}
+/* On a phone the share bar gives the label column room. */
+@media (max-width: 30rem) {
+  body.software-factory .sf-share { width: 2.25rem; margin-left: 0.375rem; }
+  body.software-factory .sf-breakdown .sf-table :is(th, td) { padding-inline: 0.375rem; }
+  body.software-factory .sf-breakdown .sf-table :is(th, td):first-child { padding-left: 0; }
 }
 body.software-factory .sf-areas-table td {
   min-width: 9rem;
@@ -553,6 +579,16 @@ body.software-factory .sf-post-archive .sf-post + .sf-post {
   padding-top: 1.25rem;
   border-top: 1px solid var(--sf-rule);
 }
+/* In the archive the featured post is one of the list: the list's rules only. */
+body.software-factory .sf-post-archive .sf-post-featured {
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+body.software-factory .sf-featured {
+  color: var(--sf-text);
+  font-weight: 600;
+}
 body.software-factory .sf-empty {
   margin: 0.5rem 0 0;
   padding: 1.25rem;
@@ -585,7 +621,7 @@ body.software-factory .sf-stock .sf-coverage {
 }
 body.software-factory .sf-breakdowns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
   gap: 1.5rem 2rem;
 }
 body.software-factory .sf-breakdown {
@@ -655,6 +691,12 @@ body.software-factory .sf-facts dd {
 }
 body.software-factory .sf-method {
   margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sf-rule);
+}
+/* The separate figures follow the last metric as one more ruled block. */
+body.software-factory .sf-method + h3 {
+  margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--sf-rule);
 }
