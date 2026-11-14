@@ -154,10 +154,35 @@ Test it in Node.
     included, so editing one fails `contract.test.mjs` until the example is regenerated. The inputs' required fields
     are therefore in `import.mjs` (`FIELDS`); they could move into `source.json` at the merge, with the example
     regenerated.
+  - `measures.mjs` also exports `METRICS` (its copy of the filter scopes, tested against `config/metrics.json`).
   - Additions to `import.mjs`'s interface, all optional: `readSources({ dir, fetchImpl, config })`, `RawSources.runs`,
     `loadConfig()`, and `campaign` and `rollup` on normalized records. A job's linked examples count as paths
     `examples/<id>` for the area rule.
-- Next: A3, `computeMeasures` and `series` in `measures.mjs`, matching `aggregate`'s all-time measures unfiltered.
+- **A3 browser measures: done.** `computeMeasures` and `series` in `measures.mjs`, a plain module (no imports, no
+  Node APIs; a test imports it from its text alone, as the browser loads `/software-factory/measures.js`). They read
+  the overview's usage and verification tables by column name. `test/data-measures.test.mjs`, 10 tests:
+  - Unfiltered, every value, numerator, denominator and coverage equals the overview's all-time measure: for the
+    published example, `aggregate` on the fixture, and a hand input. On the real source at `7384f8c2` too
+    ($1,936.419143, 19,963 calls, 97.9%, 309 jobs, 10.4 s, 599 changes, 164 examples), checked by hand: summing the
+    rounded usage cells gives the same usd as `aggregate`'s single sum.
+  - Filter scopes: an exported `METRICS` table, which a test holds equal to `config/metrics.json` (units, kinds,
+    filters) and to the overview's order. A filter a metric doesn't take is not applied and gives `filtered: false`:
+    verification with a model or effort, stocks with anything. `filtered` is true when every asked-for filter was
+    applied, so also with none asked.
+  - Empty means null: a range that shares no day with the metric's dataset (its table's first row to its last) is
+    null, a reversed or empty range too. Inside the span a quiet day is a real 0 (calls, usd); usd is null when calls
+    exist and none is priced; cache reuse is null for a zero denominator.
+  - `series` gives every calendar day in `[from, to)` (an unbounded side stops at the overview's first or last
+    day), and sums back to the measure on the fixture; it throws for a stock or an unknown metric.
+  - Coverage: `model_calls` keeps the overview's (sessions with a metrics file: the overview has no per-session
+    rows); `verification_completed` counts results without `finishedAt` as missing from every period.
+  - One change to `aggregate` to keep the two consistent: with results but no completed job,
+    `verification_completed` is null (the verification dataset has no span; its manifest bounds were null already),
+    where it was 0.
+  - `usage_share_by_model` is a value per model, so it is not one of the records. The dashboard can take a model's
+    period share as `usage_usd` with `models: [id]` over `usage_usd` unfiltered by model.
+- Next: A4, `refresh` in `import.mjs` (staging, `validateSnapshotDir`, atomic replace, `unchanged`, retention), tested
+  against every refresh outcome of `cases.json`.
 - Status: working
 
 ## Loop settings

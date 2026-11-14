@@ -22,8 +22,9 @@
 //     parsed config/metrics.json, read from CONFIG_DIR when absent);
 //     configSha256 and metricDefinitions default to identity.mjs's values.
 //   - A value with nothing to be computed over is null, never 0: usage with no
-//     priced call, calls with no metrics file, a ratio with a zero
-//     denominator, a median of no durations. An insight whose value is null is
+//     priced call, calls with no metrics file, no completed verification
+//     job (that dataset has no span), a ratio with a zero denominator, a
+//     median of no durations. An insight whose value is null is
 //     left out.
 //   - Detail records hold only completed verification jobs (schema.json needs
 //     their finishedAt); the jobs without one are counted in coverage.
@@ -218,7 +219,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     { id: 'usage_usd', value: usd, unit: 'usd', scope: 'all-time', coverage: coverage.usage },
     { id: 'model_calls', value: calls.length ? calls.length : null, unit: 'calls', scope: 'all-time', coverage: coverage.calls },
     { id: 'cache_reuse', value: cacheDen ? cacheNum / cacheDen : null, unit: 'ratio', scope: 'all-time', numerator: cacheNum, denominator: cacheDen, coverage: coverage.cache },
-    { id: 'verification_completed', value: results.length ? completed.length : null, unit: 'jobs', scope: 'all-time', coverage: coverage.completed },
+    { id: 'verification_completed', value: completed.length ? completed.length : null, unit: 'jobs', scope: 'all-time', coverage: coverage.completed },
     { id: 'verification_duration_median', value: medianSeconds, unit: 'seconds', scope: 'all-time', coverage: coverage.durations },
     { id: 'changes_recorded', value: changeList.length, unit: 'changes', scope: 'snapshot', coverage: coverage.changes },
     { id: 'examples_catalog', value: examples.length, unit: 'examples', scope: 'snapshot', coverage: coverage.catalog },
