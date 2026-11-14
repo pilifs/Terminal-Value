@@ -148,7 +148,21 @@ Under Progress, the exact changes for files you don't own:
     null, measured versus interpreted, raw id beside display name), one opening prompt, one heading, and a
     footnote linking `evidence.json`. It has no example images, so only `cover.png` must exist.
   - The template is never selected and never built without drafts (tested on a copy).
-- Next: C4, the draft `blog/posts/fable-5-1-vs-5-2/`.
+- **C4 done** (2026-11-14). `blog/posts/fable-5-1-vs-5-2/` holds `index.md`, `cover.png` (the template's) and
+  `evidence.json` (a byte copy of `evidence.incomplete.json`: status incomplete, honest nulls, only
+  `claude-fable-5-1`). Tested in `test/editorial-draft.test.mjs` (5 tests, 56 in the suite). The drafts build makes
+  its page (3 posts; h1 "Fable 5.1 vs. 5.2", noindex, evidence and cover copied); the production build is unchanged
+  (85 files) and no file in `dist/` names the slug or title.
+  - Front matter: the exact title, `draft: true`, `collection: software-factory`, `author: Filip Stankovic`,
+    `featured: false`, `evidence: evidence.json`, `image: cover.png`. The date is the scaffold's day, as
+    `npm run new` would set it, and the description is a placeholder.
+  - A NOTE box says the date is a placeholder, not a commitment; no raw id is mapped to Fable 5.2 yet (the comparison
+    needs a documented alias and cohort mapping from the data the author will import); the evidence is incomplete on
+    purpose; and what to replace before publishing.
+  - The body is the plan's seven headings (with "Software Factory" for "Factory"), each followed only by an italic
+    `_Prompt: ..._` paragraph. The test pins the headings and fails on any paragraph that isn't a prompt (checked
+    by adding a sentence with a number), and on any `claude-fable-5-2` in the source.
+- Next: C5, the production exclusion test (`loadPosts` without drafts leaves out `fable-5-1-vs-5-2`).
 - Status: working
 
 ## Loop settings
