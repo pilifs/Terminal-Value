@@ -128,7 +128,28 @@ only under `/software-factory/`).
 
 ## Progress
 
-- Nothing yet.
+- **B1, overview** (cycle 1): `render.mjs` renders `index.html` in the plan's order: intro with "Published data as
+  of" (the snapshot's last day) and the source SHA, four summary metrics with coverage, definitions on demand and
+  their filter scope, the trend chart (inline SVG) with its data table, three observations linking to their
+  breakdown or records, "Analysis & notes by Filip" (featured post and list, or the empty state), stocks marked
+  "Snapshot total" apart from the breakdowns, and deeper exploration (lazy details, raw ids, source). States: no
+  snapshot (message, layout and posts kept), fixture banner, escaping. Shared browser modules, imported by
+  `render.mjs` too: `blog/assets/software-factory/format.js`, `chart.js`, and `measures-local.js`.
+  - Days a dataset didn't measure (outside its manifest bounds) are null in the chart and table, never 0.
+  - Periods (7d, 30d) end on the snapshot's last day, not the reader's clock.
+  - Tests: `test/render-overview.test.mjs` (13) and `test/client-measures.test.mjs` (8), 41 in all pass. The
+    production build is byte-identical to the parent's (85 files); the drafts build renders the overview from the
+    example and from no snapshot.
+- **For the merge: switch to A's measures.** `measures-local.js` keeps stream A's `computeMeasures`/`series`
+  interface. At the merge, import `computeMeasures` and `series` from `../software-factory/measures.js` (browser)
+  and `./measures.mjs` (`render.mjs`), keep `trend`, `periodRange`, `torontoDay` and `datasetDays` from
+  `measures-local.js`, and check A's results against `test/client-measures.test.mjs`.
+- **Contract request: `test/build.test.mjs`.** Its test "a published section is listed in the sitemap and llms.txt"
+  asserts the sitemap is exactly `['/software-factory/']`. Once the analysis and methodology pages exist (next
+  piece), `index.mjs` lists all three and that frozen test fails. Asked of the merge: assert the three URLs
+  (`/software-factory/`, `/software-factory/analysis/`, `/software-factory/methodology/`). Until then that one test
+  fails in this stream and in the integration check, and nothing else does.
+- Next: B1's `analysis/index.html` and `methodology/index.html`, then B2 styles.
 - Status: working
 
 ## Loop settings
