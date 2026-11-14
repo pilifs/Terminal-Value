@@ -21,6 +21,7 @@
 //     A published post's `evidence: FILE` must name a well-formed evidence
 //     manifest (schema.json evidence) with status complete. A draft's may be
 //     incomplete or absent. Never invents values to make one validate.
+//     (Rules in full above the function; the build fails on any problem.)
 //
 // Added by stream C, for the coordinator to place in build.mjs's renderPost:
 //
@@ -37,6 +38,20 @@
 //   related: software-factory       background the section links, never an item
 //
 // Authorship is never inferred: the site's global author is not a post's.
+//
+// The evidence convention, for the author: an article's evidence is copied
+// into its own post folder, never linked to the live feed. evidence.json and
+// every data file it lists sit beside index.md, so the build publishes them
+// with the post (/posts/<slug>/evidence.json) and the article stays readable,
+// with the numbers it was written from, when the dashboard's data changes or
+// the remote feed fails. A later snapshot never updates a published article:
+// a new analysis gets new evidence. Start a draft's evidence from
+// test/fixtures/evidence.incomplete.json, keep what isn't known yet null and
+// the status incomplete, and mark it complete only when every field is real.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { sha256, validate } from './validate.mjs';
 
 export const COLLECTION = 'software-factory';
 export const ROUTE = `/${COLLECTION}/`;
@@ -128,6 +143,73 @@ export function evidenceLinks(post, { section }) {
   return links.length ? `<p class="source">${links.join(' · ')}</p>` : '';
 }
 
-export function validateEvidence() {
-  return [];
+/** A file name in the post's own folder, such as evidence.json: no directories, no dot files. */
+const EVIDENCE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.json$/;
+
+/** A path inside the post's folder: relative, forward slashes, no `.` or `..` segments. */
+const insideFolder = (rel) =>
+  typeof rel === 'string' &&
+  rel !== '' &&
+  !rel.startsWith('/') &&
+  !rel.includes('\\') &&
+  rel.split('/').every((part) => part !== '' && part !== '.' && part !== '..');
+
+/**
+ * The problems with a post's `evidence: FILE`; empty when there are none. The
+ * build should fail on any problem, in every build.
+ *
+ * - No `evidence` field: nothing to check, for drafts and published posts alike.
+ * - The reference must be a JSON file name in the post's own folder.
+ * - Published, the file must exist and parse; a draft's may be absent.
+ * - A file that's there must be a valid schema.json evidence record.
+ * - Published, or a draft that says `complete`: status complete, every field
+ *   non-null, at least one model and one listed file.
+ * - Every listed file must be inside the post's folder, not the evidence file
+ *   itself, exist, and match its sha256.
+ *
+ * Read-only: it never fills in a value or writes a file.
+ */
+export function validateEvidence(post) {
+  if (post.meta.evidence === undefined) return [];
+  const published = !post.meta.draft;
+  const at = `${post.slug}: evidence`;
+  const name = text(post.meta.evidence);
+  if (!name || !EVIDENCE_FILE.test(name)) {
+    return [`${at}: ${JSON.stringify(post.meta.evidence)} is not a JSON file name in the post's folder`];
+  }
+  const file = path.join(post.dir, name);
+  if (!fs.existsSync(file)) return published ? [`${at}: ${name} is missing`] : [];
+
+  let record;
+  try {
+    record = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    return [`${at}: ${name} is not JSON (${e.message})`];
+  }
+  const invalid = validate('evidence', record);
+  if (invalid.length) return invalid.map((e) => `${at}: ${name}: ${e}`);
+
+  const problems = [];
+  if (published || record.status === 'complete') {
+    if (record.status !== 'complete') {
+      problems.push(`${at}: ${name} is ${record.status}; a published post needs complete evidence`);
+    }
+    for (const [key, value] of Object.entries(record)) {
+      if (value === null) problems.push(`${at}: ${name}: ${key} is null`);
+    }
+    if (record.models.length === 0) problems.push(`${at}: ${name}: no models`);
+    if (record.files.length === 0) problems.push(`${at}: ${name}: no files`);
+  }
+  for (const { path: rel, sha256: expected } of record.files) {
+    if (!insideFolder(rel)) {
+      problems.push(`${at}: ${name}: ${JSON.stringify(rel)} is not a path inside the post's folder`);
+    } else if (rel === name) {
+      problems.push(`${at}: ${name} lists itself`);
+    } else {
+      const listed = path.join(post.dir, rel);
+      if (!fs.existsSync(listed) || !fs.statSync(listed).isFile()) problems.push(`${at}: ${rel} is missing`);
+      else if (sha256(fs.readFileSync(listed)) !== expected) problems.push(`${at}: ${rel}: sha256 differs from ${name}`);
+    }
+  }
+  return problems;
 }

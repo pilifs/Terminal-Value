@@ -119,7 +119,24 @@ Under Progress, the exact changes for files you don't own:
   - **Deferred on purpose:** adding `related: software-factory` to `blog/posts/reading-the-trace/index.md`. The
     build copies the post's Markdown into `dist/`, so the line would change a published file while the section is
     unpublished. The coordinator adds that one line when `config/section.json` turns `published: true`.
-- Next: C2, `validateEvidence` and the evidence convention.
+- **C2 done** (2026-11-14). `validateEvidence(post)` in `editorial.mjs`, read-only, returns problems; tested in
+  `test/editorial-evidence.test.mjs` (14 tests, 46 in the suite). Production build unchanged (85 files); drafts
+  build still builds.
+  - No `evidence` field: nothing to check. The reference must be a `.json` file name in the post's own folder
+    (no directories, no dot files), published or draft.
+  - Published: the file must exist, parse, be a valid `evidence` record, have status complete, every top-level
+    field non-null, and at least one model and one listed file. A draft's file may be absent or incomplete, but a
+    file that is there must be a valid record, and a draft that says `complete` gets the published checks.
+  - Every listed file must be inside the post folder (no `..`, no absolute path), not the evidence file itself,
+    exist, and match its sha256, in drafts too. `models[].alias` may stay null: the schema allows a raw id with
+    no display name yet.
+  - The convention is written in the header of `editorial.mjs`: evidence and its data files are copied into the
+    post folder, published with the post, never updated by a later snapshot. C3's template and C6's `AGENTS.md`
+    section repeat it for the author.
+  - For the coordinator (C6 will repeat it): in `build.mjs`, after `loadPosts`,
+    `const problems = posts.flatMap(validateEvidence); if (problems.length) throw new Error(problems.join('\n'));`
+    so every build, drafts included, fails on a problem.
+- Next: C3, the template `blog/templates/software-factory-post/`.
 - Status: working
 
 ## Loop settings
