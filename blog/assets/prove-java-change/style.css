@@ -1309,6 +1309,14 @@ td code {
   .loop li:not(:last-child)::after {
     content: none;
   }
+  /* About 44 characters of a terminal, and 40 of a witness, fit a phone without scrolling. */
+  .term pre {
+    padding: 1rem 1rem 1.1rem;
+    font-size: 0.72rem;
+  }
+  .witness {
+    font-size: 0.7rem;
+  }
   .tiles {
     gap: 0.6rem;
   }

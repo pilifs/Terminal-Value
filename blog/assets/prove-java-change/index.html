@@ -58,20 +58,17 @@
 
           <figure class="term" aria-label="The verdicts recorded for example 285, a Spring Boot security fix">
             <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>CVE-2023-34055 · Spring Boot 2.7.17 → 2.7.18</span></div>
-<pre><span class="p">Claim: the "method" metric tag is one of GET, HEAD,
-POST, PUT, PATCH, DELETE, OPTIONS, TRACE, UNKNOWN</span>
+<pre><span class="p">Does the fix bound the "method" label?</span>
 
-<span class="no">✗ refuted on 2.7.17</span>                     <span class="p">0.0 s</span>
-  method(request=HttpServletRequest{
-           getMethod()=""})
-    returns ImmutableTag{key="method", value=""}
-    <span class="p">run on a JVM (JDK 25.0.5): fails there too</span>
+<span class="no">✗ 2.7.17: refuted in 0.0 s</span>
+  method(request{getMethod()=""}) returns
+  ImmutableTag{key="method", value=""}
+  <span class="p">run on a JVM (JDK 25.0.5): fails too</span>
 
-<span class="ok">✓ established on 2.7.18</span>
-  <span class="p">every method token up to 8 characters, and null</span>
-<span class="ok">✓ known labels preserved, 2.7.17 → 2.7.18</span>
-<span class="no">✗ refuted on a constructed mutant</span>   <span class="p">the control</span></pre>
-            <figcaption>The verdicts of <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">example 285</a>, condensed from its receipts. The proof loop ran unattended for 2 h 59 min.</figcaption>
+<span class="ok">✓ 2.7.18: established</span>
+  <span class="p">every method token up to 8 characters</span>
+<span class="ok">✓ known labels preserved across the fix</span></pre>
+            <figcaption>A real Spring Boot security fix: the hole is found in the old release and proved closed in the new one, within the bound shown. From <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">example 285</a>, condensed. The proof loop ran unattended for 2 h 59 min.</figcaption>
           </figure>
         </div>
       </div>
@@ -202,20 +199,23 @@ after:  returns 90; no modeled call</pre>
 
 <span class="no">POST /quotes: refuted</span>
   witness: cents=0, quantity=1
-    old build returns 0, attempts no modeled call
+    old build returns 0,
+      attempts no modeled call
     new build returns 1, attempts
-      KafkaTemplate.send(topic="quotes", data.total=1)
-  <span class="p">found in 0.1 s, replayed on a JVM (JDK 25.0.5)</span>
+      KafkaTemplate.send(topic="quotes",
+        data.total=1)
+  <span class="p">found in 0.1 s, replayed on a JVM</span>
 
 <span class="ok">shop.Pricing#discount: verified</span>
 <span class="no">shop.Pricing#total: refuted</span>
   correspondence (inferred):
     old.q.cents == new.q.amount.cents
-  witness: total(q=new Quote(new Money(0), 1))
+  witness: total(q=new Quote(
+             new Money(0), 1))
     before, 0; after, 1
 
-kernel: 2 verified, 1 refuted, 0 unresolved,
-        2 unsupported
+kernel: 2 verified, 1 refuted,
+        0 unresolved, 2 unsupported
 decisions a person made: 0
 questions for a person: none</pre>
             </figure>
