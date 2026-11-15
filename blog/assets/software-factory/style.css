@@ -1324,6 +1324,74 @@ body.software-factory .sf-shell .sf-floor-figure figcaption {
   }
 }
 
+/* A run picked on the floor, and its record under the clock. */
+body.software-factory .sf-floor[data-pick] .sf-run {
+  cursor: pointer;
+}
+/* A link to a run lands with the names over the clock in view. */
+body.software-factory .sf-floor .sf-run {
+  scroll-margin-top: 9rem;
+}
+body.software-factory .sf-floor .sf-run-on {
+  z-index: 1;
+  outline: 2px solid var(--sf-text);
+  outline-offset: 2px;
+}
+body.software-factory .sf-inspect {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-top: 1rem;
+}
+body.software-factory .sf-inspect-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-shell .sf-inspect-bar p {
+  margin: 0;
+}
+body.software-factory .sf-inspect-at {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-inspect-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+body.software-factory .sf-shell .sf-inspect button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+body.software-factory .sf-inspect [data-sf-inspect-body]:not(:empty) {
+  margin-top: 0.9rem;
+}
+/* The record in full: each summary on as many lines as it needs, the cycles scrolling past twelve or so. */
+body.software-factory .sf-ledger-full .sf-ledger-text {
+  overflow: visible;
+  white-space: normal;
+}
+body.software-factory .sf-ledger-full ol {
+  max-height: 21rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body.software-factory .sf-ledger-full li + li {
+  margin-top: 0.2rem;
+}
+body.software-factory .sf-ledger-stop {
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-shell .sf-ledger-note {
+  margin: 0.6rem 0 0;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+
 /* Where the overview sends a reader next. */
 body.software-factory .sf-more {
   display: grid;

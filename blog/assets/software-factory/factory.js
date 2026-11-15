@@ -77,7 +77,7 @@ export function heroHtml(snapshot, { title, lede }) {
   return `<div class="sf-hero">
         <div class="sf-hero-text">
           <h1><span class="sf-eyebrow">${e(title)}</span> <span class="sf-headline">${e(headline)}</span></h1>
-          <p class="sf-lede">That is what the feature loops in <a href="${REPO}">in-the-loop</a> did in ${plural(t.runs, 'recorded run')}, ${e(
+          <p class="sf-lede">That is what the feature loops did in <a href="${REPO}">in-the-loop</a>, a project that formally verifies Java code, in ${plural(t.runs, 'recorded run')}, ${e(
             range(first, last)
           )}. Each loop gives an agent a written brief and lets it work: do the next piece, verify it, commit it, decide whether to go on.</p>
         </div>
@@ -108,7 +108,9 @@ function ledgerHtml(snapshot) {
             </ol>
             <p class="sf-ledger-total"><strong>${plural(run.cycles, 'cycle')}</strong> · ${plural(run.commits, 'commit')} · ${count(run.toolCalls)} tool calls · <strong>${e(span(run.seconds))}</strong><br>0 prompts from a person, start to end</p>
           </div>
-          <figcaption>The longest run nobody typed into, from <a href="${e(record)}">its own record</a>: each line is a cycle that ended in a commit.</figcaption>
+          <figcaption>The longest run nobody typed into, from <a href="${e(record)}">its own record</a>: each line is a cycle that ended in a commit.${
+            floorFigure(loops)?.ids.has(run.run) ? ` <a href="#run-${e(run.run)}">Find it among the other runs</a>.` : ''
+          }</figcaption>
         </figure>`;
 }
 
@@ -288,6 +290,7 @@ function floorFigure(loops) {
     nights,
     ticks,
     runs: runs.map((r) => ({
+      id: r.id,
       from: r.from,
       to: r.to,
       row: rowOf.get(r.loop),
@@ -308,9 +311,19 @@ function floorFigure(loops) {
             </ul>`;
   const cut = panels.length > 1 ? ` The clock skips ${panels.length === 2 ? `the ${lull(panels[1].from - panels[0].to)}` : 'each pause of more than six hours'} when no loop ran.` : '';
   const partial = shown.length < all.length ? ` Runs before ${e(dayYear(shown[0].from))} are on the feature loops page.` : '';
+  // Where a picked run's record is shown. Hidden until the page's script is there to fill it.
+  const inspect = `<div class="sf-inspect" data-sf-inspect hidden>
+            <div class="sf-inspect-bar">
+              <p class="sf-inspect-at" data-sf-inspect-at role="status">Pick a run on the clock to read its record, cycle by cycle.</p>
+              <p class="sf-inspect-steps"><button type="button" data-sf-step="-1" hidden>Earlier run</button><button type="button" data-sf-step="1">Show the first run</button><button type="button" data-sf-step="0" hidden>Close</button></p>
+            </div>
+            <div data-sf-inspect-body></div>
+          </div>`;
   return {
     html,
     legend,
+    inspect,
+    ids: new Set(runs.map((r) => r.id)),
     stretches: all,
     runs: runs.length,
     caption: `${shown.length < all.length ? `${plural(runs.length, 'loop run')}` : `Every loop run`}, ${e(range(shown[0].from, shown.at(-1).to))}, on one clock. Rows are loops working at the same time on separate branches; the last row of a campaign is the loop that merges the others.${cut}${partial}`,
@@ -466,7 +479,8 @@ function floorSection(loops) {
           ${floor.legend}
           ${floor.html}
           <figcaption class="sf-caption">${floor.caption} Each campaign is drawn on its own clock <a href="#sf-campaigns">below</a>.</figcaption>
-        </figure>`;
+        </figure>
+        ${floor.inspect}`;
 }
 
 /** The feature loops section. */
@@ -538,6 +552,46 @@ export function campaignRunsHtml(records, campaignId) {
               </details>`;
     })
     .join('\n');
+}
+
+/**
+ * One run's record, shown when a reader picks the run on the floor: every
+ * cycle by its own summary, what the run took, and how it ended. `r` is a
+ * record of the loops collection; models is overview.models, for the names.
+ */
+export function runRecordHtml(r, { models = [] } = {}) {
+  const started = Date.parse(r.started);
+  const label = models.find((m) => m.id === r.model)?.label;
+  const typed = r.prompts ? r.prompts.person + r.prompts.interrupt : null;
+  const lines = r.cycles
+    .map(
+      (c) =>
+        `<li><span class="sf-ledger-time">${into((Date.parse(c.at) - started) / 1000)}</span><span class="sf-ledger-cycle">cycle ${e(c.n)}</span><span class="sf-ledger-text">${e(c.summary)}${
+          c.decision === 'stop' ? ' <span class="sf-ledger-stop">decided to stop</span>' : ''
+        }</span></li>`
+    )
+    .join('\n              ');
+  const took = [
+    `<strong>${plural(r.cycles.length, 'cycle')}</strong>`,
+    plural(r.commits, 'commit'),
+    r.toolCalls === null || r.toolCalls === undefined ? null : `${count(r.toolCalls)} tool calls`,
+    r.seconds === null ? null : `<strong>${e(span(r.seconds))}</strong>`,
+    r.usd === null || r.usd === undefined ? null : `${e(formatValue(r.usd, 'usd'))} estimated usage`,
+    r.codeAdded ? `+${count(r.codeAdded)} lines of code` : null,
+  ].filter(Boolean);
+  const ended = [typed === null ? null : `${plural(typed, 'prompt')} from a person, start to end`, e(OUTCOMES[r.outcome] ?? r.outcome)].filter(Boolean);
+  const links = `${link(r.recordUrl, 'Run record')}${link(r.summaryUrl, 'Session summary')}`.replace(/^ · /, '');
+  return `<div class="sf-ledger sf-ledger-full">
+            <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>feature loop: ${e(r.loop)}</code></div>
+            <div class="sf-ledger-body">
+              <p class="sf-ledger-meta">started ${e(dayYear(r.started))}, ${e(clockWords(torontoClock(started)))} · ${label ? `${e(label)} (<code>${e(r.model)}</code>)` : `<code>${e(r.model)}</code>`}, ${e(r.effort)} effort</p>
+              <ol>
+              ${lines || '<li class="sf-ledger-more"><span class="sf-ledger-time"></span><span class="sf-ledger-cycle"></span><span class="sf-ledger-text">No cycle committed.</span></li>'}
+              </ol>
+              <p class="sf-ledger-total">${took.join(' · ')}<br>${ended.join(' · ')}</p>
+            </div>
+            <p class="sf-ledger-note">Each line is a cycle, by the summary line of its own commit.${links ? ` ${links}` : ''}</p>
+          </div>`;
 }
 
 // --- Tools --------------------------------------------------------------------
@@ -962,7 +1016,7 @@ export function codeHtml(snapshot) {
  * One finding: a claim computed from the data, a sentence, three numbers and
  * the chart that carries it, with a link to the page that has everything.
  */
-function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, caption, wide = false }) {
+function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, caption, wide = false, after = '' }) {
   const head = `<p class="sf-eyebrow">${e(eyebrow)}</p>
             <h2 id="finding-${id}-title"><a href="${href}">${e(claim)}</a></h2>`;
   const numbers = `<dl class="sf-finding-facts">${facts
@@ -990,7 +1044,7 @@ function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, c
             ${legend}
             <div class="sf-chart-wrap">${chart}</div>
             <figcaption class="sf-caption">${caption}</figcaption>
-          </figure>
+          </figure>${after ? `\n          ${after}` : ''}
         </article>`;
 }
 
@@ -1037,6 +1091,7 @@ function loopsFinding(overview) {
     legend: floor?.legend ?? '',
     chart: floor?.html ?? '',
     caption: floor?.caption ?? '',
+    after: floor?.inspect ?? '',
   });
 }
 

@@ -354,6 +354,60 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
       }
     });
 
+    await t.test('a run picked on the clock shows its own record, can be stepped from, and can be linked to', async () => {
+      const remote = REMOTES['no binding (503)'];
+      const record = (page) =>
+        page.evaluate(() => ({
+          at: document.querySelector('[data-sf-inspect-at]').textContent,
+          loop: document.querySelector('.sf-ledger-full .sf-ledger-bar code')?.textContent ?? null,
+          cycles: document.querySelectorAll('.sf-ledger-full li').length,
+          on: [...document.querySelectorAll('.sf-run-on')].map((el) => el.dataset.run),
+          hash: location.hash,
+          steps: [...document.querySelectorAll('[data-sf-step]')].map((b) => (b.hidden ? null : `${b.textContent}${b.disabled ? ' (off)' : ''}`)),
+        }));
+      const shown = (page, what) => until(() => page.evaluate(() => Boolean(document.querySelector('.sf-ledger-full'))), what);
+      let visit = await open('/software-factory/', remote);
+      let third;
+      try {
+        // As built: the place for a record is there, with nothing picked.
+        const ids = await visit.page.evaluate(() => [...document.querySelectorAll('.sf-floor .sf-run[data-run]')].map((el) => el.dataset.run));
+        third = ids[2];
+        assert.deepEqual(await record(visit.page), { at: 'Pick a run on the clock to read its record, cycle by cycle.', loop: null, cycles: 0, on: [], hash: '', steps: [null, 'Show the first run', null] });
+        // A click picks a run: its record is loaded once, and the address names it.
+        await visit.page.click(`[id="run-${third}"]`);
+        await shown(visit.page, 'the record of the run that was clicked');
+        let now = await record(visit.page);
+        assert.deepEqual([now.at, now.on, now.hash], [`Run 3 of ${ids.length}`, [third], `#run-${third}`]);
+        assert.ok(third.endsWith(now.loop.replace('feature loop: ', '')), now.loop);
+        assert.ok(now.cycles > 0);
+        assert.deepEqual(now.steps, ['Earlier run', 'Later run', 'Close']);
+        // The buttons step through every run, from the keyboard too, and stop at the ends.
+        await visit.page.focus('[data-sf-step="-1"]');
+        await visit.page.keyboard.press('Enter');
+        await visit.page.keyboard.press('Enter');
+        await until(() => visit.page.evaluate(() => document.querySelector('[data-sf-inspect-at]').textContent.startsWith('Run 1 of')), 'the first run');
+        now = await record(visit.page);
+        assert.deepEqual([now.on, now.hash, now.steps], [[ids[0]], `#run-${ids[0]}`, ['Earlier run (off)', 'Later run', 'Close']]);
+        assert.equal(await visit.page.evaluate(() => document.activeElement.dataset.sfStep), '1', 'the focus moves off a button that can no longer step');
+        await visit.page.click('[data-sf-step="0"]');
+        assert.deepEqual(await record(visit.page), { at: 'Pick a run on the clock to read its record, cycle by cycle.', loop: null, cycles: 0, on: [], hash: '', steps: [null, 'Show the first run', null] });
+        assert.equal(visit.requests.filter((p) => p.endsWith('/details/loops.json')).length, 1, 'one load for every pick');
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+      // A link to a run opens its record, on the loops page as on the overview.
+      visit = await open(`/software-factory/loops/#run-${third}`, remote);
+      try {
+        await shown(visit.page, 'the record of the run in the address');
+        const now = await record(visit.page);
+        assert.deepEqual([now.on, now.hash], [[third], `#run-${third}`]);
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+    });
+
     await t.test('a remote that never answers: the bundled snapshot after the timeout', async () => {
       const { context, page, errors } = await visit({ hang: true });
       try {

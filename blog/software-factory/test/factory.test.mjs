@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
@@ -638,4 +638,31 @@ test('the loops finding claims a pace only from the data, and says who it asked'
   // A person's prompt in the stretch is never passed over.
   const typed = findingsHtml({ ...snap, overview: { ...snap.overview, loops: { ...loops, runs: runs.map((r, i) => (i ? r : { ...r, person: 1 })) } } });
   assert.doesNotMatch(typed, /Nobody typed/);
+});
+
+test('a run on the floor can be linked to and picked, and its record is the run’s own', () => {
+  const out = run();
+  const snap = snapshotOf(out);
+  const [record] = out.details.loops.records;
+  // The floor names each run, on the overview and on the loops page; the place for its record waits for the script.
+  for (const html of [findingsHtml(snap), loopsHtml(snap)]) {
+    assert.match(html, new RegExp(`<span class="sf-run" id="run-${record.id}" data-run="${record.id}" style=`));
+    assert.match(html, /<div class="sf-inspect" data-sf-inspect hidden>/);
+    assert.match(html, /<p class="sf-inspect-at" data-sf-inspect-at role="status">Pick a run on the clock to read its record, cycle by cycle\.<\/p>/);
+    assert.match(html, /<button type="button" data-sf-step="-1" hidden>Earlier run<\/button><button type="button" data-sf-step="1">Show the first run<\/button><button type="button" data-sf-step="0" hidden>Close<\/button>/);
+  }
+  const html = runRecordHtml(record, { models: snap.overview.models });
+  assert.match(html, /<code>feature loop: demo-heap<\/code>/);
+  assert.match(html, /started Nov 6, 2026, 11 pm · Opus 5\.5 \(<code>claude-opus-5-5<\/code>\), high effort/, 'a model by its name, with the raw id beside it');
+  assert.match(html, /<span class="sf-ledger-time">\+0:30<\/span><span class="sf-ledger-cycle">cycle 1<\/span><span class="sf-ledger-text">First &lt;script&gt;x&lt;\/script&gt;/, 'a summary is data: escaped');
+  assert.match(html, /<strong>1 cycle<\/strong> · 1 commit · 6 tool calls · <strong>2 h<\/strong> · \$[\d.]+ estimated usage/);
+  assert.match(html, /0 prompts from a person, start to end · Done/);
+  assert.match(html, /<a href="https:\/\/github\.com\/pilifs\/in-the-loop\/blob\/[^"]+">Run record<\/a>/);
+  // An id with no documented name is shown as it is; only https links are followed; nothing is invented for what is missing.
+  const bare = runRecordHtml({ ...record, model: 'claude-x', recordUrl: 'javascript:alert(1)', summaryUrl: null, cycles: [], usd: null, codeAdded: null, prompts: null, outcome: 'blocked' }, { models: snap.overview.models });
+  assert.match(bare, /· <code>claude-x<\/code>, high effort/);
+  assert.doesNotMatch(bare, /javascript:|<a /);
+  assert.match(bare, /No cycle committed\./);
+  assert.match(bare, /<strong>0 cycles<\/strong> · 1 commit · 6 tool calls · <strong>2 h<\/strong><br>Blocked on a person/);
+  assert.match(runRecordHtml({ ...record, cycles: [{ ...record.cycles[0], decision: 'stop' }] }), /<span class="sf-ledger-stop">decided to stop<\/span>/);
 });

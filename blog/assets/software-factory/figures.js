@@ -166,8 +166,9 @@ const BREAK = 2.5; // the width of a cut in the floor's clock, in percent
  *   panels: [{ from, to, pause }] in order, times in ms; each is drawn to the
  *     same scale, and `pause` says how long the cut before it was.
  *   rows: how many rows the plot has. A run sits in row `row`, from 0.
- *   runs: [{ from, to, row, ticks: [ms], tip, flag }]; a notch per tick, and a
- *     marker on a run's end when `flag` is set.
+ *   runs: [{ id, from, to, row, ticks: [ms], tip, flag }]; a notch per tick, and a
+ *     marker on a run's end when `flag` is set. With an id a run can be linked
+ *     to (#run-<id>) and picked.
  *   names: [{ at, until, label, href }]: a link over the plot, with room to `until`.
  *   nights: [{ from, to }], shaded behind the runs.
  *   ticks: [{ at, label, kind }], kind 'start' (a panel's first), 'day' or 'hour'.
@@ -205,7 +206,8 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
               .filter((t) => t > r.from && t < r.to)
               .map((t) => `<i style="left:${Number((((t - r.from) / length) * 100).toFixed(2))}%"></i>`)
               .join('');
-      return `<span class="sf-run${r.flag ? ' sf-run-flag' : ''}" style="${box(r.from, r.to)};--sf-row:${r.row}" title="${e(r.tip)}" data-tip="${e(r.tip)}">${notches}</span>`;
+      const name = r.id ? ` id="run-${e(r.id)}" data-run="${e(r.id)}"` : '';
+      return `<span class="sf-run${r.flag ? ' sf-run-flag' : ''}"${name} style="${box(r.from, r.to)};--sf-row:${r.row}" title="${e(r.tip)}" data-tip="${e(r.tip)}">${notches}</span>`;
     })
     .join('');
   const labels = names

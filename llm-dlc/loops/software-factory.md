@@ -844,6 +844,11 @@ Settled by the author on 2026-11-14:
   nights shaded, the idle days cut out of the clock. The same figure is on the loops page. Drawn from
   `overview.loops.runs`; no change to the contract or the snapshot. The loops page's title says "no prompt from a
   person", not "nobody at the keyboard".
+- **A run's record under the clock** (2026-11-15, interactive): docs/software-factory.md, "Every run on one
+  clock". A click on a run of the figure shows its record: every cycle by its commit's summary line, what the run
+  took, how it ended, and links to the run record in the source. Two buttons step through all the runs; the address
+  keeps the pick as `#run-<id>`. From the `loops` collection the snapshot already has. The overview's opening
+  sentence now says what in-the-loop is, from its README: a project that formally verifies Java code.
 - Status: done
 
 ## Loop settings

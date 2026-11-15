@@ -153,6 +153,13 @@ and the seconds at which its cycles committed.
   The axis shows hours from 60rem wide, days from 36rem, and each stretch's first day below that. The campaign
   names over the plot are links to the campaign's card on the loops page; the plot itself is hidden from a screen
   reader, because that page lists every run.
+- **A run can be picked.** With the page's script, a click on a run shows that run's record under the clock: every
+  cycle by the summary line of its commit, the model, what the run took and how it ended, with links to the run
+  record and the session summary in the source repository. It comes from the snapshot's `loops` collection, loaded
+  once on the first pick (`runRecordHtml` in `factory.js`). Two buttons step to the earlier and the later run, so
+  every run is reachable from the keyboard and by touch. The address keeps the pick as `#run-<id>`, so a link to
+  `/software-factory/#run-<id>` or `/software-factory/loops/#run-<id>` opens that run. Without the script the
+  place for the record stays hidden and the link scrolls to the run.
 - The loops page's title no longer says "nobody at the keyboard". The record shows no prompt from a person inside
   the runs; it does not show where the person was. It now says "no prompt from a person".
 

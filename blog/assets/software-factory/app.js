@@ -15,7 +15,7 @@
 
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runRecordHtml, toolChartHtml, toolsHtml } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
 import { computeMeasures, series } from './measures.js';
@@ -228,6 +228,7 @@ async function start(shell) {
     if (control) control.hidden = false;
     for (const title of $$('[data-tip] > title', root)) title.parentNode.removeChild(title);
     for (const mark of $$('[data-tip][title]', root)) mark.removeAttribute('title');
+    if (root === shell) readyInspector();
   }
 
   function drawFactory(snap) {
@@ -271,6 +272,90 @@ async function start(shell) {
       body.innerHTML = '<p>These runs could not be loaded. Close this and open it again to retry.</p>';
     }
   }
+  // A run picked on the floor: its record, from the loops collection. The
+  // address keeps the pick (#run-<id>), so a run can be linked to. The two
+  // step buttons reach every run without a pointer.
+  let picked = null;
+  const floorRuns = () => $$('.sf-floor .sf-run[data-run]').map((el) => el.dataset.run);
+  function runInAddress() {
+    try {
+      const hash = decodeURIComponent(location.hash.slice(1));
+      return hash.startsWith('run-') ? hash.slice(4) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function pickRun(id, { address = true } = {}) {
+    const box = $('[data-sf-inspect]');
+    if (!box) return;
+    const order = floorRuns();
+    if (!order.includes(id)) id = null;
+    picked = id;
+    for (const el of $$('.sf-floor .sf-run')) el.classList.toggle('sf-run-on', id !== null && el.dataset.run === id);
+    const [earlier, later, close] = [-1, 1, 0].map((n) => $(`[data-sf-step="${n}"]`, box));
+    const at = $('[data-sf-inspect-at]', box);
+    const body = $('[data-sf-inspect-body]', box);
+    at.dataset.hint ??= at.textContent;
+    const i = order.indexOf(id);
+    const held = document.activeElement;
+    earlier.hidden = close.hidden = id === null;
+    earlier.disabled = i <= 0;
+    later.disabled = id !== null && i === order.length - 1;
+    later.textContent = id === null ? 'Show the first run' : 'Later run';
+    // A button that just went away or dead hands the focus to the one that still steps.
+    if (box.contains(held) && (held.hidden || held.disabled)) (later.disabled ? earlier : later).focus();
+    if (address && !filtered) history.replaceState(null, '', id === null ? `${location.pathname}${location.search}` : `#run-${encodeURIComponent(id)}`);
+    if (id === null) {
+      at.textContent = at.dataset.hint;
+      body.innerHTML = '';
+      return;
+    }
+    at.textContent = `Run ${i + 1} of ${order.length}`;
+    const snap = current;
+    if (!body.firstChild) body.innerHTML = '<p class="sf-muted">Loading…</p>';
+    try {
+      runs ??= loadCollection(snap, 'loops', { fetch: get });
+      const file = await runs;
+      if (snap !== current || picked !== id) return;
+      const record = file.records.find((r) => r.id === id);
+      body.innerHTML = record ? runRecordHtml(record, { models: snap.overview.models }) : '<p>This run has no record in the snapshot.</p>';
+    } catch {
+      runs = null;
+      if (picked === id) body.innerHTML = '<p>This run could not be loaded. Pick it again to retry.</p>';
+    }
+  }
+
+  /** After the floor is drawn: show where a picked run's record goes, and keep the pick. */
+  function readyInspector() {
+    const box = $('[data-sf-inspect]');
+    if (!box) return;
+    box.hidden = false;
+    $('.sf-floor')?.setAttribute('data-pick', '');
+    if (picked !== null) pickRun(picked, { address: false });
+  }
+
+  shell.addEventListener('click', (ev) => {
+    const run = ev.target.closest?.('.sf-floor .sf-run[data-run]');
+    if (run) {
+      pickRun(run.dataset.run);
+      // The record goes under the clock: bring both into view when it would land out of sight.
+      const box = $('[data-sf-inspect]');
+      if (box && box.getBoundingClientRect().top > window.innerHeight - 160)
+        run.closest('.sf-floor').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      return;
+    }
+    const step = ev.target.closest?.('[data-sf-step]');
+    if (!step) return;
+    const order = floorRuns();
+    const by = Number(step.dataset.sfStep);
+    pickRun(by === 0 ? null : picked === null ? order[0] : (order[order.indexOf(picked) + by] ?? picked));
+  });
+  window.addEventListener('hashchange', () => {
+    const id = runInAddress();
+    if (id !== null && id !== picked) pickRun(id, { address: false });
+  });
+
   // Every change as a dot, from the changes collection: drawn when opened.
   async function openChangePlot(d) {
     const body = $('[data-sf-change-plot-body]', d);
@@ -456,6 +541,7 @@ async function start(shell) {
     if (`${location.pathname}${location.search}${location.hash}` !== canonical) history.replaceState(null, '', canonical);
   }
   openTarget();
+  if (runInAddress() !== null) pickRun(runInAddress(), { address: false });
 
   createPoller({
     check,
