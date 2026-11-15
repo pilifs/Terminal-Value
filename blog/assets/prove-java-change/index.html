@@ -79,7 +79,7 @@ always GET, POST, … or UNKNOWN</span>
           <ul>
             <li><b>0</b><span>specifications to write</span></li>
             <li><b>2</b><span>confirmations from you before it runs unattended</span></li>
-            <li><b>92<small> of 100</small></b><span>refuted changes had passed their unit tests</span></li>
+            <li><b>92<small> of 100</small></b><span>refuted example changes had passed their unit tests</span></li>
             <li><b>183</b><span>worked examples the loop learns from</span></li>
           </ul>
         </div>
@@ -526,7 +526,7 @@ after:  -2147483648</pre>
             <p class="kicker">Before you run it</p>
             <h2>Questions</h2>
           </div>
-          <details open><summary>Why not a code review, or more tests?</summary><p>Tests check the inputs someone thought of: of the 100 changes the examples refute, 92 had passed their unit tests. A review, by a person or a model, is an opinion about the source. Here the model only prepares the question. The answer comes from a model checker run on the compiled bytecode, over every input within the stated bounds. A refuted claim comes with the input that breaks it, and that input is then run on a real JVM.</p></details>
+          <details open><summary>Why not a code review, or more tests?</summary><p>Tests check the inputs someone thought of. In the project's own examples, 92 of the 100 refuted changes had passed their system's unit tests. A review, by a person or a model, is an opinion about the source. Here the model only prepares the question. The answer comes from a model checker run on the compiled bytecode, over every input within the stated bounds. A refuted claim comes with the input that breaks it, and that input is then run on a real JVM.</p></details>
           <details><summary>The model writes the claims. Who checks them?</summary><p>You do, before any proof runs. Much of a claim is not the model's to invent: a regression claim is the previous version's own behaviour, and a contract is read from the types and the bytecode. Where the change's intent is needed, the plugin drafts it, shows you each claim in plain words, and waits. After that, the proof loop may not change a claim to fit a result. A proof that covers no input is reported as vacuous, never as a plain pass.</p></details>
           <details id="verifier"><summary>The loop can extend the verifier. What stops it bending the verifier until the proof passes?</summary><p>The claims and the answer expected of each are written down before the proof starts. A refutation does not rest on the verifier alone: its input is run on a real JVM. An established answer does rest on it, so it is checked from outside where that is possible. On example 285 the same claim also had to be refuted on a deliberately broken copy of the fix, and it was. Where JBMC is installed, a second engine with its own model of the JVM can prove the statement again. On the 35 recorded obligations both engines decide, none is decided differently. Every extension is a commit on your machine that you can read. What is left: the verifier itself is tested, not proved.</p></details>
           <details id="requirements"><summary>What does it need?</summary>
@@ -558,8 +558,9 @@ after:  -2147483648</pre>
           <p>Prove your next Java change. Two commands to install, one to run. Tell me how it went, especially if it failed.</p>
           <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
           <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
+          <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
           <div class="actions">
-            <a class="btn primary" href="#install">Get started</a>
+            <a class="btn primary" href="#install">See the three steps</a>
             <a class="btn" href="https://github.com/pilifs/in-the-loop">View on GitHub</a>
           </div>
         </div>
