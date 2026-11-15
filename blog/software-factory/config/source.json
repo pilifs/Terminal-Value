@@ -13,7 +13,8 @@
     { "path": "verification/results/index.json", "schemas": ["verification-results-index/v1"], "required": true },
     { "path": "verification/jobs/{job}.json", "schemas": ["verification-job/v1"], "required": false, "note": "for expected and submitted.session only" },
     { "path": "examples/index.json", "schemas": ["examples-index/v2"], "required": true },
-    { "path": "examples/tags.json", "schemas": [], "required": true }
+    { "path": "examples/tags.json", "schemas": [], "required": true },
+    { "path": "examples/{example}/result.json", "schemas": [], "required": false, "note": "an example's own result, one per catalog entry with a folder: read for the existing tests' task and the tests that failed, the first counterexample, a trace's invariant, length and actions, the attempt's seconds and the checker's name; never its code, logs or paths. The manifest records them together, as one input at examples/*/result.json" }
   ],
   "housekeeping": {
     "summaries": ["Record session traces"],

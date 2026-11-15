@@ -1,5 +1,5 @@
 {
-  "version": "4",
+  "version": "5",
   "note": "Frozen in Phase 0 with schema.json; version 2 adds the figures of the feature loops, tools and code, and version 4 the example catalog's own answers about each example. The data stream implements these definitions; the dashboard and the methodology page show them. A change here is a contract change, and bumps version.",
   "periods": {
     "timezone": "America/Toronto",
@@ -77,7 +77,7 @@
       "filters": [],
       "definition": "Examples in examples/index.json at the source revision, by origin (constructed, real-world), verdict, vacuity and freshness.",
       "coverage": "Examples with a verdict of all examples.",
-      "notes": "A stock, never examples per period. A verified label is not a claim of a current, non-vacuous proof: freshness may be unknown and a proof may be vacuous. The catalog also says of each example whether the module's existing unit tests passed on the same patch, and how severe the change would be if it shipped unnoticed. Both are the catalog's statements, counted as written (overview.catalog), over the examples that have them. Most examples were constructed for the catalog, with the systems and tests they change."
+      "notes": "A stock, never examples per period. A verified label is not a claim of a current, non-vacuous proof: freshness may be unknown and a proof may be vacuous. The catalog also says of each example whether the module's existing unit tests passed on the same patch, and how severe the change would be if it shipped unnoticed. Both are the catalog's statements, counted as written (overview.catalog), over the examples that have them. Most examples were constructed for the catalog, with the systems and tests they change. An example's own result file says what its verdict rests on: the existing tests' task and the tests that failed, the first counterexample or a model checker's trace, and how long the attempt took where it is recorded. That text is carried as written and cut at 320 characters."
     },
     {
       "id": "usage_share_by_model",

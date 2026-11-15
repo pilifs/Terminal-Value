@@ -12,7 +12,8 @@
 //   normalizeSources(raw, config) -> Normalized
 //     Checks each input's schema name and required fields (config/source.json)
 //     and selects public fields only: never prompt text, tool labels or
-//     errors, job descriptions or example notes. Normalized is
+//     errors, job descriptions or example notes (an example's own result
+//     file is read for the facts exampleEvidence lists). Normalized is
 //     { source: { repository, sha, inputs: [{ path, sha256, bytes, schema }] },
 //       pricingAsOf, calls, sessions, changes, verification, examples, tags },
 //     each record holding the fields schema.json's details and overview need
@@ -102,6 +103,13 @@ const EXAMPLES = 'examples/index.json';
 const TAGS = 'examples/tags.json';
 export const sessionMetricsPath = (id) => `llm-dlc/traces/${id}/metrics.json`;
 export const jobPath = (id) => `verification/jobs/${id}.json`;
+// An example's own result, beside its entry in the catalog. `folder` is the entry's path.
+const EXAMPLE_FOLDER = /^examples\/[A-Za-z0-9._-]+$/;
+export const exampleResultPath = (folder) => `${folder}/result.json`;
+// The examples' result files are many and small, so the manifest records them
+// together: one input under this path, whose sha256 is of a line for each file
+// read (`<path> <sha256>\n`, in path order) and whose bytes are their sum.
+export const EXAMPLE_RESULTS = 'examples/*/result.json';
 // The top-level fields each input must have, by its config/source.json path.
 // Kept here, not in source.json: that file is hashed into every snapshot id,
 // the frozen example's included (see Progress in the data brief).
@@ -263,7 +271,9 @@ export async function readSources({ ref, sha, checkout, dir, fetchImpl = globalT
   const sessionIds = (Array.isArray(index?.sessions) ? index.sessions : []).map((s) => s?.session_id).filter((id) => SESSION_ID.test(id ?? ''));
   const results = files.has(RESULTS) ? tryJson(files.get(RESULTS)) : null;
   const jobIds = (Array.isArray(results?.results) ? results.results : []).map((r) => r?.id).filter((id) => JOB_ID.test(id ?? ''));
-  await mapLimit([...sessionIds.map(sessionMetricsPath), ...jobIds.map(jobPath)], 8, put);
+  const catalog = files.has(EXAMPLES) ? tryJson(files.get(EXAMPLES)) : null;
+  const folders = (Array.isArray(catalog?.examples) ? catalog.examples : []).map((x) => x?.path).filter((p) => EXAMPLE_FOLDER.test(p ?? ''));
+  await mapLimit([...sessionIds.map(sessionMetricsPath), ...jobIds.map(jobPath), ...folders.map(exampleResultPath)], 8, put);
   const runs = (await reader.list(at, 'llm-dlc/traces')).filter((p) => RUN.test(p)).sort();
   // The run records themselves, for the feature loops; the briefs' names, for their campaigns.
   await mapLimit(runs, 8, put);
@@ -297,6 +307,59 @@ export function parseSignals(summary) {
     .map((s) => s.trim().match(/^([a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._-]*)(?:×(\d+))?$/i))
     .filter(Boolean)
     .map((m) => ({ name: m[1], count: Math.max(1, Number(m[2] ?? 1)) }));
+}
+
+// Text from a result file is carried as written up to this many characters, then cut with an ellipsis.
+const EVIDENCE_TEXT = 320;
+const TRACE_ACTIONS = 24;
+const FAILED_TESTS = 5;
+
+/**
+ * What an example's verdict rests on, from its own result file: the existing
+ * tests' task and the tests that failed, the first counterexample (its input,
+ * what was expected and what came back) with how many were recorded, a
+ * trace's invariant, length, actions and states explored, how long the
+ * attempt took and the checker it names. Two layouts are read: the first
+ * keeps these at the top, format 2 under `evidence` with the attempt beside
+ * it. Never the code, the logs, a path on the machine or the notes. Null when
+ * there is no result or nothing of this in it.
+ */
+export function exampleEvidence(result) {
+  if (!isObject(result)) return null;
+  const ev = result.format === 2 && isObject(result.evidence) ? result.evidence : result;
+  const text = (v) => {
+    if (v === null || v === undefined) return null;
+    const s = typeof v === 'string' ? v : JSON.stringify(v);
+    return s.length > EVIDENCE_TEXT ? `${s.slice(0, EVIDENCE_TEXT - 1)}…` : s;
+  };
+  const tests =
+    isObject(ev.existingTests) && typeof ev.existingTests.task === 'string'
+      ? {
+          task: text(ev.existingTests.task),
+          failed: (Array.isArray(ev.existingTests.failures) ? ev.existingTests.failures : [])
+            .filter((t) => typeof t === 'string')
+            .slice(0, FAILED_TESTS)
+            .map(text),
+        }
+      : null;
+  const found = (Array.isArray(ev.counterexamples) ? ev.counterexamples : []).filter((c) => isObject(c) && typeof c.input === 'string');
+  const counterexample = found.length ? { input: text(found[0].input), expected: text(found[0].contract ?? found[0].expected), actual: text(found[0].actual), count: found.length } : null;
+  const steps = (Array.isArray(ev.trace) ? ev.trace : []).filter(isObject);
+  const trace = steps.length
+    ? {
+        invariant: typeof ev.invariant === 'string' ? text(ev.invariant) : null,
+        steps: steps.length,
+        actions: steps
+          .map((s) => (typeof s.action === 'string' ? text(s.action) : null))
+          .filter(Boolean)
+          .slice(0, TRACE_ACTIONS),
+        states: isCount(ev.statesExplored) ? ev.statesExplored : null,
+      }
+    : null;
+  const taken = isObject(result.attempt) ? result.attempt.seconds : null;
+  const seconds = typeof taken === 'number' && Number.isFinite(taken) && taken >= 0 ? taken : null;
+  const checker = isObject(ev.search) && typeof ev.search.checker === 'string' ? text(ev.search.checker) : null;
+  return tests || counterexample || trace || seconds !== null || checker ? { tests, counterexample, trace, seconds, checker } : null;
 }
 
 export function normalizeSources(raw, config = loadConfig()) {
@@ -524,12 +587,14 @@ export function normalizeSources(raw, config = loadConfig()) {
   });
 
   // Examples: the catalog's public facts and its one-paragraph summary of each,
-  // never its working notes.
+  // never its working notes. An example's own result file adds what its
+  // verdict rests on (exampleEvidence).
   const examples = list(EXAMPLES, examplesDoc, 'examples').map((x, i) => {
     if (!isObject(x) || typeof x.id !== 'string' || typeof x.title !== 'string') bad(EXAMPLES, `examples[${i}] lacks an id or title`);
     if (!['constructed', 'real-world'].includes(x.origin)) bad(EXAMPLES, `examples[${i}].origin ${JSON.stringify(x.origin)} is unknown`);
     const tags = isObject(x.tags) ? x.tags : {};
     const strings = (v) => (Array.isArray(v) ? v.filter((t) => typeof t === 'string') : []);
+    const folder = typeof x.path === 'string' && EXAMPLE_FOLDER.test(x.path) ? x.path : null;
     return {
       id: x.id,
       title: x.title,
@@ -542,7 +607,7 @@ export function normalizeSources(raw, config = loadConfig()) {
       tags: { domain: strings(tags.domain), defect: strings(tags.defect), technique: strings(tags.technique) },
       // Where the example is in the repository, what it says of itself, and
       // the change it verifies when that was published elsewhere.
-      path: typeof x.path === 'string' && /^examples\/[A-Za-z0-9._-]+$/.test(x.path) ? x.path : null,
+      path: folder,
       summary: strOrNull(x.summary),
       sourceUrl: typeof x.source === 'string' && /^https:\/\//.test(x.source) ? x.source : null,
       // The catalog's own answers: did the module's unit tests pass on the same
@@ -550,8 +615,13 @@ export function normalizeSources(raw, config = loadConfig()) {
       testsPassed: typeof x.existingTestsPassed === 'boolean' ? x.existingTestsPassed : null,
       severity: strOrNull(x.severity),
       changeKind: strOrNull(x.changeKind),
+      evidence: folder ? exampleEvidence(load(exampleResultPath(folder))) : null,
     };
   });
+  const results = [...inputs.values()].filter((i) => i.path.endsWith('/result.json') && EXAMPLE_FOLDER.test(i.path.slice(0, -'/result.json'.length))).sort((a, b) => (a.path < b.path ? -1 : 1));
+  for (const r of results) inputs.delete(r.path);
+  if (results.length)
+    inputs.set(EXAMPLE_RESULTS, { path: EXAMPLE_RESULTS, sha256: sha256(results.map((r) => `${r.path} ${r.sha256}\n`).join('')), bytes: results.reduce((t, r) => t + r.bytes, 0), schema: '' });
 
   // Feature loop runs: each run record, in the campaign its loop's name gives.
   // A record that isn't one (no header) is left out and counted.

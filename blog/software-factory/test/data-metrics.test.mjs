@@ -267,14 +267,17 @@ test('partial coverage is counted, never filled in', () => {
   assert.deepEqual(out.overview.stocks.examples, { total: 2, origin: { constructed: 2 }, verdict: { verified: 1, none: 1 }, vacuous: 0, freshness: { current: 1, absent: 1 } });
 });
 
+const evidence = (o = {}) => ({ tests: null, counterexample: null, trace: null, seconds: null, checker: null, ...o });
+
 test('the catalog’s answers are counted by verdict, and an example with none is in neither count', () => {
   const out = run(
     norm({
       examples: [
-        example('a', { verdict: 'violation', testsPassed: true, severity: 'critical', path: 'examples/a', summary: 'Found.', sourceUrl: 'https://example.invalid/1', changeKind: 'refactor' }),
-        example('b', { verdict: 'violation', testsPassed: true, severity: 'high' }),
-        example('c', { verdict: 'violation', testsPassed: false, severity: 'high' }),
-        example('d', { verdict: 'verified', testsPassed: true, severity: 'none' }),
+        example('a', { verdict: 'violation', testsPassed: true, severity: 'critical', path: 'examples/a', summary: 'Found.', sourceUrl: 'https://example.invalid/1', changeKind: 'refactor', evidence: evidence({ counterexample: { input: 'f(0)', expected: '1', actual: '2', count: 3 }, seconds: 9 }) }),
+        // A trace and an input: counted once, as an input. A trace alone: as a trace. A violation with neither is in neither.
+        example('b', { verdict: 'violation', testsPassed: true, severity: 'high', evidence: evidence({ counterexample: { input: 'g()', expected: null, actual: null, count: 1 }, trace: { invariant: 'Safe', steps: 2, actions: ['Init', 'Next'], states: 7 }, seconds: 2 }) }),
+        example('c', { verdict: 'violation', testsPassed: false, severity: 'high', evidence: evidence({ trace: { invariant: null, steps: 1, actions: [], states: null } }) }),
+        example('d', { verdict: 'verified', testsPassed: true, severity: 'none', evidence: evidence({ seconds: 4, counterexample: { input: 'not a violation', expected: null, actual: null, count: 1 } }) }),
         example('e', { verdict: null, testsPassed: null, severity: 'low' }),
         example('f', { verdict: 'verified' }),
       ],
@@ -284,12 +287,26 @@ test('the catalog’s answers are counted by verdict, and an example with none i
     coverage: { included: 4, total: 6, missing: 2, note: 'examples whose entry says whether the existing tests passed' },
     tests: { violation: { passed: 2, failed: 1 }, verified: { passed: 1 } },
     severity: { violation: { critical: 1, high: 2 }, verified: { none: 1 }, none: { low: 1 } },
+    counterexamples: { violations: 3, input: 2, trace: 1 },
+    // The middle of 2, 4 and 9 seconds, whatever the verdict.
+    attempts: { timed: 3, medianSeconds: 4 },
   });
   const [a, , , , , f] = out.details.examples.records;
+  assert.deepEqual(a.evidence, { tests: null, counterexample: { input: 'f(0)', expected: '1', actual: '2', count: 3 }, trace: null, seconds: 9, checker: null });
+  assert.equal(f.evidence, null);
   assert.deepEqual([a.path, a.summary, a.sourceUrl, a.testsPassed, a.severity, a.changeKind], ['examples/a', 'Found.', 'https://example.invalid/1', true, 'critical', 'refactor']);
   assert.deepEqual([f.path, f.summary, f.sourceUrl, f.testsPassed, f.severity, f.changeKind], [null, null, null, null, null, null]);
   // No examples: an empty count, never a missing one, and still valid.
-  assert.deepEqual(run(norm()).overview.catalog, { coverage: { included: 0, total: 0, missing: 0, note: 'examples whose entry says whether the existing tests passed' }, tests: {}, severity: {} });
+  assert.deepEqual(run(norm()).overview.catalog, {
+    coverage: { included: 0, total: 0, missing: 0, note: 'examples whose entry says whether the existing tests passed' },
+    tests: {},
+    severity: {},
+    counterexamples: { violations: 0, input: 0, trace: 0 },
+    attempts: { timed: 0, medianSeconds: null },
+  });
+  // With two timed attempts the middle is the lower one: a value that was measured, not an average.
+  const two = run(norm({ examples: [example('a', { evidence: evidence({ seconds: 1.5 }) }), example('b', { evidence: evidence({ seconds: 30 }) })] }));
+  assert.deepEqual(two.overview.catalog.attempts, { timed: 2, medianSeconds: 1.5 });
 });
 
 test('days are half-open Toronto days from UTC instants, with no gaps', () => {

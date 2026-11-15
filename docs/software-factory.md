@@ -181,6 +181,43 @@ the tests they change: the claim is about a catalog built to show this, not a fi
   change, and the definition on the methodology page says so.
 - The snapshot was made again from the same source revision (`fbd1fa86`), so no other number moved.
 
+### What a verdict rests on: an example's evidence (generator 5)
+
+The catalog's index says an example's verdict and whether the existing tests passed. The example's own folder says
+what that rests on, in `result.json`: the test task that ran, the counterexample the verifier found, how long the
+attempt took. The importer now reads that file for every catalog entry with a folder
+(`examples/{example}/result.json` in `config/source.json`, optional) and the example's record carries an
+`evidence` object (`exampleEvidence` in `import.mjs`):
+
+- `tests`: the existing tests' task, such as `java -ea net.terminalvalue.quorum.Tests`, and up to five tests that
+  failed. Whether they passed is still the record's `testsPassed`, from the index; at this revision the two agree
+  for all 157 examples with a result.
+- `counterexample`: the first one recorded, as its input, what was expected and what came back, with the count of
+  all recorded.
+- `trace`: for a model checker's result, the invariant it breaks, the trace's length, each step's action (up to
+  24) and the states explored.
+- `seconds` and `checker`: how long the attempt took and the checker the result names, where recorded. Only the
+  newer layout of the file has them: 47 of 183 examples say how long, 16 name a checker.
+
+Both layouts of the file are read: the first keeps these at the top, format 2 under `evidence` with the attempt
+beside it. Text is carried as written and cut at 320 characters with an ellipsis (one text at this revision).
+Never carried: the code before and after, the logs, the machine's paths, the notes.
+
+`overview.catalog` gains `counterexamples` (of the violations, how many come with an input and how many with a
+trace and no input: 64 and 36 of 100) and `attempts` (how many say how long they took, and the middle one's
+seconds: 47 and 2.9). Both are counted from the records, so a page needs no collection to say them.
+
+- **One input in the manifest for all the result files.** Listed one by one they added 11.7 KB gzip to the
+  manifest, which is on the first load. They are recorded together under `examples/*/result.json`: the sha256 is
+  of a line for each file read (`<path> <sha256>`, in path order) and the bytes are their sum. The methodology
+  page says so. The code figures are read from the tree at the same revision with no input of their own, so this
+  is more provenance than they have, and less than a line per file.
+- A result file that isn't JSON stops the import, like any input that can't be trusted. A folder with no result
+  file is an example with no evidence: 26 at this revision, the 24 changes to published libraries and two
+  constructed examples.
+- The snapshot was made again from the same source revision (`fbd1fa86`): `sf1-5959e891382708eb`. No other number
+  moved.
+
 ### The catalog's own page
 
 The Output finding was the only one with no page under it: its link went to a records table on the usage page.

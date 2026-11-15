@@ -30,6 +30,10 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 5 adds each example's `evidence` (what its verdict rests on,
+//     from its own result file) and overview.catalog's counterexamples and
+//     attempts. Version 4 added an example's path, summary and the catalog's
+//     answers about it, with overview.catalog.
 //   - Version 2 adds the feature loops, the tools and the code (factory.mjs):
 //     overview.loops, overview.tools and overview.code, each null when nothing
 //     was measured for it, the loops collection (one record per run, with its
@@ -50,7 +54,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '4' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '5' };
 
 const STATUSES = ['passed', 'failed'];
 const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
@@ -251,10 +255,24 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const tested = examples.filter((x) => typeof x.testsPassed === 'boolean');
   const byVerdict = (rows, key) =>
     Object.fromEntries(Object.entries(Object.groupBy(rows, (x) => x.verdict ?? 'none')).map(([verdict, list]) => [verdict, countBy(list, key)]));
+  const violations = examples.filter((x) => x.verdict === 'violation');
+  const timed = examples
+    .map((x) => x.evidence?.seconds)
+    .filter((s) => typeof s === 'number')
+    .sort((a, b) => a - b);
   const catalog = {
     coverage: { included: tested.length, total: examples.length, missing: examples.length - tested.length, note: 'examples whose entry says whether the existing tests passed' },
     tests: byVerdict(tested, (x) => (x.testsPassed ? 'passed' : 'failed')),
     severity: byVerdict(examples.filter((x) => typeof x.severity === 'string'), (x) => x.severity),
+    // What a violation comes with, from the example's own result: a
+    // counterexample's input, or else a trace. And the attempts that say how
+    // long they took, whatever the verdict.
+    counterexamples: {
+      violations: violations.length,
+      input: violations.filter((x) => x.evidence?.counterexample).length,
+      trace: violations.filter((x) => !x.evidence?.counterexample && x.evidence?.trace).length,
+    },
+    attempts: { timed: timed.length, medianSeconds: timed.length ? timed[Math.floor((timed.length - 1) / 2)] : null },
   };
 
   // Areas.
@@ -387,6 +405,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     testsPassed: x.testsPassed ?? null,
     severity: x.severity ?? null,
     changeKind: x.changeKind ?? null,
+    evidence: x.evidence ?? null,
   }));
 
   // Collections, the snapshot id over them (identity.mjs), then the manifest.

@@ -84,6 +84,7 @@
             "repository": { "const": "pilifs/in-the-loop" },
             "sha": { "$ref": "#/$defs/sha" },
             "inputs": {
+              "description": "Every source file read, with its SHA-256. A path with a * stands for all the files read that match it (the examples' result files): its sha256 is of a line for each, '<path> <sha256>\\n' in path order, and its bytes are their sum.",
               "type": "array",
               "items": {
                 "type": "object",
@@ -425,6 +426,47 @@
               "testsPassed": { "type": ["boolean", "null"], "description": "The catalog's existingTestsPassed: whether the module's unit tests passed on the same patch." },
               "severity": { "type": ["string", "null"], "description": "The catalog's severity if the change shipped unnoticed." },
               "changeKind": { "type": ["string", "null"], "description": "The catalog's kind of change: refactor, feature, bug-fix, ..." },
+              "evidence": {
+                "description": "What the verdict rests on, from the example's own result file. Text is as written, cut at 320 characters with an ellipsis. Null when the example has no result file. Since generator 5.",
+                "type": ["object", "null"],
+                "required": ["tests", "counterexample", "trace", "seconds", "checker"],
+                "additionalProperties": false,
+                "properties": {
+                  "tests": {
+                    "description": "The existing tests run on the same patch: the task, and up to five tests that failed.",
+                    "type": ["object", "null"],
+                    "required": ["task", "failed"],
+                    "additionalProperties": false,
+                    "properties": { "task": { "type": "string" }, "failed": { "type": "array", "items": { "type": "string" } } }
+                  },
+                  "counterexample": {
+                    "description": "The first counterexample recorded: its input, what was expected and what came back, and how many were recorded.",
+                    "type": ["object", "null"],
+                    "required": ["input", "expected", "actual", "count"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "input": { "type": "string" },
+                      "expected": { "type": ["string", "null"] },
+                      "actual": { "type": ["string", "null"] },
+                      "count": { "type": "integer", "minimum": 1 }
+                    }
+                  },
+                  "trace": {
+                    "description": "A model checker's trace: the invariant it breaks, its length, the action of each step (up to 24) and the states explored.",
+                    "type": ["object", "null"],
+                    "required": ["invariant", "steps", "actions", "states"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "invariant": { "type": ["string", "null"] },
+                      "steps": { "type": "integer", "minimum": 1 },
+                      "actions": { "type": "array", "items": { "type": "string" } },
+                      "states": { "type": ["integer", "null"], "minimum": 0 }
+                    }
+                  },
+                  "seconds": { "type": ["number", "null"], "minimum": 0, "description": "How long the attempt took, where the result records it." },
+                  "checker": { "type": ["string", "null"], "description": "The checker the result names, such as JBMC 6.11.0." }
+                }
+              },
               "tags": {
                 "type": "object",
                 "required": ["domain", "defect", "technique"],
@@ -792,7 +834,7 @@
       }
     },
     "catalogOverview": {
-      "description": "The example catalog's own answers about each example, counted by verdict (none for an example with no single verdict). Since generator 4.",
+      "description": "The example catalog's own answers about each example, counted by verdict (none for an example with no single verdict), and what its violations come with. Since generator 4.",
       "type": "object",
       "required": ["coverage", "tests", "severity"],
       "additionalProperties": false,
@@ -811,6 +853,24 @@
           "description": "Examples by the severity the catalog gives the change, by verdict.",
           "type": "object",
           "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+        },
+        "counterexamples": {
+          "description": "Of the examples whose verdict is a violation: those whose result records a counterexample's input, and those with a trace and no input. Since generator 5.",
+          "type": "object",
+          "required": ["violations", "input", "trace"],
+          "additionalProperties": false,
+          "properties": {
+            "violations": { "type": "integer", "minimum": 0 },
+            "input": { "type": "integer", "minimum": 0 },
+            "trace": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "attempts": {
+          "description": "The examples whose result says how long the attempt took, and the middle one's seconds (null with none). Since generator 5.",
+          "type": "object",
+          "required": ["timed", "medianSeconds"],
+          "additionalProperties": false,
+          "properties": { "timed": { "type": "integer", "minimum": 0 }, "medianSeconds": { "type": ["number", "null"], "minimum": 0 } }
         }
       }
     },

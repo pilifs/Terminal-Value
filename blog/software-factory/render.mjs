@@ -539,7 +539,9 @@ function provenance(snapshot, { e, formatDate }) {
   const check = pointer.lastSourceCheck;
   const rows = [
     ['Source', `<a href="${REPO}/tree/${e(manifest.source.sha)}">${e(manifest.source.repository)}</a> at <code>${e(manifest.source.sha)}</code>`],
-    ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e(manifest.source.inputs.length.toLocaleString('en-US'))} source files, each recorded with its SHA-256`],
+    ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e(manifest.source.inputs.length.toLocaleString('en-US'))} source inputs, each recorded with its SHA-256${
+        manifest.source.inputs.some((i) => i.path.includes('*')) ? '; the examples’ result files are recorded together, as one' : ''
+      }`],
     ['Data as of', asOf ? `<time datetime="${e(asOf)}">${e(formatDate(asOf))}</time>, the last day with activity in the data` : 'No dated activity'],
     ['Published', day(pointer.publishedAt)],
     [

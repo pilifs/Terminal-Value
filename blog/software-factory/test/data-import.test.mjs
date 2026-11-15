@@ -1,9 +1,10 @@
 // Stream A, phase A1: reading and normalizing in-the-loop's metadata.
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { SourceError, normalizeSources, parseSignals, readSources } from '../import.mjs';
+import { SourceError, exampleEvidence, normalizeSources, parseSignals, readSources } from '../import.mjs';
 import { CASES, UPSTREAM, materialize } from './fixtures/cases.mjs';
 
 const SHA = JSON.parse(fs.readFileSync(path.join(UPSTREAM, 'SOURCE.json'), 'utf8')).rev;
@@ -314,4 +315,82 @@ test('an example keeps the catalog’s own answers: where it is, what it says, a
   const first = json(UPSTREAM, 'examples/index.json').examples[0];
   assert.deepEqual([whole.examples[0].path, whole.examples[0].sourceUrl, whole.examples[0].severity], [first.path, first.source, first.severity]);
   assert.ok(whole.examples.some((x) => x.testsPassed === true) && whole.examples.some((x) => x.testsPassed === false) && whole.examples.some((x) => x.testsPassed === null));
+});
+
+test('an example’s result file gives what its verdict rests on, in either layout, and nothing else of it', () => {
+  // The first layout: everything at the top.
+  const first = exampleEvidence({
+    verdict: 'violation',
+    existingTests: { task: ':domain:test', passed: false, failures: ['A.one', 2, 'A.two', 'A.three', 'A.four', 'A.five', 'A.six'] },
+    counterexamples: [{ input: 'decide(DECLINED)', contract: 'Transition[next=REFUND]', actual: 'Unchanged' }, { input: 'decide(OTHER)', contract: 'x', actual: 'y' }, 'not one'],
+    before: { code: 'SECRET code' },
+    trace: null,
+    statesExplored: null,
+  });
+  assert.deepEqual(first, {
+    tests: { task: ':domain:test', failed: ['A.one', 'A.two', 'A.three', 'A.four', 'A.five'] },
+    counterexample: { input: 'decide(DECLINED)', expected: 'Transition[next=REFUND]', actual: 'Unchanged', count: 2 },
+    trace: null,
+    seconds: null,
+    checker: null,
+  });
+  // Format 2: under evidence, with the attempt beside it. A value that isn't text is written as JSON.
+  const second = exampleEvidence({
+    format: 2,
+    attempt: { seconds: 2.9, engine: 'jbmc', pipeline: { workdir: '/home/someone/work' } },
+    conclusion: { label: '✗ Violation' },
+    evidence: {
+      existingTests: { task: 'java -ea Tests', passed: true, failures: [] },
+      counterexamples: [{ input: 'grant(a=0)', expected: false, actual: true, witness: { inputs: [] } }],
+      search: { checker: 'JBMC 6.11.0', seconds: 0.4 },
+      trace: [{ step: 1, action: 'Initial predicate', changes: { x: 'SECRET state' } }, { step: 2, action: 'Hold' }, 'junk', { step: 3 }],
+      invariant: 'NoMoneyStranded',
+      statesExplored: 423,
+    },
+  });
+  assert.deepEqual(second, {
+    tests: { task: 'java -ea Tests', failed: [] },
+    counterexample: { input: 'grant(a=0)', expected: 'false', actual: 'true', count: 1 },
+    trace: { invariant: 'NoMoneyStranded', steps: 3, actions: ['Initial predicate', 'Hold'], states: 423 },
+    seconds: 2.9,
+    checker: 'JBMC 6.11.0',
+  });
+  assert.doesNotMatch(JSON.stringify([first, second]), /SECRET|\/home\//, 'no code, no state, no path on the machine');
+  // Long text is cut at 320 characters, with an ellipsis; a long trace keeps its length and its first 24 actions.
+  const long = exampleEvidence({ counterexamples: [{ input: 'x'.repeat(400), contract: 'y'.repeat(320), actual: null }], trace: Array.from({ length: 30 }, (_, i) => ({ action: `A${i}` })), statesExplored: -1, invariant: 7 });
+  assert.equal(long.counterexample.input, `${'x'.repeat(319)}…`);
+  assert.deepEqual([long.counterexample.expected.length, long.counterexample.actual], [320, null]);
+  assert.deepEqual([long.trace.steps, long.trace.actions.length, long.trace.actions.at(-1), long.trace.states, long.trace.invariant], [30, 24, 'A23', null, null]);
+  // Nothing of this in it, or no result at all: null, never an empty record.
+  for (const nothing of [null, undefined, 'text', [], {}, { format: 2, evidence: { counterexamples: [], trace: [] }, attempt: { seconds: 'fast' } }, { existingTests: { passed: true } }])
+    assert.equal(exampleEvidence(nothing), null);
+  assert.deepEqual(exampleEvidence({ format: 2, attempt: { seconds: 0 } }), { tests: null, counterexample: null, trace: null, seconds: 0, checker: null });
+});
+
+test('each example’s result file is read from its folder, listed as an input, and not required', async () => {
+  const { dir } = materialize('stale-source');
+  const index = json(dir, 'examples/index.json');
+  const [a, b, c] = index.examples;
+  Object.assign(a, { path: 'examples/001-first' });
+  Object.assign(b, { path: 'examples/002-second' });
+  Object.assign(c, { path: '../outside' });
+  write(dir, 'examples/index.json', index);
+  write(dir, 'examples/001-first/result.json', { existingTests: { task: ':t:test', passed: true, failures: [] }, counterexamples: [{ input: 'f(1)', contract: '2', actual: '3' }] });
+  // A file beside it that the catalog doesn't point at is never read.
+  write(dir, 'examples/099-stray/result.json', { counterexamples: [{ input: 'stray', contract: '', actual: '' }] });
+  const n = await load(dir);
+  assert.deepEqual(n.examples[0].evidence, { tests: { task: ':t:test', failed: [] }, counterexample: { input: 'f(1)', expected: '2', actual: '3', count: 1 }, trace: null, seconds: null, checker: null });
+  assert.equal(n.examples[1].evidence, null, 'no result file in its folder');
+  assert.equal(n.examples[2].evidence, null, 'no folder to look in');
+  // The manifest records the result files together: one input, hashed over a line for each file read.
+  const listed = n.source.inputs.filter((i) => i.path.endsWith('/result.json'));
+  const bytes = fs.readFileSync(path.join(dir, 'examples/001-first/result.json'));
+  const line = `examples/001-first/result.json ${crypto.createHash('sha256').update(bytes).digest('hex')}\n`;
+  assert.deepEqual(listed, [{ path: 'examples/*/result.json', sha256: crypto.createHash('sha256').update(line).digest('hex'), bytes: bytes.length, schema: '' }]);
+  assert.deepEqual(n.source.inputs.map((i) => i.path), n.source.inputs.map((i) => i.path).sort());
+  assert.doesNotMatch(JSON.stringify(n.examples), /stray/);
+  // A result that isn't JSON can't be trusted: the import stops, naming it.
+  fs.mkdirSync(path.join(dir, 'examples/002-second'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'examples/002-second/result.json'), '{ not json');
+  await assert.rejects(load(dir), (err) => err instanceof SourceError && err.code === 'malformed' && err.path === 'examples/002-second/result.json');
 });
