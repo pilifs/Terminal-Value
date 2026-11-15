@@ -592,9 +592,79 @@ Settled by the author on 2026-11-14:
   - **Left as a finding**: older snapshots stay in the bucket. Nothing deletes them yet, and posts copy their own
     evidence.
   - **For the author**: the first real run, `--destination preview`, once the buckets and token exist.
-- Next: M2.4, the workflow `.github/workflows/software-factory-refresh.yml`: `workflow_dispatch`, a 15-minute
-  schedule gated on `SOFTWARE_FACTORY_SCHEDULE == 'on'`, a concurrency group, and the secrets named in
-  docs/software-factory.md. The runbook (M2.6) documents `software-factory:publish`.
+- **M2.4 workflow: done** (cycle 10). `.github/workflows/software-factory-refresh.yml` runs `npm run
+  software-factory:publish` on GitHub Actions.
+  - **Triggers**:
+    - **By hand** (`workflow_dispatch`): to `preview` (the default) or `production`, at `origin/main` or at a
+      commit given as 40 lowercase hex digits. Any other input fails before anything is published.
+    - **Every 15 minutes** (`*/15 * * * *`): to preview, then production, but only when
+      `github.event_name == 'workflow_dispatch' || vars.SOFTWARE_FACTORY_SCHEDULE == 'on'`. Otherwise the job is
+      skipped.
+    - If one destination fails, the other is still published, and the run fails.
+  - **Serialized**: the workflow-level group `software-factory-refresh`, with `cancel-in-progress: false`, across
+    both triggers. A run times out after 15 minutes, so a stuck run can't hold the group for long.
+  - **Secrets**:
+    - The three `SOFTWARE_FACTORY_R2_*` secrets reach only the publish step, through its `env`.
+    - Inputs reach the script as environment, never as a `${{ }}` inside it, so no input is ever run as script.
+    - The token is `contents: read`. Both checkouts set `persist-credentials: false`.
+    - No `GITHUB_TOKEN` is passed. in-the-loop is checked out whole (`fetch-depth: 0`), so the publisher reads it and
+      checks commit order with git alone.
+  - **Nothing installed**: from a clean copy with no `node_modules`, the publisher and CLI import only Node built-ins.
+    So the job skips `npm ci`, and no package's install script runs beside the credentials. Node is
+    `24.13.1`, as `package.json` asks.
+  - docs/software-factory.md gets the workflow's part: triggers, the gate, the schedule's limits, serializing, and
+    the secrets by name. M2.6 makes that the full runbook.
+  - **Checks**:
+    - `test/site-workflow.test.mjs`, 12 tests, no credentials or network. A small reader handles the YAML subset the
+      file uses and throws on anything else. PyYAML 6.0.3, where installed, reads the file the same way; that test
+      skips otherwise. The tests cover:
+      - the triggers and inputs, with the destination options equal to `DESTINATIONS`;
+      - the exact gate, the concurrency group, permissions and the timeout;
+      - the publish step's exact `env`, with every secret named being one of `CREDENTIALS` and named nowhere else;
+      - the docs naming each secret, the variable and the file;
+      - no expression inside a script;
+      - the four steps: checkout settings, in-the-loop as `config/source.json`'s repository, and Node equal to
+        `engines`;
+      - the publish script, run in bash as GitHub runs it (`--noprofile --norc -eo pipefail`) with a stand-in npm:
+        each trigger's calls, a failing destination, five bad commit inputs, and an unexpected event.
+    - Each of 15 mutations fails a test: `cancel-in-progress: true`, a per-run group, an always-on gate, a secret
+      given to a checkout, an input expanded in the script, no commit check, stopping at the first failure, a
+      shallow source, stored credentials, an install step, an hourly cron, production alone on the schedule, an
+      extra destination, an extra secret, and `contents: write`.
+    - **The workflow's own script, end to end**: run with the real npm and CLI from a copy with no `node_modules`,
+      on a full clone of the local in-the-loop. Requests went to a local signed fake of R2: dummy credentials, and
+      a preload that sent `*.r2.cloudflarestorage.com` there and refused any other host. 93 requests, none
+      rejected.
+      - A manual preview run at `7384f8c2` gave `new-snapshot` `sf1-95bf08f3ebdea3fa`. A repeat gave `unchanged`,
+        and so did a scheduled run's preview leg.
+      - The scheduled run then published production. Its 6 files equal the committed snapshot byte for byte.
+      - A manual preview run at `f542897f`, a descendant, gave `new-snapshot` `sf1-19b881c0147e875a`.
+      - A run at `7384f8c2` after it was `refused` at `order` (`behind`), with the pointer left alone.
+      - A commit input of `main` published nothing.
+    - 254 of 254 tests pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+  - **Untried**: no run on GitHub. These come from GitHub's documented behaviour, not from a run:
+    - `actions/checkout@v5` and `actions/setup-node@v5`, which the author may pin to commit SHAs;
+    - `origin/main` existing in a `fetch-depth: 0` checkout;
+    - the `vars` context in a job's `if`.
+    A scheduled run happens only from the default branch's copy, so the file must reach `main` first, and that is
+    a push, which is the author's.
+  - **Found, for the next piece**: in-the-loop moves on in ways A's importer refuses. At `e26b4eb0`, the local
+    checkout's HEAD, 83 commits past the pin and not known to be on GitHub, `llm-dlc/traces/metrics.json` has
+    `commits[681]` with `summary: null`. `import.mjs` rejects the whole rollup (`schema`, "lacks a change_id or
+    summary"), so every publish of a commit like it fails at `refresh`. The pointer stays, as it should, but the
+    data stops advancing. `f542897f`, the commit before it, passes.
+  - **For the author**:
+    - push, so the workflow reaches `main`;
+    - one manual run to `preview` once the buckets and secrets exist;
+    - then `SOFTWARE_FACTORY_SCHEDULE=on`.
+    In a private repository, the schedule costs about 2,900 Actions minutes a month (docs/software-factory.md).
+- Next: M2.5, the client against the remote pointer. Check fallback on a missing binding, an error and an invalid
+  snapshot, on a first visit with filters set. Optionally fetch the overview beside the manifest in `snapshot.js`.
+  Then decide the importer finding above: a rollup change with `summary: null`, perhaps an unsummarized change that
+  is never housekeeping. Then M2.6, the runbook.
 - Status: working
 
 ## Loop settings

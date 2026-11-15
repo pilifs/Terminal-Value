@@ -1,0 +1,97 @@
+# Publishes a Software Factory snapshot of in-the-loop to R2:
+# blog/software-factory/publish.mjs, run by `npm run software-factory:publish`.
+# docs/software-factory.md (Milestone 2) is the runbook.
+#
+# - Manual: Actions > Software Factory refresh > Run workflow, to preview or
+#   production, at the head of in-the-loop's main or at one commit.
+# - Scheduled: every 15 minutes, preview then production, but only while the
+#   repository variable SOFTWARE_FACTORY_SCHEDULE is `on`. GitHub runs a
+#   schedule late or skips it under load: it is best-effort, not real time.
+# - One run at a time, across both triggers. The publisher itself never lets
+#   an older source commit replace a newer pointer.
+# - The publisher needs no npm package, so nothing is installed: no install
+#   script runs beside the R2 credentials, which only the publish step gets.
+#   in-the-loop is checked out whole, so the publisher reads it and orders its
+#   commits with git alone: no GitHub API call, no token.
+
+name: Software Factory refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      destination:
+        description: Where to publish
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+      sha:
+        description: in-the-loop commit, 40 hex digits (empty for the head of main)
+        type: string
+        required: false
+        default: ''
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: software-factory-refresh
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || vars.SOFTWARE_FACTORY_SCHEDULE == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the site
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Check out in-the-loop
+        uses: actions/checkout@v5
+        with:
+          repository: pilifs/in-the-loop
+          path: software-factory-source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24.13.1'
+
+      - name: Publish
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          DESTINATION: ${{ inputs.destination }}
+          SHA: ${{ inputs.sha }}
+          SOURCE_CHECKOUT: software-factory-source
+          SOFTWARE_FACTORY_R2_ACCOUNT_ID: ${{ secrets.SOFTWARE_FACTORY_R2_ACCOUNT_ID }}
+          SOFTWARE_FACTORY_R2_ACCESS_KEY_ID: ${{ secrets.SOFTWARE_FACTORY_R2_ACCESS_KEY_ID }}
+          SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY: ${{ secrets.SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY }}
+        run: |
+          case "$EVENT" in
+            schedule) destinations="preview production" ;;
+            workflow_dispatch) destinations="$DESTINATION" ;;
+            *) echo "::error::unexpected event $EVENT"; exit 1 ;;
+          esac
+          if [ -z "$SHA" ]; then
+            source=(--ref origin/main)
+          elif [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            source=(--sha "$SHA")
+          else
+            echo "::error::sha must be 40 lowercase hex digits"
+            exit 1
+          fi
+          status=0
+          for destination in $destinations; do
+            npm run --silent software-factory:publish -- \
+              --destination "$destination" --checkout "$SOURCE_CHECKOUT" "${source[@]}" || status=1
+          done
+          exit "$status"

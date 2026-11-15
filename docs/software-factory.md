@@ -162,6 +162,25 @@ publisher job runs the same importer, uploads a new snapshot's files, checks the
 3. **No R2:** each refresh commits a snapshot and redeploys the site (Milestone 1 only). Simplest, but every data
    update is a deploy.
 
+**The refresh workflow**, `.github/workflows/software-factory-refresh.yml`, runs the publisher on GitHub Actions:
+
+- **By hand** (Actions, Software Factory refresh, Run workflow): to `preview` (the default) or `production`, at the
+  head of in-the-loop's `main` or at one commit, given as 40 lowercase hex digits.
+- **On a schedule**, every 15 minutes, to preview and then production, but only while the repository variable
+  `SOFTWARE_FACTORY_SCHEDULE` is `on`. Otherwise each scheduled run is skipped. GitHub's schedule is best-effort: a
+  run can start late or be dropped under load. Only the default branch's copy of the file is scheduled. In a public
+  repository, GitHub turns the schedule off after 60 days without activity. In a private one, each run bills at least
+  a minute, so about 2,900 minutes a month at 96 runs a day.
+- **One run at a time**, across both triggers: the concurrency group `software-factory-refresh`. A run under way is
+  never cancelled. GitHub keeps only one waiting run, though, and a newer one replaces it, so a manual run waiting
+  behind another can be replaced by the next scheduled one. The publisher never lets an older source commit replace
+  a newer pointer either way.
+- **Secrets**: `SOFTWARE_FACTORY_R2_ACCOUNT_ID`, `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and
+  `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY`, as repository secrets. Only the publish step gets them, through its
+  environment. No other secret or token is used: in-the-loop is checked out whole, and the publisher reads it and
+  orders its commits with git.
+- Nothing is installed (the publisher needs no npm package), and the token has `contents: read` only.
+
 The merge loop writes the function, its config and the workflow, with tests that run without credentials. The
 author's part happens on a machine where wrangler is logged in:
 
