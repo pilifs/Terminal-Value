@@ -17,11 +17,13 @@ folder already qualifies them.
 - **Unpublished.** `blog/software-factory/config/section.json` says `published: false`. A production build leaves
   out every page, asset and data file of the section, and stays byte for byte what it was before Phase 0: all 85
   files had the same sha256. A drafts build (`npm run dev`, `build:drafts`) includes the section, noindex: a
-  robots meta on every page, and `X-Robots-Tag: noindex` on every response through `_headers`. Only the author sets
-  `published: true`.
-- **`/verify-bytecode/`.** The source lives in another copy of the repo, and its draft must not be seen. This repo
-  doesn't have it, and building and deploying from here would remove that page. Nobody deploys from here, to dev
-  or production, until the author has brought that source in.
+  robots meta on every blog page, and `X-Robots-Tag: noindex` on every response through `_headers`, hand-written
+  pages included. Only the author sets `published: true`.
+- **`/verify-bytecode/`.** Its source lived in another copy of the repo until 2026-11-15, when the author's
+  `verify-bytecode-page` branch was merged here: the hand-written page in `blog/assets/verify-bytecode/`,
+  `blog/assets/_redirects`, build.mjs's `PAGES`, and `reading-the-trace` moved to `blog/archive/`, which the build
+  doesn't publish. With the section unpublished, the merge's production build equals that branch's byte for byte
+  (82 files).
 - **Upstream baseline.** in-the-loop `origin/main` was `7384f8c23eef441817ddb714c6ef5571cdc138bd`, the brief's
   audited revision. It is public: a refresh fetches by SHA from `raw.githubusercontent.com` with no token. The
   local checkout's HEAD moves while its loops run, so always pin a SHA.
@@ -339,7 +341,8 @@ In this order. Each step is the author's, on a machine logged in to Cloudflare o
    `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY`. `setup-r2.sh --github` asks for
    them with hidden input and sets them with `gh`.
 4. **Before any deploy**, of either kind:
-   - bring in `/verify-bytecode/`'s source (State at Phase 0);
+   - check that this repo has everything the live site has: `/verify-bytecode/` came in on 2026-11-15 (State at
+     Phase 0), and a page added elsewhere since then would be removed by a deploy from here;
    - compare `wrangler.toml` with the project's settings;
    - confirm that the project's production branch is `production`;
    - make sure both buckets exist.
@@ -350,9 +353,10 @@ In this order. Each step is the author's, on a machine logged in to Cloudflare o
    (`npm run deploy:dev`) serves it at `/software-factory/data/latest.json` on the dev site.
 7. **Schedule**: set the repository variable `SOFTWARE_FACTORY_SCHEDULE` to `on`. Each run then publishes preview,
    then production.
-8. **Launch**: set `published: true` in `config/section.json`, add `related: software-factory` to
-   `blog/posts/reading-the-trace/index.md`, and deploy (`npm run deploy`). The production function serves only once
-   the section is published.
+8. **Launch**: set `published: true` in `config/section.json` and deploy (`npm run deploy`). The production
+   function serves only once the section is published. The plan linked `reading-the-trace` from the section with
+   `related: software-factory`, but that post is now archived. Add the line to whichever published post, if any,
+   should appear as related background.
 
 The author also writes the Fable 5.1 vs. 5.2 draft's content, evidence and cover, and the template's cover, if one
 is wanted.

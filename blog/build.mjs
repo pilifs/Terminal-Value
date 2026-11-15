@@ -37,6 +37,8 @@ const OUT_DIR = path.join(BLOG_DIR, '..', 'dist');
 // Static builds of projects in projects/<name>/dist, published at /projects/<name>/.
 // Build them first with `npm run build:projects`.
 const PROJECTS = ['terminal-value-pipeline'];
+// Hand-written pages in blog/assets/<path>/index.html, listed in the sitemap.
+const PAGES = ['/verify-bytecode/'];
 const PROJECTS_DIR = path.join(BLOG_DIR, '..', 'projects');
 const CODE_LANGS = [
   'js',
@@ -320,6 +322,7 @@ function renderSitemap(posts, sectionUrls = []) {
     '/',
     ...posts.map(({ slug }) => `/posts/${slug}/`),
     ...sectionUrls,
+    ...PAGES,
     ...PROJECTS.flatMap((name) => [
       `/projects/${name}/`,
       ...(fs.existsSync(path.join(ASSETS_DIR, 'projects', name, 'compare'))

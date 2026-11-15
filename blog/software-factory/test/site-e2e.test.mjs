@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { buildCopy, PROJECT_DIST, read, REPO, skip, texts } from './site-build.mjs';
+import { buildCopy, handWritten, PROJECT_DIST, read, REPO, skip, texts } from './site-build.mjs';
 
 const DRAFT = 'fable-5-1-vs-5-2';
 const DRAFT_DIR = path.join(REPO, 'blog', 'posts', DRAFT);
@@ -20,6 +20,8 @@ const EXAMPLE = path.join(REPO, 'blog', 'software-factory', 'test', 'fixtures', 
 const NOINDEX = '<meta name="robots" content="noindex">';
 const NAV = '<nav class="sections" aria-label="Sections"><a href="/software-factory/">Software Factory</a></nav>';
 const NOTE = 'sf-e2e-note';
+// The published post the populated copy marks related: software-factory.
+const BACKGROUND = 'terminal-value-pipeline';
 
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const files = (dir) => fs.readdirSync(dir, { recursive: true }).filter((f) => fs.statSync(path.join(dir, f)).isFile()).sort();
@@ -42,14 +44,14 @@ const populated = () =>
       const posts = path.join(root, 'blog', 'posts');
       const dir = path.join(posts, NOTE);
       fs.mkdirSync(dir);
-      fs.copyFileSync(path.join(posts, 'reading-the-trace', 'cover.png'), path.join(dir, 'cover.png'));
+      fs.copyFileSync(path.join(posts, BACKGROUND, 'cover.png'), path.join(dir, 'cover.png'));
       fs.writeFileSync(
         path.join(dir, 'index.md'),
         '---\ntitle: An end-to-end note\ndate: 2026-11-15\ndescription: A post made by the end-to-end test.\n' +
           'image: cover.png\ncollection: software-factory\nauthor: Filip Stankovic\nfeatured: true\n---\n\nBody.\n'
       );
-      const trace = path.join(posts, 'reading-the-trace', 'index.md');
-      fs.writeFileSync(trace, read(trace).replace(/^image: cover\.png$/m, '$&\nrelated: software-factory'));
+      const background = path.join(posts, BACKGROUND, 'index.md');
+      fs.writeFileSync(background, read(background).replace(/^image: cover\.png$/m, '$&\nrelated: software-factory'));
     },
   });
 
@@ -95,7 +97,8 @@ test('no draft title, file or evidence reaches a production build, published or 
 test('the drafts build is noindex throughout; production is not', { skip }, () => {
   const dist = drafts();
   const pages = files(dist).filter((f) => f.endsWith('.html'));
-  for (const f of pages.filter((f) => !f.startsWith('projects'))) assert.ok(read(path.join(dist, f)).includes(NOINDEX), f);
+  // Hand-written pages keep their own head; the header below covers them.
+  for (const f of pages.filter((f) => !f.startsWith('projects') && !handWritten(f))) assert.ok(read(path.join(dist, f)).includes(NOINDEX), f);
   // Every response, the data files and the project demo included, by header.
   assert.match(read(path.join(dist, '_headers')), /^\/\*\n {2}X-Robots-Tag: noindex\n/);
   assert.equal(read(path.join(dist, 'robots.txt')), 'User-agent: *\nDisallow: /\n');
@@ -132,13 +135,13 @@ test('populated: a published copy lists its post, featured, and the related back
   assert.match(list, new RegExp(`<h2><a href="/posts/${NOTE}/">An end-to-end note</a></h2>\\s*<p class="sf-post-meta"><strong class="sf-featured">Featured</strong> · <span class="sf-byline">By Filip Stankovic</span>`));
   const related = list.slice(list.indexOf('class="sf-panel sf-related"'));
   assert.match(related, /Related background/);
-  assert.ok(related.includes('/posts/reading-the-trace/') && !related.includes(`/posts/${NOTE}/`));
+  assert.ok(related.includes(`/posts/${BACKGROUND}/`) && !related.includes(`/posts/${NOTE}/`));
 
   // The posts themselves stay canonical under /posts/, with byline and links.
   const note = page(dist, `posts/${NOTE}`);
   assert.match(note, /· By Filip Stankovic/);
   assert.match(note, /<a href="\/software-factory\/">Latest Software Factory data<\/a>/);
-  assert.match(page(dist, 'posts/reading-the-trace'), /<a href="\/software-factory\/analysis\/">More analysis in the Software Factory<\/a>/);
+  assert.match(page(dist, `posts/${BACKGROUND}`), /<a href="\/software-factory\/analysis\/">More analysis in the Software Factory<\/a>/);
   assert.ok(!fs.existsSync(path.join(dist, 'software-factory', 'posts')), 'no copy of a post under the section');
   assert.match(read(path.join(dist, 'feed.xml')), new RegExp(`/posts/${NOTE}/`));
 });
@@ -185,8 +188,8 @@ test('existing posts and the project demo are unchanged by the section', { skip 
           // The drafts build's noindex, the header link and a related post's
           // link back to the analysis are the only differences.
           b = b.replace(NOINDEX, '').replace(NAV, '');
-          if (other === populated() && slug === 'reading-the-trace') b = b.replace('\n      <p class="source"><a href="/software-factory/analysis/">More analysis in the Software Factory</a></p>', '');
-        } else if (other === populated() && slug === 'reading-the-trace' && f === 'index.md') {
+          if (other === populated() && slug === BACKGROUND) b = b.replace('\n      <p class="source"><a href="/software-factory/analysis/">More analysis in the Software Factory</a></p>', '');
+        } else if (other === populated() && slug === BACKGROUND && f === 'index.md') {
           b = b.replace('\nrelated: software-factory', '');
         }
         assert.equal(b, a, `${slug}/${f}`);
@@ -200,5 +203,14 @@ test('existing posts and the project demo are unchanged by the section', { skip 
     const demo = path.join(dist, 'projects', 'terminal-value-pipeline');
     assert.deepEqual(files(demo), [...expected.keys()].sort());
     for (const [f, source] of expected) assert.equal(sha(path.join(demo, f)), sha(source), f);
+  }
+  // Hand-written pages, such as /verify-bytecode/, and the files beside them: copied as they are.
+  const assets = path.join(REPO, 'blog', 'assets');
+  const pageDirs = files(assets).filter((f) => handWritten(f) && !f.startsWith('projects')).map(path.dirname);
+  assert.ok(pageDirs.length >= 1, 'a hand-written page');
+  for (const dir of pageDirs) {
+    for (const f of files(path.join(assets, dir))) {
+      for (const dist of [prod, drafts(), populated()]) assert.equal(sha(path.join(dist, dir, f)), sha(path.join(assets, dir, f)), `${dir}/${f}`);
+    }
   }
 });

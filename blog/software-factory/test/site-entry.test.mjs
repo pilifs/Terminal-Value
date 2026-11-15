@@ -1,7 +1,8 @@
 // The Software Factory's entry in the header and on the home page (site.mjs),
 // checked on whole builds of a temporary copy of the site: unpublished, the
 // production build has nothing of it; published (in the copy only, never
-// committed), every page's header and the home page link the section.
+// committed), every blog page's header and the home page link the section.
+// Hand-written pages from blog/assets/ keep their own header.
 // Coordinator-owned. Run: npm run test:software-factory
 
 import assert from 'node:assert/strict';
@@ -9,13 +10,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { headerNav, homeEntry, STYLES } from '../site.mjs';
-import { buildCopy, read, REPO, skip, texts } from './site-build.mjs';
+import { buildCopy, handWritten, read, REPO, skip, texts } from './site-build.mjs';
 
 const DRAFT = 'fable-5-1-vs-5-2';
 
 test('the header link names the section and marks its own pages', () => {
   assert.equal(
-    headerNav('/posts/reading-the-trace/'),
+    headerNav('/posts/terminal-value-pipeline/'),
     '<nav class="sections" aria-label="Sections"><a href="/software-factory/">Software Factory</a></nav>'
   );
   assert.match(headerNav('/software-factory/methodology/'), /<a href="\/software-factory\/" aria-current="true">Software Factory<\/a>/);
@@ -37,7 +38,7 @@ test('published, every page header and the home page link the section', { skip }
   const home = read(path.join(dist, 'index.html'));
   assert.match(home, /<p class="tagline">[^<]*<\/p>\s*<aside class="section-entry" aria-label="Software Factory">/);
   assert.doesNotMatch(home, /<header class="site">/, 'the home page keeps no header');
-  const pages = texts(dist).filter(([f]) => f.endsWith('.html') && f !== 'index.html' && !f.startsWith('projects'));
+  const pages = texts(dist).filter(([f]) => f.endsWith('.html') && f !== 'index.html' && !f.startsWith('projects') && !handWritten(f));
   assert.ok(pages.length >= 5, pages.map(([f]) => f).join(' '));
   for (const [file, html] of pages) {
     const inSection = file.startsWith('software-factory');
@@ -57,7 +58,7 @@ test('published, every page header and the home page link the section', { skip }
 test('the drafts build previews the entry, noindex', { skip }, () => {
   const dist = buildCopy({ published: false, drafts: true });
   assert.match(read(path.join(dist, 'index.html')), /class="section-entry"/);
-  const post = read(path.join(dist, 'posts', 'reading-the-trace', 'index.html'));
+  const post = read(path.join(dist, 'posts', 'terminal-value-pipeline', 'index.html'));
   assert.match(post, /<nav class="sections" aria-label="Sections"><a href="\/software-factory\/">Software Factory<\/a><\/nav>/);
   assert.match(post, /<meta name="robots" content="noindex">/);
 });
