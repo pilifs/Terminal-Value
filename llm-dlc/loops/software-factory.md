@@ -451,7 +451,52 @@ Settled by the author on 2026-11-14:
     - The drafts build has 3 posts.
     - `software-factory:validate`: valid.
 - **M1 is done**: every Done-when criterion for M1 holds.
-- Next: M2.1, the Pages Function `functions/software-factory/data/[[path]].js`, tested with a fake binding.
+- **M2.1 Pages Function: done** (cycle 7). `functions/software-factory/data/[[path]].js` serves the bucket bound as
+  `SOFTWARE_FACTORY_DATA`.
+  - **Paths**: only `latest.json` and `snapshots/sf1-<16 hex>/` + `manifest`, `overview` or
+    `details/(sessions|changes|verification|examples)` `.json`. That is schema.json's collection path pattern.
+    Anything else is 404 without touching the bucket, even when the bucket holds that key. Encoded slashes and dot
+    segments are covered too.
+  - **Methods**: GET and HEAD. HEAD uses the bucket's `head()` and sends `Content-Length`. Other methods get 405 with
+    `Allow`.
+  - **Caching**: `latest.json` is `no-cache`. Snapshot files are `public, max-age=31536000, immutable`. Both carry
+    R2's strong `httpEtag`, and both answer 304 when `If-None-Match` matches, with the unread body cancelled.
+    `If-None-Match` is compared the weak way RFC 9110 asks, because the edge may weaken an ETag when it compresses.
+  - **Failures**: a missing object is 404. A missing binding or a throwing bucket is 503, so the client falls back.
+    Errors are `no-store`, so a file published later is never stuck at 404.
+  - Every response carries `nosniff` and `X-Robots-Tag: noindex`, because `_headers` doesn't apply to a Function.
+  - **Added, not in the brief: the unpublished gate.** `wrangler pages deploy` uploads `functions/` with any deploy.
+    A production deploy would then serve the section's data while `config/section.json` says `published: false`.
+    The function bundles `section.json`. While it is unpublished, the function serves only where
+    `SOFTWARE_FACTORY_ENVIRONMENT` is `preview`. Anywhere else, the variable missing included, it answers 404, as a
+    site without the section would. M2.2's `wrangler.toml` must set that variable to `preview` and `production`
+    per environment.
+  - **Checks**:
+    - `test/site-function.test.mjs`, 12 tests, against a fake binding with R2's interface (`get`, `head`,
+      `httpEtag` as quoted MD5, `size`, `body`) loaded with the committed snapshot. They cover the path allowlist
+      and the not-a-gateway case, the methods, both cache policies, ETags and 304 (exact, weak, list, `*`, then a
+      changed pointer gives 200), HEAD, the failures and the gate. They also run the browser module through the
+      function: `firstSnapshot` loads the remote snapshot, a poll with its ETag is `unchanged`, and an empty,
+      failing, partial or unbound bucket falls back to the bundled snapshot, whole.
+    - Mutations fail them: no allowlist, no 304, a one-hour cache, no gate, strong-only comparison, and GET for
+      HEAD.
+    - **Wrangler Pages local dev runs without an account** (wrangler 4.65.0), in a copy under `/tmp/sf-m21`, so no
+      `.wrangler/` lands in the repo. The commands:
+      - `wrangler pages functions build` bundles the function, with `section.json` inlined.
+      - `wrangler r2 object put software-factory-data-preview/<key> --local --persist-to …` loads the 7 files.
+      - `wrangler pages dev dist --r2 SOFTWARE_FACTORY_DATA=software-factory-data-preview --binding
+        SOFTWARE_FACTORY_ENVIRONMENT=preview --persist-to … --port 8791`.
+      - curl showed the same headers. The bytes equal the committed files. 304 came back for the exact and the W/
+        ETag, and gzip kept the ETag strong locally. Every rejected path was 404, POST was 405, and the static
+        `static-data/` stayed static.
+      - Headless Chromium loaded the overview from `/software-factory/data/` (three 200s, "Published data as of
+        Nov 14, 2026"), with and without `?period=7d`, with no script error.
+    - 214 of 214 tests pass.
+    - The production build is byte for byte Phase 0's (85 files). `functions/` is outside `dist/`.
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+- Next: M2.2, `wrangler.toml` from `ops/terminal-value.pages-config.toml`, with the binding and
+  `SOFTWARE_FACTORY_ENVIRONMENT` per environment.
 - Status: working
 
 ## Loop settings
