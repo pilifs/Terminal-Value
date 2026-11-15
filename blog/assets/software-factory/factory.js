@@ -936,6 +936,118 @@ export function stumbles(tools) {
     .slice(0, 6);
 }
 
+const SHELL_TOOL = 'Bash';
+// The two names the source gives a command that opens with no program of its own.
+const NOT_PROGRAMS = { shell: 'opens with for, while, until, if or case', other: 'first word is not a plain program name' };
+// Programs that put text on the screen, set against the tool made for reading a file.
+const TEXT_PROGRAMS = ['sed', 'grep', 'cat'];
+const FILE_TOOL = 'Read';
+
+/**
+ * What the tool calls were: by tool, and the Bash calls by the program each
+ * command opened with. `programs` is null when the snapshot doesn't list every
+ * program (an older one kept only those that failed most).
+ */
+export function toolMix(tools) {
+  const byCalls = (a, b) => b.calls - a.calls;
+  const list = [...tools.byTool].sort(byCalls);
+  const shell = list.find((t) => t.name === SHELL_TOOL) ?? null;
+  const families = [...(tools.byFamily ?? [])].sort(byCalls);
+  const complete = shell !== null && families.length > 0 && families.reduce((n, f) => n + f.calls, 0) === shell.calls;
+  const programs = complete ? families : null;
+  const text = programs ? TEXT_PROGRAMS.map((name) => programs.find((f) => f.family === name)).filter(Boolean) : [];
+  const file = list.find((t) => t.name === FILE_TOOL) ?? null;
+  return {
+    calls: tools.totals.calls,
+    tools: list,
+    shell,
+    programs,
+    named: programs ? programs.filter((f) => !(f.family in NOT_PROGRAMS)).length : null,
+    mcp: list.filter((t) => t.name.startsWith('mcp__')).reduce((n, t) => n + t.calls, 0),
+    // Only when all three programs and the tool were called: the comparison the page states.
+    text: text.length === TEXT_PROGRAMS.length && file ? { names: TEXT_PROGRAMS, calls: text.reduce((n, f) => n + f.calls, 0), tool: file.name, toolCalls: file.calls } : null,
+  };
+}
+
+const MIX_TOOLS = 4; // tools with a bar of their own, before the rest are one bar
+const MIX_PROGRAMS = 9;
+
+/** The model performance page's part on what the calls were, before how they failed. */
+function toolMixHtml(tools) {
+  const mix = toolMix(tools);
+  if (!mix.shell || mix.tools.length < 2) return '';
+  const share = (n, of) => pct(rate(n, of));
+  const failed = (r) => (r.errors ? `; ${count(r.errors)} failed` : '');
+  const rest = (rows) => ({ n: rows.length, calls: rows.reduce((n, r) => n + r.calls, 0), errors: rows.reduce((n, r) => n + r.errors, 0) });
+  const group = (rows, top, of, { name, key, others, what }) => {
+    // One row more than `top` is shown as itself: a bar for "1 other" says less.
+    const head = rows.length > top + 1 ? rows.slice(0, top) : rows;
+    const tail = rows.length > top + 1 ? rest(rows.slice(top)) : null;
+    return [
+      ...head.map((r) => ({ label: name(r), value: `${count(r.calls)} · ${share(r.calls, of)}`, amount: r.calls, key: key(r), tip: `${name(r)}: ${count(r.calls)} of ${count(of)} ${what} (${share(r.calls, of)})${failed(r)}` })),
+      ...(tail ? [{ label: others(tail.n), value: `${count(tail.calls)} · ${share(tail.calls, of)}`, amount: tail.calls, key: key(null), tip: `${others(tail.n)}: ${count(tail.calls)} of ${count(of)} ${what} (${share(tail.calls, of)})${failed(tail)}` }] : []),
+    ];
+  };
+  const programName = (f) => (f.family === 'shell' ? 'for, while, if (shell syntax)' : f.family);
+  const names = mix.text ? mix.text.names.join(', ').replace(/, ([^,]*)$/, ' or $1') : '';
+  // Two counts on one scale: the commands that open with a program that prints text, and the tool that reads a file.
+  const against = mix.text
+    ? {
+        title: `${SHELL_TOOL} calls that opened with ${names}, against the ${mix.text.tool} tool`,
+        rows: [
+          { label: `Opened with ${names}`, value: count(mix.text.calls), amount: mix.text.calls, key: 'shell', tip: `${count(mix.text.calls)} ${SHELL_TOOL} calls opened with ${names}` },
+          { label: `Calls to ${mix.text.tool}`, value: count(mix.text.toolCalls), amount: mix.text.toolCalls, key: 'tool', tip: `${count(mix.text.toolCalls)} calls to the ${mix.text.tool} tool` },
+        ],
+      }
+    : null;
+  const byTool = {
+      title: `All ${count(mix.calls)} tool calls, by tool`,
+      rows: group(mix.tools, MIX_TOOLS, mix.calls, { name: (t) => t.name, key: (t) => (t?.name === SHELL_TOOL ? 'shell' : 'tool'), others: (n) => `${count(n)} other tools`, what: 'tool calls' }),
+  };
+  const groups = [
+    against ? { groups: [byTool, against] } : byTool,
+    mix.programs
+      ? {
+          title: `The ${count(mix.shell.calls)} ${SHELL_TOOL} calls, by the program the command opened with`,
+          rows: group(mix.programs, MIX_PROGRAMS, mix.shell.calls, { name: programName, key: () => 'shell', others: (n) => `${count(n)} others`, what: `${SHELL_TOOL} calls` }),
+        }
+      : null,
+  ].filter(Boolean);
+  const first = mix.programs?.[0];
+  const row = (label, r, of) => `<tr><th scope="row">${label}</th><td>${count(r.calls)}</td><td>${e(share(r.calls, of))}</td><td>${count(r.errors)}</td><td>${e(pct(rate(r.errors, r.calls)))}</td></tr>`;
+  const table = (head, rows) =>
+    `<table class="sf-table"><thead><tr><th scope="col">${e(head)}</th><th scope="col">Calls</th><th scope="col">Share</th><th scope="col">Failed</th><th scope="col">Rate</th></tr></thead><tbody>${rows}</tbody></table>`;
+  return `<div class="sf-subhead" id="mix"><h2>What the calls were</h2></div>
+        <p class="sf-caption">${count(mix.shell.calls)} of the ${count(mix.calls)} tool calls were ${SHELL_TOOL}, a shell command: ${e(share(mix.shell.calls, mix.calls))}. ${
+          mix.mcp ? `${count(mix.mcp)} went to an MCP server.` : 'None went to an MCP server.'
+        }${first ? ` The commands opened with ${count(mix.named)} different names, <code>${e(first.family)}</code> most often.` : ''} <a href="${ROUTE}methodology/#def-tool_mix">Definition</a></p>
+        ${scaleHtml(groups, {
+          label: `${groups
+            .flatMap((g) => g.groups ?? [g])
+            .map((g) => `${g.title}: ${g.rows.map((r) => `${r.label}, ${r.value.replace(' · ', ', ')}`).join('; ')}`)
+            .join('. ')}.`,
+        })}
+        <p class="sf-caption">${
+          mix.programs
+            ? `A command is counted once, by the first program it runs past <code>cd</code> and the like, however many it chains or pipes.${
+                mix.text ? ` ${mix.text.names.map((n) => `<code>${e(n)}</code>`).join(', ').replace(/, ([^,]*)$/, ' and $1')} can each print a file or search one, and <code>sed</code> can edit one:` : ''
+              } ${mix.text ? 'the' : 'The'} count says what was called, not what a call was for.`
+            : 'This snapshot lists the tools, and not the programs the shell commands ran.'
+        }</p>
+        <details class="sf-data-table"><summary>Every tool${mix.programs ? ' and every program' : ''}</summary>
+          ${table('Tool', mix.tools.map((t) => row(`<code>${e(t.name)}</code>`, t, mix.calls)).join(''))}
+          ${
+            mix.programs
+              ? `<p class="sf-caption">The programs ${SHELL_TOOL} commands opened with, as the source reads them: the first word past <code>cd</code>, assignments and wrappers. A few of the rarest are fragments of a longer command. Share is of the ${count(mix.shell.calls)} ${SHELL_TOOL} calls.</p>
+          ${table(
+            'Program',
+            mix.programs.map((f) => row(`<code>${e(f.family)}</code>${f.family in NOT_PROGRAMS ? ` <span class="sf-muted">${NOT_PROGRAMS[f.family]}</span>` : ''}`, f, mix.shell.calls)).join('')
+          )}`
+              : ''
+          }
+        </details>`;
+}
+
 export function toolsHtml(snapshot) {
   const { tools, models } = snapshot.overview;
   if (!tools || !tools.totals.calls)
@@ -978,6 +1090,7 @@ export function toolsHtml(snapshot) {
           tile('Inside a loop run', pct(rate(modes.runs.calls - modes.runs.errors, modes.runs.calls)), `succeeded; ${e(pct(rate(modes.outside.calls - modes.outside.errors, modes.outside.calls)))} outside one`),
         ].join('')}</dl>
         <p class="sf-coverage">Coverage: ${e(formatCoverage(tools.coverage))} · All time; no filter applies · <a href="${ROUTE}methodology/#def-tool_success">Definition</a></p>
+        ${toolMixHtml(tools)}
         <div class="sf-subhead"><h2>When they stumbled</h2>${control}</div>
         <div class="sf-subhead sf-subhead-legend">${legendHtml(KINDS)}</div>
         <p class="sf-caption">Share of each day's tool calls that failed, by how. Days are Toronto days; a short mark on the baseline is a day with no tool calls. The data table names each day's largest source of failures.</p>
@@ -1419,6 +1532,7 @@ function toolsFinding(overview) {
   const { tools, loops } = overview;
   if (!tools || !tools.totals.calls) return '';
   const t = tools.totals;
+  const mix = toolMix(tools);
   const r = tools.recovery?.failures ? tools.recovery : null;
   const longest = r?.streaks.at(-1)?.[0] ?? null;
   const streaks = r ? r.streaks.reduce((n, [, times]) => n + times, 0) : 0;
@@ -1447,7 +1561,7 @@ function toolsFinding(overview) {
       longest !== null && longest * STREAK_PER_CALLS <= t.calls
         ? `${count(t.calls)} tool calls, never more than ${plural(longest, 'failure')} in a row`
         : `${pct(rate(t.ok, t.calls))} of ${count(t.calls)} tool calls succeeded`,
-    lede: `Of the ${count(t.errors)} that failed, ${count(t.exit)} ${t.exit === 1 ? 'was a command' : 'were commands'} that ran and exited non-zero, which is often the tool working, as when a test fails.${
+    lede: `${mix.shell ? `${count(mix.shell.calls)} of them were ${SHELL_TOOL}, a shell command${mix.mcp ? '' : ', and none went to an MCP server'}. ` : ''}Of the ${count(t.errors)} that failed, ${count(t.exit)} ${t.exit === 1 ? 'was a command' : 'were commands'} that ran and exited non-zero, which is often the tool working, as when a test fails.${
       r ? ` ${count(r.nextOk)} of the ${count(r.failures)} were followed by a call that succeeded.` : ''
     }`,
     facts: [
@@ -1456,7 +1570,7 @@ function toolsFinding(overview) {
       r && streaks ? [`${count(alone)} of ${count(streaks)}`, 'streaks of failures were a single call'] : null,
     ],
     href: `${ROUTE}tools/`,
-    more: 'Failures by model, tool and run length',
+    more: 'Every tool and program, and failures by model and run length',
     legend: legendHtml(KINDS),
     chart: groups.length
       ? ratesHtml(groups, { series: KINDS, label: `Share of tool calls that failed. ${label}. The model performance page has these as tables.` })

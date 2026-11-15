@@ -78,7 +78,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '14' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '15' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 

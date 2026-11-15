@@ -160,7 +160,8 @@ export function ratesHtml(groups, { series, label }) {
  *   groups: [{ title, legend?, rows: [{ label, value, amount, tip, parts?, key? }] }]:
  *     `parts` are [{ key, amount }] drawn in order within the bar; without
  *     them the bar is one mark of `key`. `legend` is [{ key, label }] for a
- *     group whose bars have parts.
+ *     group whose bars have parts. A group given as { groups: [...] } stacks
+ *     those in one column, each on its own scale.
  *   label says the whole figure for a screen reader.
  */
 export function scaleHtml(groups, { label }) {
@@ -171,9 +172,12 @@ export function scaleHtml(groups, { label }) {
     }%">${parts.map((p) => `<span class="sf-series-${e(p.key)}" style="flex:${p.amount}"></span>`).join('')}</span></span></div>`;
   };
   return `<div class="sf-scales" role="img" aria-label="${e(label)}">${groups
-    .map((g) => {
-      const most = Math.max(0, ...g.rows.map((r) => r.amount));
-      return `<div class="sf-scale"><p class="sf-scale-title">${e(g.title)}</p>${g.rows.map((r) => row(r, most)).join('')}${g.legend ? legendHtml(g.legend) : ''}</div>`;
+    .map((column) => {
+      const one = (g) => {
+        const most = Math.max(0, ...g.rows.map((r) => r.amount));
+        return `<p class="sf-scale-title">${e(g.title)}</p>${g.rows.map((r) => row(r, most)).join('')}${g.legend ? legendHtml(g.legend) : ''}`;
+      };
+      return `<div class="sf-scale">${(column.groups ?? [column]).map(one).join('')}</div>`;
     })
     .join('')}</div>`;
 }

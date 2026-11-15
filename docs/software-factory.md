@@ -452,6 +452,37 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### What the calls were (generator 15)
+
+`/prove-java-change/` says "all 25,842 recorded tool calls went to built-in tools. 22,655 of them were Bash."
+These pages said how tool calls failed and never what they were. The model performance page now says it first,
+under "What the calls were" (`/software-factory/tools/#mix`).
+
+- **By tool.** 22,655 of the 25,842 calls were Bash (87.7%), then Read 1,237, Edit 922, Write 558 and 13 other
+  tools with 470 between them. No tool's name starts with `mcp__`, so the page says none went to an MCP server.
+  It does not say "built-in": 4 calls named a tool `bash`, in lower case, and the harness refused each.
+- **By program.** The source gives each Bash call the program its command opens with (`bash_family` in its
+  `metrics.py`: the first word past `cd`, assignments and wrappers; `shell` for a command that opens with
+  `for`, `while`, `until`, `if` or `case`; `other` when the first word is not a plain name). The snapshot kept
+  only the 12 that failed most. It now keeps all 148, and they add up to the Bash calls: `python3` 5,790, `sed`
+  4,276, `grep` 4,206, `jj` 1,530, `cat` 1,347. The page draws the first nine and the rest as one bar.
+- **One comparison.** Commands that opened with `sed`, `grep` or `cat`: 9,829. Calls to the Read tool: 1,237.
+  The page states the two counts on one scale and says what it can't: the count is of what was called, not of
+  what a call was for.
+- **The table under it** lists every tool and every program with calls, share, failures and rate. A few of the
+  rarest names are fragments of a longer command, as the source reads them, and the caption says so. The
+  text says 146 "names", not programs.
+- **The overview's finding** opens with "22,655 of them were Bash, a shell command, and none went to an MCP
+  server", and its link reads "Every tool and program, and failures by model and run length".
+- **Left out:** the time each tool and program ran. The source has it, but one Bash call is recorded as
+  10.6 hours and `AskUserQuestion` counts a person's wait, so a ranking by time would mislead.
+
+A snapshot that lists only some programs (an older one, or the example fixture) shows the tools and not the
+programs: `toolMix` in `factory.js` checks that the programs add up to the Bash calls. `scaleHtml` in
+`figures.js` can stack groups in one column. Metric definitions are version 14 (`tool_mix` is new). Snapshot
+`sf1-5c0c077e51c6fe9a`, the same revision; the share image was rendered again from it. First load 134.8 KB of
+300 KB.
+
 ### The proof loop's run reads as it ran (generator 14)
 
 `/prove-java-change/` says "The proof loop ran unattended for 2 h 59 min" and that the run made 481 model calls.

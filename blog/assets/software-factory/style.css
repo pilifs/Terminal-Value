@@ -2488,6 +2488,9 @@ body.software-factory .sf-shell .sf-scale-title {
   font-size: 0.8125rem;
   font-weight: 600;
 }
+body.software-factory .sf-shell .sf-scale-row + .sf-scale-title {
+  margin-top: 1.75rem;
+}
 body.software-factory .sf-scale-row + .sf-scale-row {
   margin-top: 0.75rem;
 }
@@ -2531,6 +2534,8 @@ body.software-factory .sf-scale-bar > .sf-series-fresh { background: var(--sf-c-
 body.software-factory .sf-scale-bar > .sf-series-estimate { background: var(--sf-mark); }
 body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-compacted { background: var(--sf-mark); }
 body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-uncompacted { background: var(--sf-neutral); }
+body.software-factory .sf-scale-bar > .sf-series-shell { background: var(--sf-mark); }
+body.software-factory .sf-scale-bar > .sf-series-tool { background: var(--sf-neutral); }
 body.software-factory .sf-scale-bar > .sf-series-hypothetical {
   background: repeating-linear-gradient(135deg, var(--sf-neutral) 0 3px, var(--sf-surface) 3px 5px);
 }

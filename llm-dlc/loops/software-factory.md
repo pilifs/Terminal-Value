@@ -946,6 +946,11 @@ Settled by the author on 2026-11-14:
   and a prompt that opens with the instruction a run record quotes is the loop's own (generator 14, snapshot
   `sf1-5ef466da137fab14`). `prove-examples` opens with 1 cycle, 5 commits, 481 model calls and 2 h 59 min, as the
   landing page says; tool calls set off by a loop's own prompt are 73%, from 71%.
+- **What the calls were** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, same
+  title. The model performance page says what the 25,842 tool calls were before how they failed: 22,655 Bash,
+  as the landing page says, none to an MCP server, and the Bash calls by the program each command opened with
+  (all 148 the source names, where the snapshot kept 12). Generator 15, metric definitions 14, snapshot
+  `sf1-5c0c077e51c6fe9a`. First load 134.8 KB of 300 KB.
 - Status: done
 
 ## Loop settings

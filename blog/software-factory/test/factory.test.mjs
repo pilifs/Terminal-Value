@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf, accountClock, enduranceFacts, enduranceHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolMix, toolsHtml, verdictOf, verdictsOf, accountClock, enduranceFacts, enduranceHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
@@ -316,6 +316,8 @@ test('tool calls: how each ended, by day and model, by tool, by context and insi
     ]
   );
   assert.deepEqual(t.byTool.map((x) => [x.name, x.calls, x.rejected]), [['Bash', 5, 0], ['Monitor', 1, 1]]);
+  // Every program a Bash command opened with, not only those that failed: they add up to the Bash calls.
+  assert.deepEqual(t.byFamily.map((x) => [x.family, x.calls]), [['sed', 5]]);
   assert.deepEqual(t.dayTop, [
     { day: 0, source: 'sed (Bash)', errors: 2 },
     { day: 1, source: 'sed (Bash)', errors: 1 },
@@ -571,6 +573,67 @@ test('the failed-calls chart: one model’s days, clean share ticks, and duratio
   assert.deepEqual(shareTicks(0.009), [0, 0.002, 0.004, 0.006, 0.008, 0.01]);
   assert.deepEqual([span(50), span(2700), span(29997), span(7200), span(null)], ['50 s', '45 min', '8 h 20 min', '2 h', 'No data']);
   assert.deepEqual(stumbles({ byTool: [{ name: 'Monitor', calls: 107, errors: 26 }, { name: 'Bash', calls: 9, errors: 9 }, { name: 'Read', calls: 1000, errors: 4 }], byFamily: [{ family: 'sleep', calls: 117, errors: 42 }] }).map((s) => s.label), ['sleep', 'Monitor']);
+});
+
+const mixRow = (o) => ({ errors: 0, exit: 0, rejected: 0, denied: 0, other: 0, ...o });
+const mixTools = (byFamily) => ({
+  totals: { calls: 1000, errors: 12, exit: 10, rejected: 2, denied: 0, other: 0, ok: 988, noResult: 0 },
+  byTool: [mixRow({ name: 'Bash', calls: 800, errors: 10, exit: 10 }), mixRow({ name: 'Read', calls: 100 }), mixRow({ name: 'Edit', calls: 60 }), mixRow({ name: 'Write', calls: 20 }), mixRow({ name: 'Monitor', calls: 12, errors: 2, rejected: 2 }), mixRow({ name: 'Agent', calls: 8 })],
+  byFamily,
+});
+const mixFamilies = [['python3', 300], ['sed', 200], ['grep', 150], ['cat', 50], ['shell', 40], ['jj', 30], ['ls', 10], ['cargo', 8], ['wc', 5], ['other', 4], ['rm', 3]].map(([family, calls]) => mixRow({ family, calls }));
+
+test('what the calls were: by tool, and the Bash calls by the program each command opened with', () => {
+  const mix = toolMix(mixTools(mixFamilies));
+  assert.equal(mix.calls, 1000);
+  assert.equal(mix.shell.calls, 800);
+  assert.equal(mix.programs.length, 11);
+  assert.equal(mix.named, 9, 'shell and other are not programs');
+  assert.equal(mix.mcp, 0);
+  assert.deepEqual(mix.text, { names: ['sed', 'grep', 'cat'], calls: 400, tool: 'Read', toolCalls: 100 });
+  // A snapshot that lists only some programs gives none: a partial list would be read as the whole.
+  const partial = toolMix(mixTools(mixFamilies.slice(0, 3)));
+  assert.equal(partial.programs, null);
+  assert.equal(partial.named, null);
+  assert.equal(partial.text, null);
+  // A call to an MCP server's tool is counted as one.
+  const withMcp = mixTools(mixFamilies);
+  withMcp.byTool.push(mixRow({ name: 'mcp__docs__read', calls: 7 }));
+  assert.equal(toolMix(withMcp).mcp, 7);
+});
+
+test('the model performance page says what the calls were before how they failed', () => {
+  const snap = snapshotOf(run());
+  const overview = { ...snap.overview, tools: { ...snap.overview.tools, ...mixTools(mixFamilies) } };
+  const html = toolsHtml({ ...snap, overview });
+  const words = html.replace(/<[^>]+>/g, '');
+  assert.ok(html.indexOf('What the calls were') < html.indexOf('When they stumbled'));
+  assert.match(words, /800 of the 1,000 tool calls were Bash, a shell command: 80\.0%\. None went to an MCP server\. The commands opened with 9 different names, python3 most often\./);
+  assert.match(html, /methodology\/#def-tool_mix/);
+  // Four tools have a bar, the other two are one; nine programs have a bar, the other two are one.
+  assert.match(words, /All 1,000 tool calls, by tool/);
+  assert.match(words, /2 other tools ?20 · 2\.0%/);
+  assert.match(words, /The 800 Bash calls, by the program the command opened with/);
+  assert.match(words, /for, while, if \(shell syntax\) ?40 · 5\.0%/);
+  assert.match(words, /2 others ?7 · 0\.9%/);
+  assert.match(words, /Opened with sed, grep or cat ?400/);
+  assert.match(words, /Calls to Read ?100/);
+  assert.match(words, /The count says what was called|the count says what was called/);
+  // The table under it has every tool and every program, the two that are not programs said so.
+  const table = html.slice(html.indexOf('<details class="sf-data-table"><summary>Every tool and every program'));
+  assert.equal((table.slice(0, table.indexOf('</details>')).match(/<tr><th scope="row">/g) ?? []).length, 6 + 11);
+  assert.match(table, /<code>other<\/code> <span class="sf-muted">first word is not a plain program name<\/span>/);
+  // Bash is the bar in the mark colour; the tools that are not the shell are neutral.
+  assert.match(html, /<span class="sf-series-shell" style="flex:800">/);
+  assert.match(html, /<span class="sf-series-tool" style="flex:100">/);
+  // With only the programs that failed most, the tools are still shown and the programs are not.
+  const older = toolsHtml({ ...snap, overview: { ...snap.overview, tools: { ...overview.tools, byFamily: mixFamilies.slice(0, 3) } } });
+  assert.match(older, /All 1,000 tool calls, by tool/);
+  assert.doesNotMatch(older, /by the program the command opened with|Opened with sed/);
+  assert.match(older, /This snapshot lists the tools, and not the programs the shell commands ran\./);
+  // The overview's finding says it in a sentence.
+  const finding = findingsHtml({ ...snap, overview }).replace(/<[^>]+>/g, '');
+  assert.match(finding, /800 of them were Bash, a shell command, and none went to an MCP server\. Of the 12 that failed/);
 });
 
 // --- The floor: every run on one clock ---------------------------------------

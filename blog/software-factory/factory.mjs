@@ -389,11 +389,9 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         .map(([id, v]) => row({ id: id ?? 'unknown', label: id ? label(id) : 'Unknown model' }, v))
         .sort((a, b) => b.calls - a.calls || (a.id < b.id ? -1 : 1)),
       byTool: ranked(byTool, 'name'),
-      // The Bash command families with the most failed calls: where the stumbles are.
-      byFamily: ranked(byFamily, 'family')
-        .filter((f) => f.errors > 0)
-        .sort((a, b) => b.errors - a.errors || b.calls - a.calls || (a.family < b.family ? -1 : 1))
-        .slice(0, 12),
+      // Every program a Bash command opened with, as the source names it: what
+      // the shell was used for, and where the stumbles are.
+      byFamily: ranked(byFamily, 'family'),
       byContext: buckets.filter((b) => b.calls).map(({ from, to, ...v }) => row({ from, to }, v)),
       byMode: { runs: row({}, mode.runs), outside: row({}, mode.outside) },
       // Inside a run only: by hours since the run started, and by runs under way at the time.
