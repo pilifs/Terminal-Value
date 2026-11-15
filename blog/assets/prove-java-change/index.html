@@ -45,10 +45,10 @@
           <div>
             <h1>Formally prove any Java change in one command</h1>
             <p class="punch">Find any side effects in your code effortlessly.</p>
-            <p class="lede">Point Claude Code at a pull request or a commit on GitHub. It works out what the change must keep. A model checker then proves it from the compiled bytecode, or hands you the input where it breaks. No specification to write.</p>
+            <p class="lede">Point Claude Code at a public pull request or commit on GitHub. It works out what the change must keep. A model checker then proves it from the compiled bytecode, or hands you the input where it breaks. No specification to write.</p>
 
             <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
-            <p class="fine"><a href="#install">Two commands install it.</a> It runs on your machine, and nothing leaves it unless you agree.</p>
+            <p class="fine"><a href="#install">Two commands install it.</a> It runs on your machine, in your own Claude Code session, and publishes nothing unless you agree.</p>
 
             <div class="actions">
               <a class="btn primary" href="#install">Try it in three steps</a>
@@ -136,15 +136,15 @@ after:  returns 90; no modeled call</pre>
             </li>
             <li>
               <h3>Point it at a change</h3>
-              <p>In Claude Code, give it a pull request, a commit or a range of commits on GitHub. Say what you want proved, or let it work that out.</p>
+              <p>In Claude Code, give it a public pull request, commit or range of commits on GitHub. Say what you want proved, or let it work that out.</p>
               <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
             </li>
             <li>
               <h3>Confirm twice, then leave it</h3>
-              <p>It checks your machine and asks once. It shows you the claims and an estimate in hours and tokens, and asks again. Then it proves them unattended and reports.</p>
+              <p>It checks your machine and asks once. It shows you the claims and an estimate in hours and tokens, and asks again. Then it proves them unattended and reports. Expect hours, not seconds: the one proof loop measured so far ran for 2 h 59 min.</p>
             </li>
           </ol>
-          <p class="fine">It needs Linux, 8 GB of memory or more, and Fable 5.2 at high effort. <a href="#requirements">Everything it needs →</a></p>
+          <p class="fine">It needs Linux, 8 GiB of memory or more, and Fable 5.2 at high effort. <a href="#requirements">Everything it needs →</a> · <a href="#limits">What it can't do yet →</a></p>
         </div>
       </section>
 
@@ -500,7 +500,7 @@ after:  -2147483648</pre>
             <div class="card">
               <h3>Send an example</h3>
               <p>Every example is welcome. The ones that extend <code>jvmcontract</code> are worth the most: a new JDK model, a checker extension, a new way to prepare a change.</p>
-              <p>Step 4 prepares the pull request. Your machine's records stay behind, and a check looks for anything that names your user or host before it is pushed.</p>
+              <p>The report step prepares the pull request. Your machine's records stay behind, and a check looks for anything that names your user or host before it is pushed.</p>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md#contributing-back">How a contribution travels →</a>
             </div>
             <div class="card">
@@ -530,23 +530,23 @@ after:  -2147483648</pre>
           <details id="requirements" open><summary>What does it need?</summary>
             <ul class="limits">
               <li><a href="https://code.claude.com">Claude Code</a>, on Fable 5.2 at high effort</li>
-              <li>Linux on x86_64 or aarch64. It has run on Ubuntu 24.04 and 26.04: on a machine, in a VM and under WSL2</li>
+              <li>Linux on x86_64 or aarch64. The loops and the verifier have run on Ubuntu 24.04 and 26.04 only: on a machine, in a VM and under WSL2</li>
               <li>At least 8 GiB of memory, 2 CPUs and 10 GiB of free disk. 16 GiB, 4 CPUs and 25 GiB are comfortable</li>
-              <li>Python 3.11, git, <a href="https://github.com/jj-vcs/jj">jj</a>, JDK 25 and Rust 1.82. Step 1 installs what it can without sudo and tells you the rest</li>
+              <li>Python 3.11, git, <a href="https://github.com/jj-vcs/jj">jj</a>, JDK 25 and Rust 1.82. Setup installs what it can without sudo and tells you the rest</li>
             </ul>
             <p class="fine"><a href="https://github.com/diffblue/cbmc">JBMC</a> is optional: without it, only the verifier's own checker decides.</p>
           </details>
           <details id="limits"><summary>What can't it do yet?</summary>
             <ul class="limits">
-              <li>The change must be on GitHub: a pull request, a commit or a range of commits. Work that is local, not pushed yet or hosted elsewhere stops at step 2 until it is there. Private sources may come later.</li>
+              <li>The change must be public and on GitHub: a pull request, a commit or a range of commits. Work that is private, local, not pushed yet or hosted elsewhere is refused before any proof runs. Private sources may come later.</li>
               <li>Proofs are bounded. Arrays and loops are checked up to a stated bound, 8 elements by default, and the report names it.</li>
               <li>The verifier's own checker has no floating point, and models part of the JDK. What it can't model is left open with the reason. It is never reported as a pass.</li>
               <li>It is new. One of the 16 Spring security fixes in the examples is proved so far.</li>
             </ul>
             <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md#limits">All limits of the verifier →</a>
           </details>
-          <details><summary>How long does a run take, and what does it use?</summary><p>One measured run, example 285: the proof loop took 2 h 59 min, made 481 model calls, wrote 467,660 tokens, and used 7,956 CPU seconds of proof. At API list prices that is $65.63. Your change will differ, so step 2 gives you an estimate in hours and tokens and waits for your answer.</p></details>
-          <details><summary>Does anything leave my machine?</summary><p>No. The copy the plugin installs has tracing and publishing switched off, and it never pushes. The one exception is a contribution upstream, as a pull request you agree to first.</p></details>
+          <details><summary>How long does a run take, and what does it use?</summary><p>One measured run, example 285: the proof loop took 2 h 59 min, made 481 model calls, wrote 467,660 tokens, and used 7,956 CPU seconds of proof. At API list prices that is $65.63. Setting up and stating the claims come on top. Your change will differ, so the plugin gives you an estimate in hours and tokens before the proof starts, and waits for your answer.</p></details>
+          <details><summary>Does anything leave my machine?</summary><p>Nothing beyond what Claude Code itself sends to the model. The copy the plugin installs has tracing and publishing switched off, and it never pushes. The one exception is a contribution upstream, as a pull request you agree to first.</p></details>
         </div>
       </section>
 
