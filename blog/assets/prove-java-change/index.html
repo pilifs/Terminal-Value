@@ -58,17 +58,18 @@
 
           <figure class="term" aria-label="The verdicts recorded for example 285, a Spring Boot security fix">
             <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>CVE-2023-34055 · Spring Boot 2.7.17 → 2.7.18</span></div>
-<pre><span class="p">Does the fix bound the "method" label?</span>
+<pre><span class="p">Claim: the "method" metrics label is
+always GET, POST, … or UNKNOWN</span>
 
 <span class="no">✗ 2.7.17: refuted in 0.0 s</span>
-  method(request{getMethod()=""}) returns
-  ImmutableTag{key="method", value=""}
+  getMethod()=""  →  label ""
+  <span class="p">the raw token is the label</span>
   <span class="p">run on a JVM (JDK 25.0.5): fails too</span>
 
 <span class="ok">✓ 2.7.18: established</span>
   <span class="p">every method token up to 8 characters</span>
-<span class="ok">✓ known labels preserved across the fix</span></pre>
-            <figcaption>A real Spring Boot security fix: the hole is found in the old release and proved closed in the new one, within the bound shown. From <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">example 285</a>, condensed. The proof loop ran unattended for 2 h 59 min.</figcaption>
+<span class="ok">✓ the 8 known methods keep their labels</span></pre>
+            <figcaption>A real Spring Boot security fix. Before it, any text a client sent as the HTTP method became a metrics label. The hole is found in the old release and proved closed in the new one, within the bound shown (<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">example 285</a>, condensed). The proof loop ran unattended for 2 h 59 min.</figcaption>
           </figure>
         </div>
       </div>
