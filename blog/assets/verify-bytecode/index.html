@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>/verify-bytecode · Formal verification for Java pull requests and projects</title>
+    <meta name="description" content="Two Claude Code skills: /verify-bytecode formally verifies a Java pull request from its compiled bytecode with JBMC and jvmcontract; /add-tla-model adds a TLA+ model to a Java project and checks your invariants with TLC.">
+    <meta name="author" content="Filip Stankovic">
+    <link rel="canonical" href="https://terminalvalue.net/verify-bytecode/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Terminal Value">
+    <meta property="og:url" content="https://terminalvalue.net/verify-bytecode/">
+    <meta property="og:title" content="/verify-bytecode: formal verification for Java pull requests">
+    <meta property="og:description" content="Two Claude Code skills: /verify-bytecode proves a Java pull request from its compiled bytecode; /add-tla-model adds a TLA+ model to a project and checks your invariants with TLC.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/verify-bytecode/style.css">
+  </head>
+  <body>
+    <header class="nav">
+      <div class="wrap">
+        <a class="brand" href="#top"><span>/</span>verify-bytecode</a>
+        <nav class="nav-links" aria-label="Sections">
+          <a href="#quick-start">Quick start</a>
+          <a href="#model-specifications">Custom models</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#what-it-proves">What it proves</a>
+          <a href="#art-of-the-possible">Examples</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="nav-end">
+          <a class="btn small" href="https://github.com/pilifs/in-the-loop/tree/main/plugins/jvmcontract">GitHub</a>
+          <a class="btn small primary" href="#quick-start">Get started</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <div class="hero">
+        <div class="wrap">
+          <div>
+            <h1>Formal verification for Java pull requests</h1>
+            <p class="lede">Point it at a pull request. It compiles both sides, proves what changed from the bytecode, and shows an input wherever the behaviour differs. No tests or specifications to write.</p>
+            <p class="lede-optional"><b>Optional:</b> use the included <code>/add-tla-model</code> skill to add <a href="#model-specifications">custom invariant models</a> that extend formal verification to your most critical business logic.</p>
+
+            <div class="tabs" role="tablist" aria-label="Install method">
+              <button type="button" role="tab" id="tab-script" aria-controls="panel-script" aria-selected="true">Install script</button>
+              <button type="button" role="tab" id="tab-plugin" aria-controls="panel-plugin" aria-selected="false" tabindex="-1">Claude Code plugin</button>
+            </div>
+            <div role="tabpanel" id="panel-script" aria-labelledby="tab-script">
+              <div class="cmd"><code>curl -fsSL https://terminalvalue.net/verify-bytecode/install.sh | bash</code><button type="button" class="copy">Copy</button></div>
+            </div>
+            <div role="tabpanel" id="panel-plugin" aria-labelledby="tab-plugin" hidden>
+              <div class="cmd"><code>claude plugin install jvmcontract --marketplace pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
+            </div>
+            <p class="fine">Installs both skills, the verifier and TLC. <a href="#requirements">JBMC, a JDK, gh and jq</a> are checked, not installed. <a href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/install.sh">Read the script.</a></p>
+
+            <div class="actions">
+              <a class="btn primary" href="#quick-start">Get started</a>
+              <a class="btn" href="#real-pull-requests">See a real run</a>
+            </div>
+          </div>
+
+          <figure class="term" style="margin: 0" aria-label="Terminal output of the skill on Apache Commons Numbers pull request 223">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>claude</span></div>
+<pre><span class="p">&gt;</span> /verify-bytecode apache/commons-numbers#223
+
+<span class="no">✗ ArithmeticUtils#pow(int, int) changed</span>
+  pow(k=-2, e=31)
+    before: throws ArithmeticException
+            ("integer overflow")
+    after:  -2147483648
+
+<span class="ok">✓ pow(-2, 31) == -2147483648</span>     <span class="p">new, 1.0 s</span>
+<span class="no">✗ pow(-2, 31) == -2147483648</span>     <span class="p">old, 0.7 s</span>
+<span class="ok">✓ Javadoc claims</span>                 <span class="p">new, 1.4 s</span>
+<span class="ok">✓ unchanged on every other input</span> <span class="p">18 min</span></pre>
+          </figure>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="wrap">
+          <ul>
+            <li><b>0</b><span>specifications to write</span></li>
+            <li><b>2<sup>64</sup></b><span>inputs covered by one proof</span></li>
+            <li><b>3</b><span>verdicts, none of them a guess</span></li>
+            <li><b>56</b><span>code changes in the examples</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <section id="why">
+        <div class="wrap">
+          <div class="head">
+            <h2>The code is already the specification</h2>
+            <p>Nobody writes a spec. Each proof takes its specification from something the project already has.</p>
+          </div>
+          <div class="grid g4">
+            <div class="card"><p class="from"><b>Previous version</b> →</p><h3>Regression proof</h3><p>The new bytecode behaves as the old one on every input, or here is the input where it doesn't.</p></div>
+            <div class="card"><p class="from"><b>Javadoc</b> →</p><h3>Property proof</h3><p>A <code>@throws</code>, <code>@return</code> or <code>@param</code> claim holds on every input.</p></div>
+            <div class="card"><p class="from"><b>Types</b> →</p><h3>Behavioural contract</h3><p>Every input of a finite method is executed, before and after, and the results diffed.</p></div>
+            <div class="card"><p class="from"><b>Bytecode</b> →</p><h3>Capability contract</h3><p>What the module can reach: clock, network, file system, reflection, threads and more.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="quick-start" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <h2>Your first proof in three steps</h2>
+          </div>
+          <ol class="quick">
+            <li>
+              <h3>Install</h3>
+              <p>One command, no sudo.</p>
+              <div class="cmd"><code>curl -fsSL https://terminalvalue.net/verify-bytecode/install.sh | bash</code><button type="button" class="copy">Copy</button></div>
+            </li>
+            <li>
+              <h3>Add what it reports as missing</h3>
+              <p>The installer checks each tool and prints how to get it.</p>
+            </li>
+            <li>
+              <h3>Run it in Claude Code</h3>
+              <p>Point it at any Java pull request.</p>
+              <div class="cmd"><code class="slash">/verify-bytecode https://github.com/apache/commons-numbers/pull/223</code><button type="button" class="copy">Copy</button></div>
+            </li>
+          </ol>
+          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#use">All options →</a>
+        </div>
+      </section>
+
+      <section id="model-specifications">
+        <div class="wrap">
+          <div class="head">
+            <h2>Supercharge with custom models</h2>
+            <p>Name the rules your business can't afford to break. A model checker tries every ordering of events, within the bounds you set, to break them.</p>
+          </div>
+          <ul class="rules">
+            <li><span>Orders and payments</span><b>NoDoubleSale</b><b>NoMoneyStranded</b></li>
+            <li><span>Commit protocols</span><b>Atomicity</b><b>CommitFollowsTheCoordinator</b></li>
+            <li><span>Retries and idempotency</span><b>AtMostOnce</b><b>OneExecutionAtATime</b></li>
+            <li><span>Runtime procedures</span><b>OneInitializer</b><b>InitializedAtMostOnce</b></li>
+          </ul>
+          <div class="demo-tabs" role="tablist" aria-label="Example models">
+            <button type="button" role="tab" id="tab-breaker" aria-controls="panel-breaker" aria-selected="true">Circuit breaker</button>
+            <button type="button" role="tab" id="tab-payment" aria-controls="panel-payment" aria-selected="false" tabindex="-1">Stranded payment</button>
+            <button type="button" role="tab" id="tab-deadlock" aria-controls="panel-deadlock" aria-selected="false" tabindex="-1">Deadlock</button>
+          </div>
+          <div class="rule-demo" role="tabpanel" id="panel-breaker" aria-labelledby="tab-breaker">
+            <div>
+              <h3>One good probe closes a circuit breaker</h3>
+              <p>The rule holds in all 102 reachable states. Swap in a buggy kernel, and the checker shows the 10 steps that break it.</p>
+              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/026-half-open-breaker-that-closes-on-the-first-good-probe/README.md">Read the example →</a>
+            </div>
+            <figure class="term" aria-label="Circuit breaker: a TLA+ model that passes, then fails with the steps that break it">
+              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>CircuitBreaker.tla</span></div>
+<pre><span class="p">\* Your rule, in your system's terms.</span>
+ClosedOnlyAfterEveryProbe == ~closedEarly
+
+<span class="p">$</span> jvmcontract tlc spec/CircuitBreaker.tla
+<span class="ok">✓ every invariant holds in 102 distinct states</span>
+
+<span class="p">$</span> bash spec/check.sh  <span class="p"># kernel of example 026</span>
+<span class="no">✗ ClosedOnlyAfterEveryProbe violated after 10 steps</span>
+  5. Complete: state = "OPEN", window = &lt;&lt;TRUE, TRUE&gt;&gt;
+  8. Request: state = "HALF_OPEN", current = 1
+  9. DependencyFlips: dependency = "UP"
+ 10. Complete: state = "CLOSED", closedEarly = TRUE</pre>
+            </figure>
+          </div>
+          <div class="rule-demo" role="tabpanel" id="panel-payment" aria-labelledby="tab-payment" hidden>
+            <div>
+              <h3>One dropped query strands a payment</h3>
+              <p>The rule holds in all 4,732 reachable states. Drop one seat check, and a customer is charged with no seat and no refund.</p>
+              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/011-skipped-seat-check-strands-the-money/README.md">Read the example →</a>
+            </div>
+            <figure class="term" aria-label="Stranded payment: a TLA+ model that passes, then fails with the steps that break it">
+              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>BoxOffice.tla</span></div>
+<pre><span class="p">\* Your rule, in your system's terms.</span>
+NoMoneyStranded == \A c \in Customers :
+  payment[c] = "CAPTURED" =&gt; order[c] \in {"CONFIRMED", "REFUND_PENDING"}
+    \/ CaptureInFlight(c)
+
+<span class="p">$</span> jvmcontract tlc spec/BoxOffice.tla
+<span class="ok">✓ every invariant holds in 4732 distinct states</span>
+
+<span class="p">$</span> jvmcontract tlc spec/BoxOffice.tla  <span class="p"># with example 011</span>
+<span class="no">✗ NoMoneyStranded violated after 9 steps</span>
+  5. HandleCommand: payment[alice] = "CAPTURED"
+  7. Tick: time = 1
+  8. Hold: s1 held by bob
+  9. HandleEvent: dlt = {[alice, "PaymentCaptured"]}</pre>
+            </figure>
+          </div>
+          <div class="rule-demo" role="tabpanel" id="panel-deadlock" aria-labelledby="tab-deadlock" hidden>
+            <div>
+              <h3>One shared rule deadlocks a JVM</h3>
+              <p>Every invariant still holds. Make all class-init requests wait, and a thread waits on itself with the others queued behind it.</p>
+              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/043-class-init-that-waits-on-its-own-thread-deadlocks/README.md">Read the example →</a>
+            </div>
+            <figure class="term" aria-label="Deadlock: a TLA+ model that passes, then fails with the steps that break it">
+              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>ClassInit.tla</span></div>
+<pre><span class="p">\* No rule to write: the check finds states where nothing can move.</span>
+Spec == Init /\ [][Next]_vars
+
+<span class="p">$</span> jvmcontract tlc spec/ClassInit.tla --deadlock
+<span class="ok">✓ every invariant holds in 37 distinct states</span>
+
+<span class="p">$</span> jvmcontract tlc spec/ClassInit.tla --deadlock  <span class="p"># with example 043</span>
+<span class="no">✗ deadlock after 5 steps</span>
+  2. Request: state = "IN_PROGRESS", initializer = t1
+  3. Recurse: pc[t1] = "waiting"
+  4. Request: pc[t2] = "waiting"
+  5. Request: pc[t3] = "waiting"</pre>
+            </figure>
+          </div>
+          <div class="actions">
+            <a class="btn primary" href="#custom-invariants">More on custom models</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">How it works</p>
+            <h2>From pull request to report in six steps</h2>
+          </div>
+          <ol class="steps">
+            <li><h3>Fetch</h3><p>Reads the pull request and checks out both sides.</p></li>
+            <li><h3>Scope</h3><p>The changed files, their module, and every changed method.</p></li>
+            <li><h3>Build</h3><p>Both versions, with the project's Maven or Gradle build. Claude Code asks first.</p></li>
+            <li><h3>Prove</h3><p>Each method with the proof its shape allows, under a time and memory budget.</p></li>
+            <li><h3>Diff</h3><p>The module's capabilities and public API, before and after.</p></li>
+            <li><h3>Report</h3><p>Verdicts, the inputs behind them, and every command.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="what-it-proves">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">What it proves</p>
+            <h2>Three verdicts, and no silent passes</h2>
+            <p>If the tool could not check something, the report says so and says why.</p>
+          </div>
+          <div class="grid g3">
+            <div class="card verdict verified"><span class="pill verified">Verified</span><p>The proof covered every input within the stated bounds.</p></div>
+            <div class="card verdict violation"><span class="pill violation">Violation</span><p>A concrete input, replayed. For a regression proof, that is a behaviour change, intended or not.</p></div>
+            <div class="card verdict unverifiable"><span class="pill unverifiable">Unverifiable</span><p>The tool gave no verdict and says why. It is never reported as a pass.</p></div>
+          </div>
+          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#what-it-proves">What each kind of method gets →</a>
+        </div>
+      </section>
+
+      <section id="art-of-the-possible" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">Generated examples</p>
+            <h2>Art of the Possible</h2>
+            <p>How far bytecode proofs can reach. Of the 40 changes flagged in the examples, the unit tests beside them caught 3.</p>
+          </div>
+          <div class="grid g3">
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Property proof</span></p>
+              <h3><code>(n + 1) / 2</code> is not a majority</h3>
+              <p>A tidy-up lets two disjoint pairs elect two leaders.</p>
+              <pre class="witness">majority(n=2) = 1</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/015-rounded-half-is-not-a-majority/README.md">Read the example →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Regression proof</span></p>
+              <h3>A vote rule that loses committed entries</h3>
+              <p>A Raft rewrite elects a stale server. The old version is the specification.</p>
+              <pre class="witness">before: false   after: true</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/013-longest-log-wins-breaks-election-safety/README.md">Read the example →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Capability contract</span></p>
+              <h3>A codec that loads any class a message names</h3>
+              <p>No dependency is vulnerable, so a scanner finds nothing.</p>
+              <pre class="witness">1 capability change: reflection</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/009-codec-loads-classes-named-by-payload/README.md">Read the example →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag model">TLA+ model</span></p>
+              <h3>One dropped query strands a payment</h3>
+              <p>A customer is charged, with no seat and no refund.</p>
+              <pre class="witness">NoMoneyStranded, 9-step trace</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/011-skipped-seat-check-strands-the-money/README.md">Read the example →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag model">TLA+ model</span></p>
+              <h3>A deadlock that breaks no invariant</h3>
+              <p>One rule for class initialization leaves a thread waiting on itself.</p>
+              <pre class="witness">deadlock, 5-step trace</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/043-class-init-that-waits-on-its-own-thread-deadlocks/README.md">Read the example →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill verified">Verified</span> <span class="tag">Property proof</span></p>
+              <h3>A binary search rewrite, proved</h3>
+              <p>It finds every key, so the refactor rests on a proof, not on reading the loop.</p>
+              <pre class="witness">tables ≤ 8 entries, 4.3 s</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/046-lookupswitch-bisection-rewritten-half-open-proved-to-find-every-key/README.md">Read the example →</a>
+            </article>
+          </div>
+          <p class="note">Authored changes to small systems built to be provable, not bugs found in the wild. Test results come from those systems' own suites.</p>
+          <div class="actions">
+            <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">Browse all 56 examples</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="custom-invariants">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">TLA+ models</p>
+            <h2>Check your own invariants</h2>
+            <p>Run <code>/add-tla-model</code> in your project and say the rules in plain words. It builds a model around the code that decides what happens next, and checks them.</p>
+          </div>
+          <div class="cmd"><code class="slash">/add-tla-model "no two confirmed orders share a seat"</code><button type="button" class="copy">Copy</button></div>
+          <ol class="steps four">
+            <li><h3>Find the logic</h3><p>The code that decides what happens next. If it's spread out, the skill proposes an extraction and asks first.</p></li>
+            <li><h3>Derive it</h3><p>Its behaviour comes from the bytecode, so the model runs what the code does.</p></li>
+            <li><h3>Model the system</h3><p>One action per transaction, message or timer, plus your rules.</p></li>
+            <li><h3>Check every build</h3><p>TLC shows the steps that break a rule. The build fails when the logic changes, until the diff is reviewed.</p></li>
+          </ol>
+          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#add-tla-model-check-your-own-invariants-with-a-tla-model">How the skill works, with a real run →</a>
+        </div>
+      </section>
+
+      <section id="real-pull-requests" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">Open-source pull requests</p>
+            <h2>Results from real projects</h2>
+            <h3 class="sub-title">Apache Commons Numbers #223</h3>
+            <p>The pull request fixes <code>ArithmeticUtils.pow</code> so that <code>(-2)^31</code> returns <code>Integer.MIN_VALUE</code> instead of reporting overflow. The skill found that input from the compiled classes alone.</p>
+          </div>
+          <div class="grid g2">
+            <div class="table">
+              <table class="stack">
+                <thead><tr><th>Check</th><th>Verdict</th><th class="num">Time</th></tr></thead>
+                <tbody>
+                  <tr><td data-label="Check">Old and new <code>pow(int, int)</code> agree</td><td data-label="Verdict"><span class="pill violation">Violation</span></td><td class="num" data-label="Time">184.7 s</td></tr>
+                  <tr><td data-label="Check">The fix, on the new version</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">1.0 s</td></tr>
+                  <tr><td data-label="Check">The fix, on the old version</td><td data-label="Verdict"><span class="pill violation">Violation</span></td><td class="num" data-label="Time">0.7 s</td></tr>
+                  <tr><td data-label="Check">The Javadoc, on the new version</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">1.4 s</td></tr>
+                  <tr><td data-label="Check">Unchanged on every other input</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">18 min</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="ph tall">Terminal recording of this run, or the full report it produced, with every command.</div>
+          </div>
+          <p class="try"><b>Good first projects:</b> <a href="https://github.com/apache/commons-numbers">Apache Commons Numbers</a> <a href="https://github.com/JodaOrg/joda-time">Joda-Time</a> <a href="https://github.com/apache/commons-codec">Apache Commons Codec</a> <a href="https://github.com/FasterXML/jackson-core">jackson-core</a> <a href="https://github.com/apache/commons-lang">Apache Commons Lang</a></p>
+          <div class="grid g2 community">
+            <div class="ph">Projects using it. Logos or names, once there are any.<div class="logos" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="ph">A quote from a maintainer or reviewer, or a bug it found in the wild, with a link.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">FAQ</p>
+            <h2>Questions</h2>
+          </div>
+          <details id="limits" open><summary>What can't it do?</summary>
+            <ul class="limits">
+              <li>Arrays and loops are checked up to a stated bound.</li>
+              <li>Methods over strings, collections and objects get no per-method proof.</li>
+              <li>Some 64-bit arithmetic can exhaust the solver.</li>
+              <li>A TLA+ model is partly hand-written, and is checked within small bounds.</li>
+            </ul>
+            <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md#limits">All limits and measured costs →</a>
+          </details>
+          <details id="requirements"><summary>What does it need?</summary>
+            <ul class="limits">
+              <li><a href="https://code.claude.com">Claude Code</a></li>
+              <li>A JDK, with Maven or Gradle unless the project has a wrapper</li>
+              <li><a href="https://cli.github.com"><code>gh</code></a>, logged in, plus <code>git</code> and <code>jq</code></li>
+              <li><a href="https://github.com/diffblue/cbmc">JBMC</a>, for regression and property proofs</li>
+            </ul>
+            <p class="fine">The installer sets up Rust and TLC.</p>
+          </details>
+          <details><summary>What does a passing TLA+ model prove?</summary><p>That within its bounds, no ordering of the modelled actions breaks your invariants. It does not prove the Java correct: the decision logic comes from the bytecode, but the rest of the model is hand-written.</p></details>
+          <details><summary>Does it write to my pull request?</summary><p>Only with <code>--post</code>. Otherwise nothing is written anywhere but a working directory you can rerun from.</p></details>
+          <details><summary>How much does a run cost?</summary><div class="ph">Typical tokens and dollars for a run, from measured sessions.</div></details>
+          <details><summary>Can I run it in CI?</summary><div class="ph">Whether this is supported, and how.</div></details>
+          <details><summary>Does it work on private repositories?</summary><div class="ph">What runs locally, and what is sent to the model.</div></details>
+          <details><summary>How is this different from tests or static analysis?</summary><div class="ph">A short comparison, with one example from the 56.</div></details>
+        </div>
+      </section>
+
+      <div class="cta">
+        <div class="wrap">
+          <h2>Prove your next pull request, then your system's rules</h2>
+          <p>One command to install, one to run.</p>
+          <div class="actions">
+            <a class="btn primary" href="#quick-start">Get started</a>
+            <a class="btn" href="https://github.com/pilifs/in-the-loop">View on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot-cols">
+          <div>
+            <a class="brand" href="#top"><span>/</span>verify-bytecode</a>
+            <p>Formal verification of Java pull requests from compiled bytecode, and TLA+ models of Java projects. Built with <a href="https://github.com/diffblue/cbmc">JBMC</a>, <a href="https://github.com/tlaplus/tlaplus">TLC</a> and jvmcontract.</p>
+          </div>
+          <div>
+            <h3>Product</h3>
+            <ul>
+              <li><a href="#quick-start">Quick start</a></li>
+              <li><a href="#model-specifications">Custom models</a></li>
+              <li><a href="#how-it-works">How it works</a></li>
+              <li><a href="#what-it-proves">What it proves</a></li>
+              <li><a href="#art-of-the-possible">Examples</a></li>
+              <li><a href="#faq">FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Documentation</h3>
+            <ul>
+              <li><a href="https://github.com/pilifs/in-the-loop/tree/main/plugins/jvmcontract">Skill README</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md">jvmcontract</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">56 examples</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/README.md">Session traces</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Project</h3>
+            <ul>
+              <li><a href="https://github.com/pilifs/in-the-loop">GitHub</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/issues">Issues</a></li>
+              <li><a href="/">Terminal Value blog</a></li>
+            </ul>
+          </div>
+        </div>
+        <p class="legal"><span>© 2026 Filip Stankovic</span><span>Apache-2.0</span></p>
+      </div>
+    </footer>
+
+    <script>
+      for (const button of document.querySelectorAll('.copy')) {
+        button.addEventListener('click', async () => {
+          const text = button.parentElement.querySelector('code').textContent;
+          try {
+            await navigator.clipboard.writeText(text);
+            button.textContent = 'Copied';
+          } catch {
+            button.textContent = 'Select and copy';
+          }
+          setTimeout(() => (button.textContent = 'Copy'), 2000);
+        });
+      }
+
+      const openTarget = () => {
+        const target = document.getElementById(location.hash.slice(1));
+        if (target?.tagName === 'DETAILS') target.open = true;
+      };
+      addEventListener('hashchange', openTarget);
+      openTarget();
+
+      for (const list of document.querySelectorAll('[role="tablist"]')) {
+        const tabs = [...list.querySelectorAll('[role="tab"]')];
+        const select = (tab) => {
+          for (const other of tabs) {
+            const selected = other === tab;
+            other.setAttribute('aria-selected', selected);
+            other.tabIndex = selected ? 0 : -1;
+            document.getElementById(other.getAttribute('aria-controls')).hidden = !selected;
+          }
+        };
+        tabs.forEach((tab, index) => {
+          tab.addEventListener('click', () => select(tab));
+          tab.addEventListener('keydown', (event) => {
+            const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+            if (!step) return;
+            const next = tabs[(index + step + tabs.length) % tabs.length];
+            select(next);
+            next.focus();
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

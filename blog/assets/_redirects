@@ -1,0 +1,5 @@
+# The skill's one-command installer lives in its repository; the short URL on this site points at it.
+/verify-bytecode/install.sh https://raw.githubusercontent.com/pilifs/in-the-loop/main/plugins/jvmcontract/install.sh 302
+# The page's old path. The in-the-loop repository still names it, including in the installer's own usage line.
+/verify-bytecode-skill/install.sh https://raw.githubusercontent.com/pilifs/in-the-loop/main/plugins/jvmcontract/install.sh 302
+/verify-bytecode-skill/* /verify-bytecode/:splat 301
