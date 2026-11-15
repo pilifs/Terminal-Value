@@ -213,7 +213,9 @@ seconds: 47 and 2.9). Both are counted from the records, so a page needs no coll
   manifest, which is on the first load. They are recorded together under `examples/*/result.json`: the sha256 is
   of a line for each file read (`<path> <sha256>`, in path order) and the bytes are their sum. The methodology
   page says so. The code figures are read from the tree at the same revision with no input of their own, so this
-  is more provenance than they have, and less than a line per file.
+  is more provenance than they have, and less than a line per file. Since generator 13 the list is out of the
+  manifest and each result file is an input of its own again: see "The list of source files is out of the first
+  load", below.
 - A result file that isn't JSON stops the import, like any input that can't be trusted. A folder with no result
   file is an example with no evidence: 26 at this revision, the 24 changes to published libraries and two
   constructed examples.
@@ -449,6 +451,29 @@ script left records, read from their sessions' prompts. It is the answer to requ
 
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
+
+### The list of source files is out of the first load (generator 13)
+
+The author decided on 2026-11-15 to move the manifest's list of inputs out of the first load. The manifest is
+the first file every page reads, and the list of 565 files with their hashes was 34 KB of its 35 KB gzip.
+
+- **A collection of its own.** `details/inputs.json` (`software-factory-inputs/v1`) has a record for each source
+  file read: path, SHA-256, bytes and the schema it declares. It is listed in the manifest's `collections` like
+  the others, so its own hash and size are checked, the publisher uploads it, and the Pages Function serves it.
+  The manifest's `source` now says `inputCount`.
+- **One per file again.** The examples' result files were recorded together under `examples/*/result.json` to
+  keep the manifest short. With the list out, each is an input of its own with its own hash: 721 files in all.
+  This was my reading of the decision, not the author's words.
+- **Where a reader finds it.** The methodology page's Snapshot row counts the files and links the list. The
+  usage page's Deeper exploration has "Source files read": each file links to itself in in-the-loop at the
+  revision it was read at, beside its size and hash (`TABLES.inputs` in `details.js`).
+- **Older snapshots still load.** The client and the schema accept a manifest that lists its inputs, as the
+  fixture snapshot does, or one that counts them. A snapshot without the collection has no such table.
+- **Also in this generator:** the loops collection is oldest first whichever kind of record a run has, as its
+  table's caption says, and that table has words for the three outcomes the index gives.
+- **First load** went from 163.3 KB to 131.5 KB gzip; the manifest is 2.8 KB before compression.
+
+Snapshot `sf1-7e1442d028000062`, the same revision; the share image was rendered again from it.
 
 ### The code finding leads with the landing page's count (generator 12)
 
@@ -766,9 +791,9 @@ one record, `validateSnapshotDir(dir)` for a whole snapshot.
 | Record | File | Notes |
 | --- | --- | --- |
 | `pointer` | `latest.json` | Transport: `publishedAt` and `lastSourceCheck` change on every check, the snapshot doesn't |
-| `manifest` | `snapshots/<id>/manifest.json` | Source repo and SHA, each input's sha256, generator, config hash, metric definitions, collections with sha256 and bytes, and datasets with bounds and coverage |
+| `manifest` | `snapshots/<id>/manifest.json` | Source repo and SHA, how many source files were read (the list with each one's sha256 is the `inputs` collection), generator, config hash, metric definitions, collections with sha256 and bytes, and datasets with bounds and coverage |
 | `overview` | `overview.json` | All-time measures; a usage table by day × model × effort; one verification row per job; stocks; breakdowns; insights |
-| `sessions`, `changes`, `verification`, `examples`, `loops` | `details/*.json` | Loaded only when a reader asks for detail |
+| `sessions`, `changes`, `verification`, `examples`, `loops`, `inputs` | `details/*.json` | Loaded only when a reader asks for detail |
 | `postSummary` | in memory | `editorial.mjs` output for the pages |
 | `evidence` | a post's `evidence.json` | Frozen article data; `status: complete` before a post with numbers is published |
 | `runtime` | (future) | A producer on the factory machine; past `expiresAt` it is unavailable, never zero |

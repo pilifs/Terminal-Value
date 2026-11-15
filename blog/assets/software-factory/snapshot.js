@@ -59,7 +59,7 @@ export function checkManifest(m, pointer) {
   const problems = [];
   if (m.schema !== 'software-factory-snapshot/v1') problems.push(`manifest: schema ${JSON.stringify(m.schema)}`);
   if (m.snapshotId !== pointer.snapshotId) problems.push(`manifest: snapshotId ${m.snapshotId}, but latest.json says ${pointer.snapshotId}`);
-  if (!isObject(m.source) || !SHA.test(m.source.sha) || !Array.isArray(m.source.inputs)) problems.push('manifest: bad source');
+  if (!isObject(m.source) || !SHA.test(m.source.sha) || !(Array.isArray(m.source.inputs) || isCount(m.source.inputCount))) problems.push('manifest: bad source');
   if (m.timezone !== 'America/Toronto') problems.push('manifest: timezone');
   if (!Array.isArray(m.datasets)) problems.push('manifest: no datasets');
   if (!Array.isArray(m.collections)) problems.push('manifest: no collections');

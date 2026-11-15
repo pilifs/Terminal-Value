@@ -169,6 +169,13 @@ test('the client checks refuse what validate.mjs refuses', () => {
   assert.deepEqual(checkManifest(manifest, pointer), []);
   assert.deepEqual(checkOverview(overview, manifest), []);
   const without = (obj, key) => Object.fromEntries(Object.entries(obj).filter(([k]) => k !== key));
+  // The example's manifest lists its inputs, as every snapshot did until generator 13. One that only counts
+  // them, with the list in a collection of its own, is as good; one that does neither is refused.
+  assert.ok(Array.isArray(manifest.source.inputs));
+  const counted = { ...manifest, source: { ...without(manifest.source, 'inputs'), inputCount: manifest.source.inputs.length } };
+  assert.deepEqual(checkManifest(counted, pointer), []);
+  assert.deepEqual(validate('manifest', counted), []);
+  assert.deepEqual(checkManifest({ ...manifest, source: without(manifest.source, 'inputs') }, pointer), ['manifest: bad source']);
   const cases = [
     ['pointer', { ...pointer, schema: 'x' }, (v) => checkPointer(v)],
     ['pointer', { ...pointer, snapshotId: 'sf1-XYZ' }, (v) => checkPointer(v)],

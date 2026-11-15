@@ -536,7 +536,7 @@ async function start(shell) {
   function renderDetail(d, records, limit) {
     const body = $('[data-sf-detail-body]', d);
     const more = records.length > limit ? ' <button type="button" data-more>Show all</button>' : '';
-    body.innerHTML = `${detailTable(d.dataset.sfDetail, records, { limit })}<p class="sf-caption" tabindex="-1" data-shown>${e(detailCount(records, limit))}${more}</p>`;
+    body.innerHTML = `${detailTable(d.dataset.sfDetail, records, { limit, context: { sha: current?.manifest.source.sha } })}<p class="sf-caption" tabindex="-1" data-shown>${e(detailCount(records, limit))}${more}</p>`;
     $('[data-more]', body)?.addEventListener('click', () => {
       renderDetail(d, records, records.length);
       $('[data-shown]', body).focus();

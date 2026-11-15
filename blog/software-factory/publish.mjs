@@ -62,7 +62,7 @@ export const CREDENTIALS = ['SOFTWARE_FACTORY_R2_ACCOUNT_ID', 'SOFTWARE_FACTORY_
 export const POINTER = 'latest.json';
 /** How long a superseded snapshot stays, for tabs still showing it. */
 export const PRUNE_AFTER_MS = 24 * 60 * 60 * 1000;
-const SNAPSHOT_KEY = /^snapshots\/(sf1-[0-9a-f]{16})\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples|loops))\.json$/;
+const SNAPSHOT_KEY = /^snapshots\/(sf1-[0-9a-f]{16})\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples|loops|inputs))\.json$/;
 const JSON_TYPE = 'application/json; charset=utf-8';
 const SHA = /^[0-9a-f]{40}$/;
 const RELATIONS = ['ahead', 'behind', 'identical', 'diverged'];

@@ -116,10 +116,6 @@ export const jobPath = (id) => `verification/jobs/${id}.json`;
 // An example's own result, beside its entry in the catalog. `folder` is the entry's path.
 const EXAMPLE_FOLDER = /^examples\/[A-Za-z0-9._-]+$/;
 export const exampleResultPath = (folder) => `${folder}/result.json`;
-// The examples' result files are many and small, so the manifest records them
-// together: one input under this path, whose sha256 is of a line for each file
-// read (`<path> <sha256>\n`, in path order) and whose bytes are their sum.
-export const EXAMPLE_RESULTS = 'examples/*/result.json';
 // The top-level fields each input must have, by its config/source.json path.
 // Kept here, not in source.json: that file is hashed into every snapshot id,
 // the frozen example's included (see Progress in the data brief).
@@ -830,10 +826,9 @@ export function normalizeSources(raw, config = loadConfig()) {
       evidence: folder ? exampleEvidence(load(exampleResultPath(folder))) : null,
     };
   });
-  const results = [...inputs.values()].filter((i) => i.path.endsWith('/result.json') && EXAMPLE_FOLDER.test(i.path.slice(0, -'/result.json'.length))).sort((a, b) => (a.path < b.path ? -1 : 1));
-  for (const r of results) inputs.delete(r.path);
-  if (results.length)
-    inputs.set(EXAMPLE_RESULTS, { path: EXAMPLE_RESULTS, sha256: sha256(results.map((r) => `${r.path} ${r.sha256}\n`).join('')), bytes: results.reduce((t, r) => t + r.bytes, 0), schema: '' });
+  // Each result file read is an input of its own, as every other file is. (Until
+  // generator 13 they were recorded together, to keep the list in the manifest
+  // short; the list is a file of its own now.)
 
   // Feature loop runs: each run record, in the campaign its loop's name gives.
   // A record that isn't one (no header) is left out and counted.

@@ -937,6 +937,10 @@ Settled by the author on 2026-11-14:
 - **The usage page's headline in the landing page's words** (2026-11-15, moonshot loop
   `software-factory-impact`): "For every token written, 156 were read", with the totals in the first sentence.
   No data changed. docs/software-factory.md, "The usage page leads with a result".
+- **The list of source files is out of the first load** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, same title. `details/inputs.json` is a collection of its own (generator 13, snapshot
+  `sf1-7e1442d028000062`), 721 files, one per example result again; the manifest counts them. The usage page lists
+  them under Deeper exploration. First load 131.5 KB of 300 KB.
 - Status: done
 
 ## Loop settings

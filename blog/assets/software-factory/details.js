@@ -15,12 +15,13 @@ const id = (text) => `<code>${e(text)}</code>`;
 const link = (url, html) => (url && /^https:\/\//.test(url) ? `<a href="${e(url)}">${html}</a>` : html);
 
 const COMMIT = 'https://github.com/pilifs/in-the-loop/commit/';
-const OUTCOMES = { done: 'Done', waiting: 'Waiting on jobs', blocked: 'Blocked on a person', attention: 'Stopped for attention', ended: 'Ended', open: 'No end recorded' };
+const OUTCOMES = { done: 'Done', waiting: 'Waiting on jobs', blocked: 'Blocked on a person', attention: 'Stopped for attention', ended: 'Ended', open: 'No end recorded', unrecorded: 'No end recorded', stopped: 'Stopped', interrupted: 'Interrupted' };
+const SOURCE = 'https://github.com/pilifs/in-the-loop/blob/';
 const known = (value, unit) => (value === null || value === undefined ? muted('Not recorded') : e(formatValue(value, unit)));
 
 const TABLES = {
   loops: {
-    caption: 'Feature loop runs, oldest first',
+    caption: 'Loop runs, oldest first',
     head: ['Run', 'Started', 'Duration', 'Cycles', 'Commits', 'Tool calls', 'Estimated usage', 'From a person', 'Ended'],
     wrap: [0],
     row: (r) => [
@@ -87,10 +88,21 @@ const TABLES = {
       r.freshness ? e(r.freshness) : muted('Absent'),
     ],
   },
+  inputs: {
+    caption: 'Every source file this snapshot was made from, in path order',
+    head: ['File', 'Declares', 'Bytes', 'SHA-256 of what was read'],
+    wrap: [0, 3],
+    row: (r, { sha } = {}) => [
+      /^[0-9a-f]{40}$/.test(sha ?? '') && !r.path.includes('*') ? `<a href="${SOURCE}${sha}/${e(r.path.split('/').map(encodeURIComponent).join('/'))}">${id(r.path)}</a>` : id(r.path),
+      r.schema ? id(r.schema) : muted('No schema'),
+      e(r.bytes.toLocaleString('en-US')),
+      id(r.sha256),
+    ],
+  },
 };
 
-/** The table for a collection's records, the first `limit` of them. */
-export function detailTable(name, records, { limit = FIRST_ROWS } = {}) {
+/** The table for a collection's records, the first `limit` of them. `context` is passed to each row: { sha } of the source. */
+export function detailTable(name, records, { limit = FIRST_ROWS, context = {} } = {}) {
   const t = TABLES[name];
   if (!t) throw new Error(`details: no table for ${name}`);
   const shown = records.slice(0, limit);
@@ -98,7 +110,7 @@ export function detailTable(name, records, { limit = FIRST_ROWS } = {}) {
   const body = shown.length
     ? shown
         .map((r) => {
-          const cells = t.row(r).map((cell, i) => {
+          const cells = t.row(r, context).map((cell, i) => {
             const cls = t.wrap.includes(i) ? ' class="sf-wrap"' : '';
             return i ? `<td${cls}>${cell}</td>` : `<th scope="row"${cls}>${cell}</th>`;
           });

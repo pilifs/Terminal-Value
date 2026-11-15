@@ -135,7 +135,12 @@ test('the snapshot id and collection hashes follow identity.mjs', async () => {
   );
   for (const v of [overview, ...Object.values(details)]) assert.equal(v.snapshotId, manifest.snapshotId);
   assert.deepEqual(manifest.metricDefinitions, defs);
-  assert.deepEqual(manifest.source.inputs, normalized.source.inputs);
+  // The list of what was read is a collection of its own, out of the manifest: the manifest says how many.
+  assert.deepEqual(manifest.source, { repository: 'pilifs/in-the-loop', sha: SHA, inputCount: normalized.source.inputs.length });
+  assert.deepEqual(details.inputs, { schema: 'software-factory-inputs/v1', snapshotId: manifest.snapshotId, records: normalized.source.inputs });
+  assert.equal(manifest.collections.find((c) => c.name === 'inputs').records, normalized.source.inputs.length);
+  assert.ok(normalized.source.inputs.length > 0);
+  assert.deepEqual(manifest.collections.map((c) => c.path), ['overview.json', 'details/sessions.json', 'details/changes.json', 'details/verification.json', 'details/examples.json', 'details/loops.json', 'details/inputs.json']);
   // Deterministic: the same input gives the same bytes; another config gives another id over the same content.
   assert.equal(canonicalJson(run(normalized)), canonicalJson(out));
   const other = run(normalized, { configSha256: 'f'.repeat(64) });

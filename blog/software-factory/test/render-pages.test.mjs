@@ -118,6 +118,29 @@ test('a page’s description starts with the result it leads with, in plain text
   for (const p of renderPages({ snapshot: edited, unavailable: null, fixture: false, posts: noPosts, site, helpers, paths })) assert.doesNotMatch(p.description, /&amp;|&lt;/, p.path);
 });
 
+test('the source files read are counted on the methodology page, and listed where the snapshot has the list', () => {
+  // The example snapshot is of the older shape: its manifest lists its inputs, and it has no collection of them.
+  assert.ok(Array.isArray(snapshot.manifest.source.inputs));
+  const older = page('methodology/index.html').body;
+  assert.ok(older.includes(`${snapshot.manifest.source.inputs.length} source files read, each recorded with its SHA-256</`));
+  assert.doesNotMatch(page('usage/index.html').body, /id="explore-inputs"/);
+  // The committed snapshot counts them in its manifest and lists them in a file of its own, out of the first load.
+  const { snapshot: committed } = loadSnapshot();
+  const { source, collections, snapshotId } = committed.manifest;
+  const listed = collections.find((c) => c.name === 'inputs');
+  assert.deepEqual(Object.keys(source), ['repository', 'sha', 'inputCount']);
+  assert.equal(listed.records, source.inputCount);
+  assert.ok(source.inputCount > 500);
+  const body = page('methodology/index.html', { snapshot: committed }).body;
+  assert.ok(
+    body.includes(
+      `${source.inputCount.toLocaleString('en-US')} source files read, each recorded with its SHA-256: <a href="/software-factory/static-data/snapshots/${snapshotId}/details/inputs.json">the list</a>, also under <a href="/software-factory/usage/#explore-inputs">Deeper exploration</a>`
+    )
+  );
+  const usage = page('usage/index.html', { snapshot: committed }).body;
+  assert.match(usage, new RegExp(`<details class="sf-detail" id="explore-inputs" data-sf-detail="inputs" data-path="details/inputs.json">\\s*<summary>Source files read <span class="sf-muted">\\(<span data-count>${source.inputCount.toLocaleString('en-US')}</span>\\)</span></summary>`));
+});
+
 test('methodology: every metric definition, note and filter scope from config', () => {
   const { body } = page('methodology/index.html');
   for (const m of metrics.metrics) {

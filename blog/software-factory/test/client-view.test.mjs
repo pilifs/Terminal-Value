@@ -99,3 +99,22 @@ test('the deeper exploration’s tables show raw ids, escape, and shorten a long
   assert.doesNotMatch(sessions, /javascript:/);
   assert.match(detailTable('verification', []), /No records in this snapshot/);
 });
+
+test('the source files a snapshot was made from: each a row, linked to the file at the revision it was read at', () => {
+  const sha = 'a'.repeat(40);
+  const records = [
+    { path: 'llm-dlc/traces/metrics.json', sha256: 'b'.repeat(64), bytes: 1234567, schema: 'llm-trace-metrics-rollup/v1' },
+    { path: 'examples/001 <first>/result.json', sha256: 'c'.repeat(64), bytes: 129, schema: '' },
+  ];
+  const table = detailTable('inputs', records, { context: { sha } });
+  assert.match(table, /<th scope="col">File<\/th><th scope="col">Declares<\/th><th scope="col">Bytes<\/th><th scope="col">SHA-256 of what was read<\/th>/);
+  assert.ok(table.includes(`<a href="https://github.com/pilifs/in-the-loop/blob/${sha}/llm-dlc/traces/metrics.json"><code>llm-dlc/traces/metrics.json</code></a>`));
+  assert.ok(table.includes(`<td><code>llm-trace-metrics-rollup/v1</code></td><td>1,234,567</td><td class="sf-wrap"><code>${'b'.repeat(64)}</code></td>`));
+  // A path is data: escaped in the text and encoded in the link. A file that declares no schema says so.
+  assert.ok(table.includes(`/blob/${sha}/examples/001%20%3Cfirst%3E/result.json"><code>examples/001 &lt;first&gt;/result.json</code></a>`));
+  assert.match(table, /<span class="sf-muted">No schema<\/span>/);
+  // Without the revision, or for an older snapshot's path that stands for many files, the path is not a link.
+  assert.doesNotMatch(detailTable('inputs', records), /<a /);
+  assert.doesNotMatch(detailTable('inputs', [{ ...records[0], path: 'examples/*/result.json' }], { context: { sha } }), /<a /);
+  assert.doesNotMatch(detailTable('inputs', records, { context: { sha: 'main"><script>' } }), /<a |<script>/);
+});

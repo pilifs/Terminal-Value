@@ -382,11 +382,10 @@ test('each example’s result file is read from its folder, listed as an input, 
   assert.deepEqual(n.examples[0].evidence, { tests: { task: ':t:test', failed: [] }, counterexample: { input: 'f(1)', expected: '2', actual: '3', count: 1 }, trace: null, seconds: null, checker: null });
   assert.equal(n.examples[1].evidence, null, 'no result file in its folder');
   assert.equal(n.examples[2].evidence, null, 'no folder to look in');
-  // The manifest records the result files together: one input, hashed over a line for each file read.
+  // Each result file read is an input of its own, with the SHA-256 of its bytes; the stray one was not read.
   const listed = n.source.inputs.filter((i) => i.path.endsWith('/result.json'));
   const bytes = fs.readFileSync(path.join(dir, 'examples/001-first/result.json'));
-  const line = `examples/001-first/result.json ${crypto.createHash('sha256').update(bytes).digest('hex')}\n`;
-  assert.deepEqual(listed, [{ path: 'examples/*/result.json', sha256: crypto.createHash('sha256').update(line).digest('hex'), bytes: bytes.length, schema: '' }]);
+  assert.deepEqual(listed, [{ path: 'examples/001-first/result.json', sha256: crypto.createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, schema: '' }]);
   assert.deepEqual(n.source.inputs.map((i) => i.path), n.source.inputs.map((i) => i.path).sort());
   assert.doesNotMatch(JSON.stringify(n.examples), /stray/);
   // A result that isn't JSON can't be trusted: the import stops, naming it.

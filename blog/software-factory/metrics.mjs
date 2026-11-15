@@ -7,7 +7,7 @@
 //     Bump version whenever the same input would give different output.
 //
 //   aggregate(normalized, { config, configSha256, metricDefinitions })
-//     -> { manifest, overview, details: { sessions, changes, verification, examples } }
+//     -> { manifest, overview, details: { sessions, changes, verification, examples, loops, inputs } }
 //     Every value schema-valid (validate.mjs), with its snapshot id made as
 //     identity.mjs describes. Implements config/metrics.json: weighted ratios,
 //     unavailable (null) for a zero denominator, days rebucketed in the
@@ -30,6 +30,10 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 13 moves the list of source inputs out of the manifest, into a
+//     collection of its own (details/inputs.json): the manifest's source says
+//     inputCount. Each example result file is an input of its own again. The
+//     loops collection is oldest first, whichever kind of record a run has.
 //   - Version 12 adds overview.code.repository: the lines of code in the
 //     repository as the landing page counts them (added less removed, in the
 //     languages config/code.json names).
@@ -70,7 +74,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '12' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '13' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 
@@ -90,7 +94,7 @@ export function verdictKey(x) {
 const STATUSES = ['passed', 'failed'];
 // The source's kind for the loop a person ran by hand, before the script existed.
 const BY_HAND = 'moonshot by hand';
-const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
+const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops', 'inputs'];
 const SCOPE_TEXT = { 'all-time': 'all time', snapshot: 'at this revision' };
 const USAGE_COLUMNS = ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'];
 
@@ -609,7 +613,10 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },
     verification: { schema: 'software-factory-verification/v1', snapshotId: id, records: verificationRecords },
     examples: { schema: 'software-factory-examples/v1', snapshotId: id, records: exampleRecords },
-    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: [...factory.runRecords, ...accountRecords] },
+    // Every run, oldest first: the ones with a run record and the ones read from the index.
+    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: [...factory.runRecords, ...accountRecords].sort((a, b) => byValue(a.started, b.started) || byValue(a.id, b.id)) },
+    // Every source file read, with its SHA-256: out of the manifest, which every page loads first.
+    inputs: { schema: 'software-factory-inputs/v1', snapshotId: id, records: normalized.source.inputs },
   });
   const placeholder = build(PLACEHOLDER);
   const id = snapshotId({
@@ -627,7 +634,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const manifest = {
     schema: 'software-factory-snapshot/v1',
     snapshotId: id,
-    source: { repository: normalized.source.repository, sha: normalized.source.sha, inputs: normalized.source.inputs },
+    source: { repository: normalized.source.repository, sha: normalized.source.sha, inputCount: normalized.source.inputs.length },
     generator: GENERATOR,
     configSha256,
     metricDefinitions: { version: metricDefinitions.version, sha256: metricDefinitions.sha256 },

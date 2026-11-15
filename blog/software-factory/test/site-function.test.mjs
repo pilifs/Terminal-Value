@@ -92,7 +92,7 @@ test('only the pointer and the files of the published layout have a key', () => 
     [`/software-factory/data/snapshots/${id}/manifest.json`]: `snapshots/${id}/manifest.json`,
     [`/software-factory/data/snapshots/${id}/overview.json`]: `snapshots/${id}/overview.json`,
   };
-  for (const name of ['sessions', 'changes', 'verification', 'examples', 'loops'])
+  for (const name of ['sessions', 'changes', 'verification', 'examples', 'loops', 'inputs'])
     allowed[`/software-factory/data/snapshots/${id}/details/${name}.json`] = `snapshots/${id}/details/${name}.json`;
   for (const [pathname, key] of Object.entries(allowed)) assert.equal(keyFor(pathname), key, pathname);
 
@@ -181,7 +181,7 @@ test('snapshot files: the bucket’s bytes, cached a year as immutable', async (
   const bucket = fakeBucket(COMMITTED);
   const env = { ...PREVIEW, SOFTWARE_FACTORY_DATA: bucket };
   const keys = Object.keys(COMMITTED).filter((k) => k.startsWith('snapshots/'));
-  assert.equal(keys.length, 7, 'manifest, overview and five details');
+  assert.equal(keys.length, 8, 'manifest, overview and six details');
   for (const key of keys) {
     const res = await serve(request(`${REMOTE}${key}`), env);
     assert.equal(res.status, 200, key);

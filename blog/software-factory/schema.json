@@ -78,13 +78,14 @@
         "snapshotId": { "$ref": "#/$defs/snapshotId" },
         "source": {
           "type": "object",
-          "required": ["repository", "sha", "inputs"],
+          "required": ["repository", "sha"],
           "additionalProperties": false,
           "properties": {
             "repository": { "const": "pilifs/in-the-loop" },
             "sha": { "$ref": "#/$defs/sha" },
+            "inputCount": { "type": "integer", "minimum": 0, "description": "How many source files were read. Each is a record of the inputs collection (details/inputs.json), with its SHA-256. Since generator 13." },
             "inputs": {
-              "description": "Every source file read, with its SHA-256. A path with a * stands for all the files read that match it (the examples' result files): its sha256 is of a line for each, '<path> <sha256>\\n' in path order, and its bytes are their sum.",
+              "description": "Until generator 13, the list itself (since then: inputCount, and the inputs collection). Every source file read, with its SHA-256. A path with a * stands for all the files read that match it (the examples' result files): its sha256 is of a line for each, '<path> <sha256>\\n' in path order, and its bytes are their sum.",
               "type": "array",
               "items": {
                 "type": "object",
@@ -122,8 +123,8 @@
             "required": ["name", "path", "sha256", "bytes", "records"],
             "additionalProperties": false,
             "properties": {
-              "name": { "enum": ["overview", "sessions", "changes", "verification", "examples", "loops"] },
-              "path": { "type": "string", "pattern": "^(overview|details/(sessions|changes|verification|examples|loops))\\.json$" },
+              "name": { "enum": ["overview", "sessions", "changes", "verification", "examples", "loops", "inputs"] },
+              "path": { "type": "string", "pattern": "^(overview|details/(sessions|changes|verification|examples|loops|inputs))\\.json$" },
               "sha256": { "$ref": "#/$defs/sha256" },
               "bytes": { "type": "integer", "minimum": 0 },
               "records": { "type": "integer", "minimum": 0 }
@@ -1367,6 +1368,30 @@
               },
               "recordUrl": { "type": ["string", "null"], "description": "The run's own run record; null for a run that left none." },
               "summaryUrl": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "description": "details/inputs.json: every source file a snapshot was made from, in path order, each with the SHA-256 and size of the bytes read and the schema it declared ('' when it declares none). Since generator 13; until then the list was the manifest's source.inputs.",
+      "required": ["schema", "snapshotId", "records"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "const": "software-factory-inputs/v1" },
+        "snapshotId": { "$ref": "#/$defs/snapshotId" },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256", "bytes", "schema"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "bytes": { "type": "integer", "minimum": 0 },
+              "schema": { "type": "string" }
             }
           }
         }

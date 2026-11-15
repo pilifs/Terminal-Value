@@ -91,6 +91,7 @@ const DETAILS = [
   { name: 'sessions', label: 'Sessions', note: 'session ids, models, calls and estimated usage' },
   { name: 'verification', label: 'Verification results', note: 'job ids, process outcome, signals and durations' },
   { name: 'examples', label: 'Examples', note: 'the catalog: origin, verdict, vacuity and freshness' },
+  { name: 'inputs', label: 'Source files read', note: 'every file of in-the-loop this snapshot was made from, with the SHA-256 and size of what was read' },
 ];
 
 /** Which filters a metric takes, as a sentence for the panel. */
@@ -530,8 +531,11 @@ const DATASET_LABELS = {
 const FIGURES = METRIC_CONFIG.figures ?? [];
 const OUTCOME_WORDS = { 'new-snapshot': 'found new data', unchanged: 'found nothing new', failed: 'failed' };
 
-function provenance(snapshot, { e, formatDate }) {
+function provenance(snapshot, { e, formatDate, paths }) {
   const { pointer, manifest } = snapshot;
+  // The list of what was read is a file of the snapshot, and a table on the usage page.
+  const listed = manifest.collections.find((c) => c.name === 'inputs');
+  const inputsFile = listed ? `${paths.staticData}${pointer.manifest.replace(/manifest\.json$/, '')}${listed.path}` : null;
   const asOf = dataAsOf(snapshot);
   const day = (instant) => {
     const d = torontoDay(instant);
@@ -540,8 +544,8 @@ function provenance(snapshot, { e, formatDate }) {
   const check = pointer.lastSourceCheck;
   const rows = [
     ['Source', `<a href="${REPO}/tree/${e(manifest.source.sha)}">${e(manifest.source.repository)}</a> at <code>${e(manifest.source.sha)}</code>`],
-    ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e(manifest.source.inputs.length.toLocaleString('en-US'))} source inputs, each recorded with its SHA-256${
-        manifest.source.inputs.some((i) => i.path.includes('*')) ? '; the examples’ result files are recorded together, as one' : ''
+    ['Snapshot', `<code>${e(manifest.snapshotId)}</code>, ${e((manifest.source.inputCount ?? manifest.source.inputs?.length ?? 0).toLocaleString('en-US'))} source files read, each recorded with its SHA-256${
+        inputsFile ? `: <a href="${e(inputsFile)}">the list</a>, also under <a href="${e(paths.route)}usage/#explore-inputs">Deeper exploration</a>` : ''
       }`],
     ['Data as of', asOf ? `<time datetime="${e(asOf)}">${e(formatDate(asOf))}</time>, the last day with activity in the data` : 'No dated activity'],
     ['Published', day(pointer.publishedAt)],
@@ -739,7 +743,7 @@ function methodologyPage({ snapshot, unavailable, fixture, helpers, paths }) {
   const e = helpers.escapeHtml;
   const formatDate = helpers.formatDate ?? formatDay;
   const data = snapshot
-    ? [provenance(snapshot, { e, formatDate }), datasetCoverage(snapshot, { e, formatDate })]
+    ? [provenance(snapshot, { e, formatDate, paths }), datasetCoverage(snapshot, { e, formatDate })]
     : [
         `      <section class="sf-panel sf-unavailable" role="status" aria-labelledby="sf-unavailable-title">
         <h2 id="sf-unavailable-title">Data unavailable</h2>
