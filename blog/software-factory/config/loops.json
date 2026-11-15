@@ -1,0 +1,36 @@
+{
+  "version": "1",
+  "note": "How a feature loop's run is read from in-the-loop: the run records under llm-dlc/traces/{session}/runs/, joined to that session's prompts by time. Prompt text is read only to tell who sent a prompt, and is never published.",
+  "window": "A prompt, a tool call or a commit belongs to a run when it starts in [the record's Started time, its Ended or Stopped time]. A run with no end recorded lasts until its session's next run starts, or until its last prompt from the loop ends.",
+  "senders": {
+    "note": "Who sent a prompt that the trace records as typed input, by the start of its text. The first matching group wins; a prompt that matches none was typed by a person.",
+    "harness": [
+      "^Work on the brief in ",
+      "^Cycle \\d+ of the feature loop is committed",
+      "^The feature loop is ending after ",
+      "^This conversation goes on as one of the parallel streams",
+      "^You decided that the loop stops after "
+    ],
+    "agent": ["^<agent-message ", "^<cross-session-message "],
+    "interrupt": ["^\\[Request interrupted by user"]
+  },
+  "campaign": "A loop belongs to the campaign of the shortest brief name that equals its own or that it extends with '-': foundations-heap runs in the campaign foundations when a brief named foundations exists. Brief names are the files of llm-dlc/loops/ at the source revision, and the names of the runs themselves.",
+  "outcomes": {
+    "note": "How a run ended, from its record's Ended or Stopped line. The first matching pattern wins; no such line is 'open': the record doesn't say the run ended.",
+    "patterns": [
+      { "outcome": "attention", "pattern": "still says working|needs attention|made no commit|brief changed|gave no clear" },
+      { "outcome": "blocked", "pattern": "the brief says blocked" },
+      { "outcome": "waiting", "pattern": "the brief says waiting" },
+      { "outcome": "done", "pattern": "decided the work was done|the brief says done" }
+    ],
+    "fallback": "ended",
+    "labels": {
+      "done": "Done",
+      "waiting": "Waiting on verification jobs",
+      "blocked": "Blocked on a person",
+      "attention": "Stopped for attention",
+      "ended": "Ended",
+      "open": "No end recorded"
+    }
+  }
+}

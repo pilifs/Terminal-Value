@@ -61,7 +61,7 @@ test('the sections come in the order of the plan', () => {
     assert.ok(i >= 0, `missing ${marker}`);
     return i;
   };
-  const order = ['class="sf-intro"', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="analysis"', 'id="output"', 'id="explore"'].map(at);
+  const order = ['class="sf-intro"', 'id="loops"', 'id="tools"', 'id="code"', 'id="analysis"', 'id="usage"', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="output"', 'id="explore"'].map(at);
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
 });
 
@@ -108,9 +108,9 @@ test('days the data does not cover are no data, never a zero column', () => {
 test('deeper exploration links its records lazily, with raw ids and source', () => {
   const html = overview();
   assert.match(html, /data-sf-detail="changes" data-path="details\/changes\.json"/);
-  assert.match(html, /href="\/software-factory\/static-data\/snapshots\/sf1-61f97c6b5429a12c\/details\/verification\.json"/);
+  assert.ok(html.includes(`href="/software-factory/static-data/snapshots/${snapshot.manifest.snapshotId}/details/verification.json"`));
   assert.ok(html.includes('7384f8c23eef441817ddb714c6ef5571cdc138bd'));
-  assert.ok(html.includes('sf1-61f97c6b5429a12c'));
+  assert.ok(html.includes(`<code>${snapshot.manifest.snapshotId}</code>`));
 });
 
 test('fixture data says so plainly; real data has no banner', () => {

@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "note": "How lines in in-the-loop's git history are classed, by file extension. Code is the languages below; docs are prose; everything else (JSON, logs, diffs, receipts, traces) is data the factory generates, and is never counted as code. Read from a git checkout with `git log -M --numstat`: renames are followed, merges and binary files add nothing.",
+  "languages": [
+    { "id": "rust", "label": "Rust", "extensions": ["rs"] },
+    { "id": "python", "label": "Python", "extensions": ["py"] },
+    { "id": "java", "label": "Java", "extensions": ["java"] },
+    { "id": "shell", "label": "Shell", "extensions": ["sh"] },
+    { "id": "tla", "label": "TLA+", "extensions": ["tla"] },
+    { "id": "contract", "label": "Contracts", "extensions": ["contract"] },
+    { "id": "javascript", "label": "JavaScript", "extensions": ["js", "mjs", "ts"] }
+  ],
+  "docs": { "label": "Docs and briefs", "extensions": ["md"] },
+  "data": { "label": "Data and generated files" },
+  "contextBuckets": [0, 50000, 100000, 150000, 200000, 300000]
+}

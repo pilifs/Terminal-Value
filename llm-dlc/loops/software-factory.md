@@ -813,6 +813,15 @@ Settled by the author on 2026-11-14:
   are pinned. The runbook in docs/software-factory.md is current. Still the author's: the R2 secrets, the push, the
   first manual run, the schedule, the launch, the Fable draft, and deleting the four stream workspaces
   (`prune_workspaces.py` reports all four safe).
+- **The leading sections** (2026-11-15, interactive, at the author's request): the overview now opens with the
+  feature loops, the tools and the code, before usage. docs/software-factory.md, "The leading sections", says what
+  each shows and what changed in the contract (additive: `overview.loops`, `.tools`, `.code`, the `loops`
+  collection, generator and metric definitions 2). The committed snapshot is `sf1-16c8d7d65a6a7ef8`, of in-the-loop
+  `fbd1fa86` read from the local clone: 47 runs, 243 cycles, 12,681 tool calls and no prompt typed by a person
+  inside a run; 24,066 of 24,501 tool calls succeeded; 172,735 lines of code added, 161,261 in the tree. Checked by
+  hand against the run records and `git log --numstat` outside the importer. What the pages can't measure yet is
+  in docs/software-factory-upstream.md, for in-the-loop's agents. Still the author's, beside the list above: the
+  push, so the workflow publishes a generator 2 snapshot to R2 (until then the page shows its bundled one).
 - Status: done
 
 ## Loop settings

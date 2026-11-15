@@ -103,6 +103,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
     unavailable,
     // The banner speaks of the numbers shown, so it needs a snapshot to show.
     fixture: Boolean(override) && Boolean(snapshot),
+    // A drafts build may show what the running-loops panel will look like, as a labelled example.
+    preview: Boolean(includeDrafts),
     posts: selection,
     site,
     helpers,

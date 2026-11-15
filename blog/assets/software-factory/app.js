@@ -13,6 +13,7 @@
 
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
+import { campaignRunsHtml, codeHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
 import { computeMeasures, series } from './measures.js';
@@ -45,9 +46,17 @@ async function start(shell) {
   const bundled = shell.dataset.staticData;
   const status = $('[data-sf-static]');
 
+  // A remote snapshot made by an older version of the generator that made the
+  // page's own bundled one lacks what this page draws (the publisher hasn't
+  // caught up with the site yet): the bundled snapshot is shown instead,
+  // whole, until it does.
+  const generator = { name: shell.dataset.generator, version: Number(shell.dataset.generatorVersion) || 0 };
+  const behind = (snap) => snap.manifest.generator?.name === generator.name && Number(snap.manifest.generator.version) < generator.version;
+
   let first;
   try {
     first = await firstSnapshot({ remote, bundled, fetch: get });
+    if (first.source === 'remote' && behind(first.snapshot)) first = { ...(await firstSnapshot({ remote: null, bundled, fetch: get })), remoteError: null };
   } catch {
     if (status) status.textContent += ' The filters are unavailable: the data file could not be loaded.';
     return;
@@ -164,6 +173,7 @@ async function start(shell) {
     shell.dataset.snapshot = snap.manifest.snapshotId;
     $('[data-sf-freshness]').innerHTML = freshnessHtml(snap);
     $('[data-sf-insights]').innerHTML = insightItems(ov.insights);
+    drawFactory(snap);
     const texts = stockTexts(ov.stocks);
     for (const tile of $$('[data-stock]')) {
       const t = texts[tile.dataset.stock];
@@ -188,6 +198,94 @@ async function start(shell) {
     }
     syncControls();
   }
+
+  // The leading sections -------------------------------------------------------
+  // Drawn whole from a snapshot, as the build drew them: the headline, the
+  // loops, the tools and the code. A snapshot from before they were measured
+  // says so in each section.
+  let runs = null; // the loops collection of the snapshot on screen, once asked for
+  const section = (name) => $(`[data-sf-section="${name}"]`);
+
+  /** After a section is drawn: show its controls, and leave one tooltip, ours. */
+  function readyFactory(root = shell) {
+    const control = $('[data-sf-tool-model]');
+    if (control) control.hidden = false;
+    for (const title of $$('[data-tip] > title', root)) title.parentNode.removeChild(title);
+    for (const run of $$('.sf-run[title]', root)) run.removeAttribute('title');
+  }
+
+  function drawFactory(snap) {
+    const hero = section('hero');
+    const sections = {
+      hero: () => heroHtml(snap, { title: hero.dataset.title, lede: hero.dataset.lede }),
+      loops: () => loopsHtml(snap),
+      tools: () => toolsHtml(snap),
+      code: () => codeHtml(snap),
+    };
+    for (const [name, html] of Object.entries(sections)) {
+      const el = section(name);
+      if (el) el.innerHTML = html();
+    }
+    runs = null;
+    readyFactory();
+  }
+
+  shell.addEventListener('change', (ev) => {
+    if (ev.target.name !== 'tool-model') return;
+    const chart = $('[data-sf-tool-chart]');
+    chart.innerHTML = toolChartHtml(current.overview, ev.target.value === '' ? null : Number(ev.target.value));
+    readyFactory(chart);
+  });
+
+  // A campaign's runs and cycles, from the loops collection, loaded once per snapshot.
+  async function openCampaign(d) {
+    const body = $('[data-sf-campaign-body]', d);
+    const snap = current;
+    if (d.dataset.loaded === snap.manifest.snapshotId) return;
+    body.innerHTML = '<p class="sf-muted">Loading…</p>';
+    try {
+      runs ??= loadCollection(snap, 'loops', { fetch: get });
+      const file = await runs;
+      if (snap !== current) return;
+      body.innerHTML = campaignRunsHtml(file.records, d.dataset.sfCampaign);
+      d.dataset.loaded = snap.manifest.snapshotId;
+    } catch {
+      runs = null;
+      body.innerHTML = '<p>These runs could not be loaded. Close this and open it again to retry.</p>';
+    }
+  }
+  // toggle doesn't bubble, so it is caught on the way down.
+  shell.addEventListener(
+    'toggle',
+    (ev) => {
+      const d = ev.target;
+      if (d.matches?.('[data-sf-campaign]') && d.open) openCampaign(d);
+    },
+    true
+  );
+
+  // One tooltip for every mark that carries data-tip. It follows the pointer;
+  // the keyboard doesn't need it, since each chart has its table.
+  const tip = document.createElement('div');
+  tip.className = 'sf-tip';
+  tip.hidden = true;
+  tip.setAttribute('aria-hidden', 'true');
+  shell.append(tip);
+  shell.addEventListener('pointermove', (ev) => {
+    const mark = ev.target.closest?.('[data-tip]');
+    if (!mark || ev.pointerType === 'touch') {
+      tip.hidden = true;
+      return;
+    }
+    tip.textContent = mark.dataset.tip;
+    tip.hidden = false;
+    const box = shell.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - box.left + 12, 0), box.width - tip.offsetWidth);
+    tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(ev.clientY - box.top + 16)}px)`;
+  });
+  shell.addEventListener('pointerleave', () => {
+    tip.hidden = true;
+  });
 
   // Deeper exploration, loaded when opened -----------------------------------
   function renderDetail(d, records, limit) {
@@ -246,7 +344,7 @@ async function start(shell) {
   notice.className = 'sf-update';
   notice.setAttribute('role', 'status');
   notice.innerHTML = `<p><span data-text tabindex="-1"></span> <button type="button" data-sf-refresh hidden>Show the new data</button></p>`;
-  $('.sf-controls').append(notice);
+  $('[data-sf-notice]').append(notice);
   const noticeText = $('[data-text]', notice);
   const refresh = $('[data-sf-refresh]', notice);
 
@@ -278,6 +376,7 @@ async function start(shell) {
       }
       return;
     }
+    if (behind(r.snapshot)) return;
     if (r.snapshot.manifest.snapshotId === current.manifest.snapshotId) {
       pending = null;
       refresh.hidden = true;
@@ -294,6 +393,7 @@ async function start(shell) {
   form.hidden = false;
   measure.hidden = false;
   if (current.manifest.snapshotId !== shell.dataset.snapshot) showSnapshot(current);
+  else readyFactory();
   renderView();
   const canonical = viewUrl(state);
   if (`${location.pathname}${location.search}${location.hash}` !== canonical) history.replaceState(null, '', canonical);

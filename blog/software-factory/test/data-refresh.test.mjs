@@ -102,6 +102,7 @@ test('two refreshes of the same input give identical files', async () => {
     'latest.json',
     `snapshots/${ra.snapshotId}/details/changes.json`,
     `snapshots/${ra.snapshotId}/details/examples.json`,
+    `snapshots/${ra.snapshotId}/details/loops.json`,
     `snapshots/${ra.snapshotId}/details/sessions.json`,
     `snapshots/${ra.snapshotId}/details/verification.json`,
     `snapshots/${ra.snapshotId}/manifest.json`,

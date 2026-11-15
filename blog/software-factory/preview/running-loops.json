@@ -1,0 +1,9 @@
+{
+  "schema": "software-factory-running-loops/proposal",
+  "note": "Made-up rows that show the shape of this panel. No reporter exists yet, and nothing here was observed. Shown in preview builds only.",
+  "loops": [
+    { "loop": "example-targets-positive", "state": "active", "cycle": "7", "lastCommit": "12 min ago", "lastOutput": "40 s ago", "spend": "$21.40" },
+    { "loop": "example-targets-negative", "state": "active", "cycle": "5", "lastCommit": "3 min ago", "lastOutput": "8 s ago", "spend": "$17.85" },
+    { "loop": "example-targets-runtime", "state": "waiting on jobs", "cycle": "9", "lastCommit": "48 min ago", "lastOutput": "31 min ago", "spend": "$33.10" }
+  ]
+}

@@ -29,6 +29,50 @@ folder already qualifies them.
   audited revision. It is public: a refresh fetches by SHA from `raw.githubusercontent.com` with no token. The
   local checkout's HEAD moves while its loops run, so always pin a SHA.
 
+## The leading sections (2026-11-15)
+
+The overview used to open with four usage tiles. It now opens with what the factory's feature loops did, then how
+reliably the models' tools ran, then what the code took. Usage, output and the records follow. The author asked for
+this on 2026-11-15, after the loop.
+
+| Section | What it shows | From |
+| --- | --- | --- |
+| Headline | Tool calls and commits made inside loop runs, prompts typed by a person during them, and the longest such run as its own record, cycle by cycle | `overview.loops` |
+| Feature loops | Runs, cycles, commits and usage. Tool calls per day inside a run and outside one. Campaigns compared in the order they ran. Each campaign's runs as lanes on one clock, opening to every run and cycle | `overview.loops`, `details/loops.json` |
+| Loops running now | A panel that says it is not connected. A drafts build also shows its shape with made-up rows, labelled as an example | `preview/running-loops.json` |
+| Model performance | Tool call success. Failed calls per day by kind, for all models or one. The tools and commands that fail most. Failure by model, by context size, and inside a run or outside | `overview.tools` |
+| Code | Lines of code added, removed and still in the tree, from git. Output tokens and estimated usage per line. Lines per day and per language | `overview.code` |
+
+**How it is counted** is on the methodology page and in three config files:
+
+- `config/loops.json`: a run's window, who sent a prompt (by the start of its text, which is never published), a
+  loop's campaign, and how a run ended.
+- `config/code.json`: which file extensions are code, which are docs, and that everything else is generated data.
+- `config/metrics.json`, `figures`: the definitions the methodology page shows.
+
+**What changed in the contract.** Everything is additive, so a version 1 reader still reads every snapshot:
+
+- `overview.loops`, `overview.tools` and `overview.code` are new and optional. Each is `null` when nothing was
+  measured for it: no run record, no session with a tools table, or no git checkout.
+- `details/loops.json` is a new collection: one record per run, with its cycles. The Pages Function and the
+  publisher allow its key.
+- A change record gains `commit`, `committedAt`, `codeAdded`, `codeRemoved`, `calls`, `outputTokens` and `usd`,
+  where known.
+- The manifest lists the datasets `loops`, `tools` and `code` when they exist.
+- The generator is version 2 and the metric definitions are version 2. `loops.json` and `code.json` are part of
+  the config hash. Every snapshot id changed.
+
+**Code needs a checkout.** Lines come from `git log -M --numstat`. A refresh from GitHub alone gives a snapshot
+with no code section, so use `--checkout` for the committed snapshot. The publish workflow always has one.
+
+**An older remote snapshot.** A snapshot in R2 made by generator 1 has none of this. The page then keeps showing
+its bundled snapshot, whole, until the publisher catches up: `app.js` compares the remote manifest's generator
+version with the bundled one's. The publish workflow runs `main`'s copy of the code, so R2 gets a generator 2
+snapshot on the first run after this is pushed.
+
+**What isn't measured yet** is in [`software-factory-upstream.md`](software-factory-upstream.md): what to ask of
+in-the-loop for running loops, prompt senders, run records as data, rework by line age and review.
+
 ## Routes and files
 
 | Route | What | Made by |
@@ -55,9 +99,13 @@ blog/software-factory/
   site.mjs  site.css              the section's entry in the site header and home page (coordinator)
   schema.json  validate.mjs       the frozen contract and its validator
   identity.mjs                    canonical JSON, config hash, snapshot id
-  config/                         section, source, metrics, areas, models
+  config/                         section, source, metrics, areas, models, loops, code, requests
   import.mjs  metrics.mjs  measures.mjs    stream A
-  render.mjs                      stream B (+ blog/assets/software-factory/)
+  records.mjs                     parsers: a loop's run record, who sent a prompt, git's numstat
+  factory.mjs                     the feature loops, tools and code of a snapshot, called by metrics.mjs
+  preview/                        example rows for the running-loops panel, drafts builds only
+  render.mjs                      stream B (+ blog/assets/software-factory/; factory.js and figures.js there
+                                  draw the leading sections)
   editorial.mjs                   stream C (+ the draft post and its template)
   data/                           the committed snapshot (written by refresh only)
   test/                           *.test.mjs per workstream; fixtures/
@@ -92,7 +140,7 @@ one record, `validateSnapshotDir(dir)` for a whole snapshot.
 | `pointer` | `latest.json` | Transport: `publishedAt` and `lastSourceCheck` change on every check, the snapshot doesn't |
 | `manifest` | `snapshots/<id>/manifest.json` | Source repo and SHA, each input's sha256, generator, config hash, metric definitions, collections with sha256 and bytes, and datasets with bounds and coverage |
 | `overview` | `overview.json` | All-time measures; a usage table by day × model × effort; one verification row per job; stocks; breakdowns; insights |
-| `sessions`, `changes`, `verification`, `examples` | `details/*.json` | Loaded only when a reader asks for detail |
+| `sessions`, `changes`, `verification`, `examples`, `loops` | `details/*.json` | Loaded only when a reader asks for detail |
 | `postSummary` | in memory | `editorial.mjs` output for the pages |
 | `evidence` | a post's `evidence.json` | Frozen article data; `status: complete` before a post with numbers is published |
 | `runtime` | (future) | A producer on the factory machine; past `expiresAt` it is unavailable, never zero |
@@ -211,8 +259,9 @@ Everything here runs without an account, credentials or network, apart from the 
   with wrangler's own config reader), the publisher (a fake store, and a local fake of R2's S3 API that checks every
   signature), the workflow (its YAML, and its script run in bash with a stand-in npm), the importer, the pages and
   the client. The browser test (Commands, above) is the one that skips without Playwright.
-- **A snapshot from in-the-loop**: `npm run software-factory:refresh -- --sha <sha>`, from GitHub, or add
-  `--checkout ../in-the-loop` to read a local clone. It writes into `blog/software-factory/data/`, the committed
+- **A snapshot from in-the-loop**: `npm run software-factory:refresh -- --sha <sha> --checkout ../in-the-loop`, which
+  reads a local clone and never writes to it. Without `--checkout` it reads GitHub, and the snapshot then has no
+  code section. It writes into `blog/software-factory/data/`, the committed
   snapshot, and prunes the snapshots there that neither the pointer nor a post's evidence names. Commit the result
   only as a change of its own. `npm run software-factory:validate` checks what is there.
 - **The function, with Wrangler Pages local development.** It needs no account. Run it from a copy, so wrangler's

@@ -154,7 +154,7 @@ test('a first publish uploads the snapshot, reads it back, then creates the poin
   assert.equal(result.sha, A);
   assert.equal(result.previous, null);
   assert.deepEqual(result.uploaded, Object.keys(want.files));
-  assert.equal(Object.keys(want.files).length, 6);
+  assert.equal(Object.keys(want.files).length, 7);
 
   // Exactly the staged files, byte for byte, and the pointer last.
   const { [POINTER]: pointerText, ...files } = store.snapshot();
@@ -625,7 +625,7 @@ test("s3Store publishes through R2's S3 API: signed, path-style, conditional", a
     const store = s3Store({ ...creds, bucket: DESTINATIONS.preview, endpoint: r2.endpoint });
     const first = await publish({ store, order: fakeOrder(), sha: A, dir: UPSTREAM, now: T1 });
     assert.equal(first.outcome, 'new-snapshot', first.error);
-    assert.equal(r2.objects.size, 7);
+    assert.equal(r2.objects.size, 8);
     assert.equal(r2.objects.get(POINTER).type, 'application/json; charset=utf-8');
     const want = await staged(A);
     for (const [key, text] of Object.entries(want.files)) assert.equal(r2.objects.get(key).body.toString('utf8'), text, key);
@@ -677,7 +677,7 @@ test("s3Store lists through ListObjectsV2's pages, deletes, and prunes over R2's
 
     // Every key across pages of three, with its date; a prefix that matches nothing is empty.
     const listed = await store.list('snapshots/');
-    assert.equal(listed.length, 12);
+    assert.equal(listed.length, 14);
     assert.deepEqual(listed.map((o) => o.key), [...r2.objects.keys()].filter((k) => k !== POINTER).sort());
     assert.deepEqual(new Set(listed.map((o) => o.lastModified)), new Set([new Date(T1).toISOString(), new Date(T2).toISOString()]));
     assert.ok(r2.requests.filter((r) => r.search.includes('continuation-token=')).length >= 3, 'followed the pages');
@@ -687,7 +687,7 @@ test("s3Store lists through ListObjectsV2's pages, deletes, and prunes over R2's
     assert.equal(later.outcome, 'unchanged', later.error);
     assert.deepEqual(later.pruned, [a.snapshotId], later.pruneError);
     assert.deepEqual([...r2.objects.keys()].filter((k) => k.includes(a.snapshotId)), []);
-    assert.equal(r2.requests.filter((r) => r.method === 'DELETE').length, 6);
+    assert.equal(r2.requests.filter((r) => r.method === 'DELETE').length, 7);
     assert.equal(JSON.parse(r2.objects.get(POINTER).body).snapshotId, c.snapshotId);
     // Deleting a key that is gone is no error, as in S3.
     await store.delete(`snapshots/${a.snapshotId}/manifest.json`);

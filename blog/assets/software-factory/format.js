@@ -72,4 +72,6 @@ export const UNIT_WORDS = {
   seconds: 'seconds',
   changes: 'changes',
   examples: 'examples',
+  tokens: 'tokens',
+  lines: 'lines',
 };

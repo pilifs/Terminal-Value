@@ -138,7 +138,7 @@ export function exploreSourceHtml(manifest) {
 
 /** The announcement for a newer snapshot: what it adds, by count. */
 export function announcement(added, asOf) {
-  const WORDS = { changes: 'recorded change', sessions: 'session', verification: 'verification result', examples: 'example' };
+  const WORDS = { changes: 'recorded change', sessions: 'session', verification: 'verification result', examples: 'example', loops: 'loop run' };
   const parts = added.map(({ name, added: n }) => `${n} more ${WORDS[name] ?? name}${n === 1 ? '' : 's'}`);
   const when = asOf ? ` (as of ${formatDay(asOf)})` : '';
   return parts.length ? `New data published${when}: ${parts.join(', ')}.` : `New data published${when}.`;

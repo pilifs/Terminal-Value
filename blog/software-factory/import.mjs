@@ -65,6 +65,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_DIR, serialize, sha256 } from './identity.mjs';
 import { aggregate, collectionFiles } from './metrics.mjs';
+import { campaignOf as loopCampaign, parseGitLog, parseRunRecord, parseTree, senderOf } from './records.mjs';
 import { validate, validateSnapshotDir } from './validate.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -84,13 +85,16 @@ export class SourceError extends Error {
 
 export function loadConfig(dir = CONFIG_DIR) {
   const read = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-  return { source: read('source.json'), areas: read('areas.json'), models: read('models.json') };
+  return { source: read('source.json'), areas: read('areas.json'), models: read('models.json'), loops: read('loops.json'), code: read('code.json') };
 }
 
 const SHA = /^[0-9a-f]{40}$/;
 const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const RUN = /^llm-dlc\/traces\/([^/]+)\/runs\/\d{4}-\d\d-\d\d-\d{6}-([a-z0-9][a-z0-9-]*)\.md$/;
+const RUN = /^llm-dlc\/traces\/([^/]+)\/runs\/(\d{4}-\d\d-\d\d-\d{6}-([a-z0-9][a-z0-9-]*))\.md$/;
+const BRIEF = /^llm-dlc\/loops\/([a-z0-9][a-z0-9-]*)\.md$/;
+// git's empty tree: a diff against it lists every line of a revision.
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 const ROLLUP = 'llm-dlc/traces/metrics.json';
 const INDEX = 'llm-dlc/index.json';
 const RESULTS = 'verification/results/index.json';
@@ -136,6 +140,14 @@ function gitReader(checkout) {
     },
     async list(sha, dir) {
       return git(['ls-tree', '-r', '--name-only', sha, dir]).toString().split('\n').filter(Boolean);
+    },
+    // The history's lines per commit and the tree's lines, as git prints them.
+    // Only a checkout has them: GitHub has no numstat without a call per commit.
+    async code(sha) {
+      return {
+        log: git(['log', '--format=raw', '-M', '--numstat', sha]).toString(),
+        tree: git(['diff', '--numstat', EMPTY_TREE, sha]).toString(),
+      };
     },
   };
 }
@@ -241,8 +253,12 @@ export async function readSources({ ref, sha, checkout, dir, fetchImpl = globalT
   const jobIds = (Array.isArray(results?.results) ? results.results : []).map((r) => r?.id).filter((id) => JOB_ID.test(id ?? ''));
   await mapLimit([...sessionIds.map(sessionMetricsPath), ...jobIds.map(jobPath)], 8, put);
   const runs = (await reader.list(at, 'llm-dlc/traces')).filter((p) => RUN.test(p)).sort();
+  // The run records themselves, for the feature loops; the briefs' names, for their campaigns.
+  await mapLimit(runs, 8, put);
+  const briefs = (await reader.list(at, 'llm-dlc/loops')).map((p) => p.match(BRIEF)?.[1]).filter(Boolean).sort();
+  const code = reader.code ? await reader.code(at) : null;
 
-  return { source: { repository, sha: at, ref: resolvedRef }, files, runs };
+  return { source: { repository, sha: at, ref: resolvedRef }, files, runs, briefs, code };
 }
 
 // --- Normalizing -----------------------------------------------------------
@@ -315,12 +331,16 @@ export function normalizeSources(raw, config = loadConfig()) {
   const sessionCampaign = new Map();
   for (const p of raw.runs ?? []) {
     const m = p.match(RUN);
-    if (m) sessionCampaign.set(m[1], m[2]);
+    if (m) sessionCampaign.set(m[1], m[3]);
   }
 
-  // Sessions and their calls.
+  // Sessions and their calls, prompts, tool calls and commits.
   const calls = [];
   const sessions = [];
+  const prompts = [];
+  const tools = [];
+  const sessionCommits = [];
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   const rollupSessions = new Map();
   for (const [i, s] of list(ROLLUP, rollup, 'sessions').entries()) {
     if (!isObject(s) || typeof s.session_id !== 'string' || !isCount(s.api_calls) || typeof s.usd !== 'number')
@@ -352,6 +372,44 @@ export function normalizeSources(raw, config = loadConfig()) {
           usd: typeof c.usd === 'number' ? c.usd : null,
         });
       }
+      // Prompts: who sent each and what it set off. The text is read to tell
+      // the sender (config/loops.json) and a command's name, and goes no further.
+      for (const [j, q] of (Array.isArray(metrics.prompts) ? metrics.prompts : []).entries()) {
+        if (!isObject(q) || !isInstant(q.ts) || typeof q.kind !== 'string') bad(rel, `prompts[${j}] lacks ts or kind`);
+        const text = typeof q.text === 'string' ? q.text : '';
+        prompts.push({
+          session: s.session_id,
+          start: new Date(q.ts).toISOString(),
+          end: isInstant(q.end) ? new Date(q.end).toISOString() : null,
+          sender: q.kind === 'human' ? senderOf(text, config.loops) : q.kind === 'command' ? 'command' : 'notification',
+          command: q.kind === 'command' ? (text.match(/^\/[a-z][a-z-]*/)?.[0] ?? null) : null,
+          calls: num(q.api_calls),
+          toolCalls: num(q.tool_calls),
+          toolErrors: num(q.tool_errors),
+          outputTokens: num(q.output_tokens),
+          usd: num(q.usd),
+          agentMs: num(q.agent_ms),
+        });
+      }
+      // Tool calls: the tool, how it ended, and the model call that made it.
+      // Never the label or the error text.
+      const callRows = metrics.calls;
+      for (const [j, t] of (Array.isArray(metrics.tools) ? metrics.tools : []).entries()) {
+        if (!isObject(t) || !isInstant(t.start) || typeof t.name !== 'string' || typeof t.status !== 'string') bad(rel, `tools[${j}] lacks start, name or status`);
+        const by = Number.isInteger(t.call) ? callRows[t.call] : null;
+        tools.push({
+          session: s.session_id,
+          start: new Date(t.start).toISOString(),
+          name: t.name,
+          family: strOrNull(t.family),
+          status: t.status,
+          errorKind: strOrNull(t.error_kind),
+          model: typeof by?.model === 'string' ? by.model : null,
+          contextTokens: isCount(by?.context_tokens) ? by.context_tokens : null,
+        });
+      }
+      for (const c of Array.isArray(metrics.commits) ? metrics.commits : [])
+        if (isObject(c) && isInstant(c.ts) && typeof c.change_id === 'string') sessionCommits.push({ session: s.session_id, at: new Date(c.ts).toISOString(), changeId: c.change_id });
     }
     sessions.push({
       id: s.session_id,
@@ -361,6 +419,8 @@ export function normalizeSources(raw, config = loadConfig()) {
       ended: strOrNull(s.ended),
       models: Array.isArray(s.models) ? s.models.filter((m) => typeof m === 'string') : [],
       hasMetrics: Boolean(metrics),
+      hasPrompts: Array.isArray(metrics?.prompts),
+      hasTools: Array.isArray(metrics?.tools),
       inRollup: rollupSessions.has(s.session_id),
       campaign: sessionCampaign.get(s.session_id) ?? null,
     });
@@ -401,12 +461,15 @@ export function normalizeSources(raw, config = loadConfig()) {
       undescribed.set(c.change_id, [...(undescribed.get(c.change_id) ?? []), ...own]);
       continue;
     }
+    // What the rollup says the change took, where it says: the calls up to its commit.
+    const took = isCount(c.api_calls) && isCount(c.output_tokens) ? { calls: c.api_calls, outputTokens: c.output_tokens, usd: num(c.usd) } : null;
     const seen = byChange.get(c.change_id);
     if (seen) {
       for (const s of own) if (!seen.sessions.includes(s)) seen.sessions.push(s);
+      if (took) seen.took = seen.took ? { calls: seen.took.calls + took.calls, outputTokens: seen.took.outputTokens + took.outputTokens, usd: seen.took.usd + took.usd } : took;
       continue;
     }
-    byChange.set(c.change_id, { changeId: c.change_id, summary: c.summary, sessions: [...own], housekeeping: housekeeping.has(c.summary) });
+    byChange.set(c.change_id, { changeId: c.change_id, summary: c.summary, sessions: [...own], housekeeping: housekeeping.has(c.summary), took });
   }
   for (const [id, own] of undescribed) {
     const seen = byChange.get(id);
@@ -466,6 +529,30 @@ export function normalizeSources(raw, config = loadConfig()) {
     };
   });
 
+  // Feature loop runs: each run record, in the campaign its loop's name gives.
+  // A record that isn't one (no header) is left out and counted.
+  const briefs = [...new Set([...(raw.briefs ?? []), ...(raw.runs ?? []).map((p) => p.match(RUN)?.[3]).filter(Boolean)])];
+  const runs = [];
+  let unreadRuns = 0;
+  for (const p of raw.runs ?? []) {
+    const m = p.match(RUN);
+    const bytes = raw.files.get(p);
+    if (!m || !bytes) continue;
+    const record = parseRunRecord(bytes.toString('utf8'), config.loops);
+    inputs.set(p, { path: p, sha256: sha256(bytes), bytes: bytes.length, schema: '' });
+    if (!record) {
+      unreadRuns++;
+      continue;
+    }
+    runs.push({ id: m[2], loop: m[3], campaign: loopCampaign(m[3], briefs), ...record, session: m[1] });
+  }
+  runs.sort((a, b) => a.started.localeCompare(b.started) || a.id.localeCompare(b.id));
+
+  // Code: git's own account of each commit, where the source was a checkout.
+  const code = raw.code
+    ? { commits: parseGitLog(raw.code.log, config.code), tree: parseTree(raw.code.tree, config.code) }
+    : null;
+
   // The tag vocabulary: names only.
   const tags = Object.fromEntries(['domain', 'defect', 'technique'].map((k) => [k, isObject(tagsDoc[k]) ? Object.keys(tagsDoc[k]).sort() : []]));
 
@@ -479,6 +566,12 @@ export function normalizeSources(raw, config = loadConfig()) {
     verification,
     examples,
     tags,
+    prompts,
+    tools,
+    sessionCommits,
+    runs,
+    unreadRuns,
+    code,
   };
 }
 

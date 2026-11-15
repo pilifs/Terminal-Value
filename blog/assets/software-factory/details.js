@@ -14,16 +14,39 @@ const day = (instant) => (instant ? `<time datetime="${e(instant)}">${e(formatDa
 const id = (text) => `<code>${e(text)}</code>`;
 const link = (url, html) => (url && /^https:\/\//.test(url) ? `<a href="${e(url)}">${html}</a>` : html);
 
+const COMMIT = 'https://github.com/pilifs/in-the-loop/commit/';
+const OUTCOMES = { done: 'Done', waiting: 'Waiting on jobs', blocked: 'Blocked on a person', attention: 'Stopped for attention', ended: 'Ended', open: 'No end recorded' };
+const known = (value, unit) => (value === null || value === undefined ? muted('Not recorded') : e(formatValue(value, unit)));
+
 const TABLES = {
+  loops: {
+    caption: 'Feature loop runs, oldest first',
+    head: ['Run', 'Started', 'Duration', 'Cycles', 'Commits', 'Tool calls', 'Estimated usage', 'From a person', 'Ended'],
+    wrap: [0],
+    row: (r) => [
+      `${link(r.recordUrl, id(r.loop))}<br>${muted(r.id.slice(0, 17))} ${link(r.summaryUrl, 'session')}`,
+      day(r.started),
+      known(r.seconds, 'seconds'),
+      e(r.cycles.length),
+      e(r.commits),
+      known(r.toolCalls, 'calls'),
+      known(r.usd, 'usd'),
+      r.prompts ? e(r.prompts.person + r.prompts.interrupt) : muted('Not recorded'),
+      e(OUTCOMES[r.outcome] ?? r.outcome),
+    ],
+  },
   changes: {
     caption: 'Recorded changes, as the rollup lists them',
-    head: ['Change', 'Summary', 'Area', 'Sessions'],
+    head: ['Change', 'Summary', 'Area', 'Sessions', 'Code lines', 'Output tokens', 'Estimated usage'],
     wrap: [1],
     row: (r) => [
-      id(r.changeId.slice(0, 12)),
+      r.commit ? `<a href="${COMMIT}${e(r.commit)}">${id(r.changeId.slice(0, 12))}</a>` : id(r.changeId.slice(0, 12)),
       `${e(r.summary)}${r.housekeeping ? ` <span class="sf-tag">Housekeeping</span>` : ''}`,
       e(r.area === 'unassigned' ? 'Unassigned' : r.area),
       e(r.sessions.length),
+      r.codeAdded === undefined ? muted('Not recorded') : `+${e(r.codeAdded.toLocaleString('en-US'))} −${e(r.codeRemoved.toLocaleString('en-US'))}`,
+      known(r.outputTokens, 'tokens'),
+      known(r.usd, 'usd'),
     ],
   },
   sessions: {

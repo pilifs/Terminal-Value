@@ -3,10 +3,13 @@
   "defaultRef": "main",
   "timezone": "America/Toronto",
   "summaryUrl": "https://github.com/pilifs/in-the-loop/blob/{sha}/llm-dlc/traces/{session}/summary.md",
+  "runUrl": "https://github.com/pilifs/in-the-loop/blob/{sha}/llm-dlc/traces/{session}/runs/{run}.md",
+  "commitUrl": "https://github.com/pilifs/in-the-loop/commit/{commit}",
   "inputs": [
     { "path": "llm-dlc/traces/metrics.json", "schemas": ["llm-trace-metrics-rollup/v1"], "required": true },
     { "path": "llm-dlc/index.json", "schemas": ["llm-trace-index/v1"], "required": true },
     { "path": "llm-dlc/traces/{session}/metrics.json", "schemas": ["llm-trace-metrics/v1"], "required": false, "note": "one per session in the index; a missing one leaves that session's calls out, counted in coverage" },
+    { "path": "llm-dlc/traces/{session}/runs/{run}.md", "schemas": [], "required": false, "note": "a feature loop's run record: markdown, read for its header, its cycle lines and how it ended, never its prose" },
     { "path": "verification/results/index.json", "schemas": ["verification-results-index/v1"], "required": true },
     { "path": "verification/jobs/{job}.json", "schemas": ["verification-job/v1"], "required": false, "note": "for expected and submitted.session only" },
     { "path": "examples/index.json", "schemas": ["examples-index/v2"], "required": true },

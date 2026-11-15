@@ -4,11 +4,13 @@
 //
 // Interface, frozen in Phase 0 (docs/software-factory.md):
 //
-//   renderPages({ snapshot, unavailable, fixture, posts, site, helpers, paths })
+//   renderPages({ snapshot, unavailable, fixture, preview, posts, site, helpers, paths })
 //     -> [{ path, title, description, body }]
 //     snapshot is { pointer, manifest, overview } or null, with unavailable
 //     saying why; fixture is true when the data is a test fixture, which the
-//     pages must say plainly. posts is editorial.selectPosts() output. helpers
+//     pages must say plainly. preview (optional) is true for a drafts build:
+//     the running-loops panel then shows its shape with example rows, labelled
+//     as an example. posts is editorial.selectPosts() output. helpers
 //     has escapeHtml, formatDate and postImage. paths has route, staticData and
 //     remoteData. path is relative to /software-factory/: 'index.html',
 //     'analysis/index.html', 'methodology/index.html'. body is the HTML inside
@@ -24,6 +26,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
+import { codeHtml, heroHtml, loopsHtml, runningHtml, toolsHtml } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -46,6 +49,11 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const METRIC_CONFIG = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'metrics.json'), 'utf8'));
 const METRIC = Object.fromEntries(METRIC_CONFIG.metrics.map((m) => [m.id, m]));
 const AREAS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'areas.json'), 'utf8'));
+const LOOPS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'loops.json'), 'utf8'));
+const CODE = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'code.json'), 'utf8'));
+const REQUESTS = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'requests.json'), 'utf8'));
+// Example rows for the running-loops panel: a preview build only, and labelled there.
+const RUNNING_PREVIEW = JSON.parse(fs.readFileSync(path.join(HERE, 'preview', 'running-loops.json'), 'utf8'));
 
 // The section's name and one-line description, shared with the site's entry
 // (site.mjs).
@@ -72,7 +80,8 @@ const BREAKDOWN_BASE = {
   verification_completed: 'Verification jobs',
 };
 const DETAILS = [
-  { name: 'changes', label: 'Recent changes', note: 'jj change ids, summaries, sessions and areas' },
+  { name: 'loops', label: 'Loop runs', note: 'each run of a feature loop: its cycles, commits, tool calls and how it ended' },
+  { name: 'changes', label: 'Recent changes', note: 'jj change ids, summaries, areas, and each change\'s commit, lines of code and tokens where known' },
   { name: 'sessions', label: 'Sessions', note: 'session ids, models, calls and estimated usage' },
   { name: 'verification', label: 'Verification results', note: 'job ids, process outcome, signals and durations' },
   { name: 'examples', label: 'Examples', note: 'the catalog: origin, verdict, vacuity and freshness' },
@@ -99,23 +108,47 @@ function banner(fixture, e) {
     : '';
 }
 
+const LEDE =
+  'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches. Agents build and verify software there; these are the numbers they leave behind.';
+
 function intro({ snapshot, fixture, e, formatDate }) {
-  // Without a snapshot there is no view to describe or filter.
-  const controls = snapshot
+  const hero = snapshot
+    ? heroHtml(snapshot, { title: TITLE, lede: LEDE })
+    : `<div class="sf-hero sf-hero-plain"><div class="sf-hero-text"><h1>${TITLE}</h1><p class="sf-lede">${e(LEDE)}</p></div></div>`;
+  // Without a snapshot there is no view to describe or jump to.
+  const below = snapshot
     ? `
+        <p class="sf-freshness" data-sf-freshness>${freshnessHtml(snapshot, formatDate)}</p>
+        <div class="sf-notice" data-sf-notice></div>
+        <nav class="sf-jump" aria-label="On this page"><a href="#loops">Feature loops</a><a href="#tools">Model performance</a><a href="#code">Code</a><a href="#analysis">Analysis</a><a href="#usage">Usage</a><a href="#output">Output</a><a href="#explore">Records</a></nav>`
+    : '';
+  return `      <header class="sf-intro">
+        <div data-sf-section="hero" data-title="${e(TITLE)}" data-lede="${e(LEDE)}">
+      ${hero}
+        </div>
+        ${banner(fixture, e)}${below}
+      </header>`;
+}
+
+/** One of the leading sections: its content is redrawn whole when a newer snapshot is shown. */
+function feature(name, id, label, html, after = '') {
+  return `      <section class="sf-panel sf-feature sf-${name}" id="${id}" aria-label="${label}">
+        <div data-sf-section="${name}">
+        ${html}
+        </div>${after ? `\n        ${after}` : ''}
+      </section>`;
+}
+
+/** The head of the usage panels, with the filters that apply to them and nothing above. */
+function usageHead() {
+  return `      <section class="sf-usage-head" id="usage" aria-labelledby="sf-usage-title">
+        <p class="sf-eyebrow">Usage and verification</p>
+        <h2 id="sf-usage-title">What the factory used</h2>
         <div class="sf-controls">
           <p class="sf-range-static" data-sf-static>Showing all time, all models and efforts.</p>
           <form class="sf-filters" data-sf-filters hidden aria-label="Filters"></form>
-          <p class="sf-freshness" data-sf-freshness>${freshnessHtml(snapshot, formatDate)}</p>
-        </div>`
-    : '';
-  return `      <header class="sf-intro">
-        <h1>${TITLE}</h1>
-        <p class="sf-lede">${e(
-          'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches. Agents build and verify software there; these are the numbers they leave behind.'
-        )}</p>
-        ${banner(fixture, e)}${controls}
-      </header>`;
+        </div>
+      </section>`;
 }
 
 function metricCard(measure, e, route) {
@@ -285,14 +318,25 @@ function unavailableNotice(unavailable, e) {
       </section>`;
 }
 
-function overviewPage({ snapshot, unavailable, fixture, posts, helpers, paths }) {
+function overviewPage({ snapshot, unavailable, fixture, preview = false, posts, helpers, paths }) {
   const e = helpers.escapeHtml;
   const formatDate = helpers.formatDate ?? formatDay;
   const attrs = snapshot
-    ? ` data-snapshot="${e(snapshot.manifest.snapshotId)}" data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`
+    ? ` data-snapshot="${e(snapshot.manifest.snapshotId)}" data-generator="${e(snapshot.manifest.generator.name)}" data-generator-version="${e(snapshot.manifest.generator.version)}" data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`
     : ` data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`;
   const parts = snapshot
-    ? [summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
+    ? [
+        feature('loops', 'loops', 'Feature loops', loopsHtml(snapshot), runningHtml(preview ? RUNNING_PREVIEW : null)),
+        feature('tools', 'tools', 'Model performance', toolsHtml(snapshot)),
+        feature('code', 'code', 'Code', codeHtml(snapshot)),
+        analysis(posts, { e, formatDate, route: paths.route }),
+        usageHead(),
+        summary(snapshot, e, paths.route),
+        trendSection(snapshot, e),
+        observations(snapshot),
+        output(snapshot, e),
+        explore(snapshot, { e, paths }),
+      ]
     : [unavailableNotice(unavailable, e), analysis(posts, { e, formatDate, route: paths.route })];
   const footer = footNav(paths, e, '');
   return {
@@ -361,7 +405,16 @@ ${footNav(paths, e, 'analysis/')}
   };
 }
 
-const DATASET_LABELS = { usage: 'Model usage', verification: 'Verification results', changes: 'Recorded changes', catalog: 'Example catalog' };
+const DATASET_LABELS = {
+  usage: 'Model usage',
+  verification: 'Verification results',
+  changes: 'Recorded changes',
+  catalog: 'Example catalog',
+  loops: 'Feature loop runs',
+  tools: 'Tool calls',
+  code: 'Code in git',
+};
+const FIGURES = METRIC_CONFIG.figures ?? [];
 const OUTCOME_WORDS = { 'new-snapshot': 'found new data', unchanged: 'found nothing new', failed: 'failed' };
 
 function provenance(snapshot, { e, formatDate }) {
@@ -406,7 +459,7 @@ function datasetCoverage(snapshot, { e, formatDate }) {
           : days
             ? `<time datetime="${e(days.first)}">${e(formatDate(days.first))}</time> to <time datetime="${e(days.last)}">${e(formatDate(days.last))}</time>`
             : '<span class="sf-muted">No data</span>';
-      const used = METRIC_CONFIG.metrics.filter((m) => METRICS[m.id]?.dataset === d.id).map((m) => e(m.label));
+      const used = [...METRIC_CONFIG.metrics.filter((m) => METRICS[m.id]?.dataset === d.id), ...FIGURES.filter((f) => f.section === d.id)].map((m) => e(m.label));
       return `<tr><th scope="row">${e(DATASET_LABELS[d.id] ?? d.id)}</th><td data-label="Kind">${d.kind === 'stock' ? 'Snapshot total' : 'Period'}</td><td data-label="Measured">${window}</td><td data-label="Coverage">${e(
         formatCoverage(d.coverage)
       )}</td><td data-label="Metrics">${used.join(', ')}</td></tr>`;
@@ -458,6 +511,64 @@ ${items}
         <h3>Figures kept separate</h3>
         <p>These are other figures, never added to estimated model usage: they are not parts of one bill. Only this page would show them, and no published snapshot includes them yet.</p>
         <ul class="sf-list">${separate}</ul>
+      </section>`;
+}
+
+const FIGURE_SECTIONS = { loops: 'Feature loops', tools: 'Tools', code: 'Code' };
+
+/** The figures of the feature loops, tools and code: defined like the metrics, with the patterns they rest on. */
+function figureDefinitions(e) {
+  const items = FIGURES.map(
+    (f) => `          <article class="sf-method" id="def-${e(f.id)}">
+            <h3>${e(f.label)} <code class="sf-muted">${e(f.id)}</code></h3>
+            <dl class="sf-facts">
+              <div><dt>Section</dt><dd>${e(FIGURE_SECTIONS[f.section] ?? f.section)}</dd></div>
+              <div><dt>Filters</dt><dd>All time: no filter applies.</dd></div>
+              <div><dt>Definition</dt><dd>${e(f.definition)}</dd></div>
+              <div><dt>Coverage counts</dt><dd>${e(f.coverage)}</dd></div>
+              <div><dt>Notes</dt><dd>${e(f.notes)}</dd></div>
+            </dl>
+          </article>`
+  ).join('\n');
+  const patterns = (list) => list.map((x) => `<code>${e(x)}</code>`).join(' ');
+  return `      <section class="sf-panel sf-definitions" id="figures" aria-labelledby="sf-figures-title">
+        <h2 id="sf-figures-title">Feature loops, tools and code</h2>
+        <p class="sf-caption">How the overview's leading sections are counted. They cover all the recorded data; the date range, model and effort filters don't apply to them.</p>
+${items}
+        <h3>How a run is read</h3>
+        <dl class="sf-facts">
+          <div><dt>Window</dt><dd>${e(LOOPS.window)}</dd></div>
+          <div><dt>Campaign</dt><dd>${e(LOOPS.campaign)}</dd></div>
+          <div><dt>Sent by the loop</dt><dd>A prompt whose text starts like one of ${patterns(LOOPS.senders.harness)}</dd></div>
+          <div><dt>Sent by an agent</dt><dd>${patterns(LOOPS.senders.agent)}</dd></div>
+          <div><dt>Interruption</dt><dd>${patterns(LOOPS.senders.interrupt)}, counted with the prompts a person typed</dd></div>
+          <div><dt>Typed by a person</dt><dd>Any other prompt the trace records as typed input. The text is read only for this, and is never published.</dd></div>
+          <div><dt>How a run ended</dt><dd>${e(LOOPS.outcomes.note)}</dd></div>
+        </dl>
+        <h3>What counts as code</h3>
+        <p>${e(CODE.note)}</p>
+        <div class="sf-table-wrap" tabindex="0" role="region" aria-label="What counts as code">
+          <table class="sf-table sf-stack">
+            <thead><tr><th scope="col">Class</th><th scope="col">File extensions</th></tr></thead>
+            <tbody>${CODE.languages.map((l) => `<tr><th scope="row">${e(l.label)}</th><td data-label="File extensions">${patterns(l.extensions.map((x) => `.${x}`))}</td></tr>`).join('')}<tr><th scope="row">${e(
+              CODE.docs.label
+            )}</th><td data-label="File extensions">${patterns(CODE.docs.extensions.map((x) => `.${x}`))}</td></tr><tr><th scope="row">${e(CODE.data.label)}</th><td data-label="File extensions">Everything else</td></tr></tbody>
+          </table>
+        </div>
+      </section>`;
+}
+
+/** What the pages can't measure yet, and what is asked of the source to measure it. */
+function requests(e) {
+  return `      <section class="sf-panel sf-requests" id="requests" aria-labelledby="sf-requests-title">
+        <h2 id="sf-requests-title">Not measured yet</h2>
+        <p class="sf-caption">What these pages can't say from the source's published files, and what would let them. Until then each is left out, never estimated.</p>
+        <div class="sf-table-wrap" tabindex="0" role="region" aria-labelledby="sf-requests-title">
+          <table class="sf-table sf-stack">
+            <thead><tr><th scope="col">Question</th><th scope="col">Today</th><th scope="col">Asked of the source</th></tr></thead>
+            <tbody>${REQUESTS.requests.map((r) => `<tr><th scope="row">${e(r.title)}</th><td data-label="Today">${e(r.today)}</td><td data-label="Asked of the source">${e(r.ask)}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>
       </section>`;
 }
 
@@ -514,11 +625,13 @@ function methodologyPage({ snapshot, unavailable, fixture, helpers, paths }) {
 ${pageHead({ title: 'Methodology', lede: "How each number on the Software Factory pages is defined and measured, what it covers, where it comes from, and what it can't be compared with.", fixture, e, paths })}
       <nav class="sf-toc" aria-label="On this page"><a href="#${snapshot ? 'provenance' : 'definitions'}">${snapshot ? 'Source and freshness' : 'Definitions'}</a>${
         snapshot ? ' · <a href="#coverage">Coverage</a> · <a href="#definitions">Definitions</a>' : ''
-      } · <a href="#areas">Areas</a> · <a href="#limits">Limits</a></nav>
+      } · <a href="#figures">Loops, tools and code</a> · <a href="#areas">Areas</a> · <a href="#limits">Limits</a> · <a href="#requests">Not measured yet</a></nav>
 ${data.join('\n')}
 ${definitions(e)}
+${figureDefinitions(e)}
 ${areasSection(e)}
 ${limits(e)}
+${requests(e)}
 ${footNav(paths, e, 'methodology/')}
     </div>`,
   };

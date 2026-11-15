@@ -22,7 +22,7 @@ export const PLACEHOLDER = 'sf1-0000000000000000';
 export const CONFIG_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'config');
 // The config files a snapshot depends on. section.json (launch switch) and
 // metrics.json (hashed on its own as the metric definitions) are not among them.
-export const CONFIG_FILES = ['source.json', 'areas.json', 'models.json'];
+export const CONFIG_FILES = ['source.json', 'areas.json', 'models.json', 'loops.json', 'code.json'];
 
 export const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 

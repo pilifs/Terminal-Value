@@ -810,3 +810,710 @@ body.software-factory .sf-foot [aria-current='page'] {
     background: CanvasText;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The overview's leading sections: the headline, the feature loops, the tools
+   and the code. Series colours are named by what they mark. The four failure
+   kinds are a categorical set (blue, orange, violet, yellow), checked for
+   colour-blind separation on both surfaces; the others pair the section's
+   green with a neutral, the emphasis and the rest. */
+body.software-factory {
+  --sf-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --sf-neutral: #869086;
+  --sf-c-exit: #2a78d6;
+  --sf-c-rejected: #eb6834;
+  --sf-c-denied: #6250d6;
+  --sf-c-other: #eda100;
+  --sf-good: #0ca30c;
+  --sf-wait: #b07800;
+  --sf-stop: #c2410c;
+  --sf-term-bg: #0d1211;
+  --sf-term-rule: #26302c;
+  --sf-term-text: #dfe6e2;
+  --sf-term-dim: #8b9791;
+  --sf-term-good: #6ee7b7;
+}
+@media (prefers-color-scheme: dark) {
+  body.software-factory {
+    --sf-neutral: #6f7a6f;
+    --sf-c-exit: #3987e5;
+    --sf-c-rejected: #d95926;
+    --sf-c-denied: #9085e9;
+    --sf-c-other: #c98500;
+    --sf-good: #2ea043;
+    --sf-wait: #d9a514;
+    --sf-stop: #ec835a;
+    --sf-term-bg: #0a0e0b;
+    --sf-term-rule: #263026;
+  }
+}
+body.software-factory .sf-shell {
+  position: relative;
+}
+body.software-factory .sf-eyebrow {
+  display: block;
+  margin: 0 0 0.5rem;
+  color: var(--sf-accent);
+  font-family: var(--sf-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* The headline: what the loops did, beside the longest run's own record. */
+body.software-factory .sf-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 2rem 3rem;
+  align-items: center;
+  padding: 1rem 0 2rem;
+}
+body.software-factory .sf-hero-plain {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+}
+body.software-factory .sf-hero h1 {
+  margin: 0 0 1rem;
+}
+body.software-factory .sf-hero .sf-headline {
+  display: block;
+  font-size: clamp(2rem, 3.7vw, 2.875rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+body.software-factory .sf-hero h1 .sf-eyebrow {
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+body.software-factory .sf-hero .sf-lede {
+  max-width: 36rem;
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+}
+body.software-factory .sf-shell a.sf-button {
+  display: inline-block;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--sf-accent);
+  border-radius: var(--sf-radius);
+  background: var(--sf-accent);
+  color: var(--sf-surface);
+  font-weight: 600;
+  text-decoration: none;
+}
+body.software-factory .sf-shell a.sf-button:hover {
+  filter: brightness(1.08);
+}
+body.software-factory .sf-shell a.sf-button-quiet {
+  border-color: var(--sf-rule-strong);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+}
+body.software-factory .sf-shell a.sf-button-quiet:hover {
+  border-color: var(--sf-accent);
+  filter: none;
+}
+
+/* The run record: dark in both schemes, as a terminal is. */
+body.software-factory .sf-ledger {
+  min-width: 0;
+  margin: 0;
+}
+body.software-factory .sf-ledger-bar,
+body.software-factory .sf-ledger-body {
+  border: 1px solid var(--sf-term-rule);
+  background: var(--sf-term-bg);
+  color: var(--sf-term-text);
+  font-family: var(--sf-mono);
+  font-size: 0.78125rem;
+  line-height: 1.6;
+}
+body.software-factory .sf-ledger-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-ledger-bar span {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--sf-term-rule);
+}
+body.software-factory .sf-ledger-bar code {
+  margin-left: 0.5rem;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+body.software-factory .sf-ledger-body {
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 18px 40px -22px rgba(13, 18, 17, 0.55);
+}
+body.software-factory .sf-ledger-body p {
+  margin: 0;
+}
+body.software-factory .sf-ledger-body code {
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+body.software-factory .sf-ledger-meta {
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-ledger ol {
+  margin: 0.6rem 0;
+  padding: 0;
+  list-style: none;
+}
+body.software-factory .sf-ledger li {
+  display: grid;
+  grid-template-columns: 3.1rem 4.6rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+body.software-factory .sf-ledger-time {
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-ledger-cycle {
+  color: var(--sf-term-good);
+}
+body.software-factory .sf-ledger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.software-factory .sf-ledger-more {
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-ledger-total {
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--sf-term-rule);
+  color: var(--sf-term-dim);
+}
+body.software-factory .sf-ledger-total strong {
+  color: var(--sf-term-good);
+  font-weight: 600;
+}
+body.software-factory .sf-ledger figcaption {
+  margin-top: 0.6rem;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+
+/* The strip under the headline: each number opens its section. */
+body.software-factory .sf-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin: 0;
+  border: 1px solid var(--sf-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface);
+  overflow: hidden;
+}
+body.software-factory .sf-strip > div {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 0.15rem;
+  padding: 1rem 1.25rem 1.1rem;
+  box-shadow: 1px 0 0 var(--sf-rule), 0 1px 0 var(--sf-rule);
+}
+body.software-factory .sf-strip dt {
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+body.software-factory .sf-strip dd {
+  margin: 0;
+  font-family: var(--sf-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+body.software-factory .sf-strip dd a {
+  color: var(--sf-text);
+  text-decoration: none;
+}
+body.software-factory .sf-strip dd a:hover {
+  color: var(--sf-accent);
+}
+body.software-factory .sf-intro > .sf-freshness {
+  margin: 0.9rem 0 0;
+}
+body.software-factory .sf-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+}
+body.software-factory .sf-shell .sf-jump a {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--sf-rule-strong);
+  border-radius: 999px;
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+body.software-factory .sf-shell .sf-jump a:hover {
+  border-color: var(--sf-accent);
+  color: var(--sf-accent);
+}
+
+/* A leading section: a statement, its figures, then the evidence under it. */
+body.software-factory .sf-feature {
+  margin-top: 1.5rem;
+  padding: 1.75rem 2rem 2rem;
+  scroll-margin-top: 1rem;
+}
+body.software-factory .sf-shell .sf-feature h2 {
+  max-width: 48rem;
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+body.software-factory .sf-section-lede {
+  max-width: 48rem;
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 1.25rem 0 0.75rem;
+}
+body.software-factory .sf-figure {
+  padding-top: 0.6rem;
+  border-top: 2px solid var(--sf-rule-strong);
+}
+body.software-factory .sf-figure dt {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+body.software-factory .sf-figure dd {
+  margin: 0.1rem 0 0;
+}
+body.software-factory .sf-figure-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+body.software-factory .sf-figure-note {
+  display: block;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 2rem 0 0.35rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-shell .sf-subhead h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-subhead-legend {
+  margin: 0 0 0.35rem;
+  padding: 0;
+  border: 0;
+}
+
+/* Legends: a swatch beside its name, the name in text ink. */
+body.software-factory .sf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+  list-style: none;
+}
+body.software-factory .sf-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+body.software-factory .sf-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+}
+body.software-factory .sf-seg.sf-series-runs,
+body.software-factory .sf-seg.sf-series-added { fill: var(--sf-mark); }
+body.software-factory .sf-swatch.sf-series-runs,
+body.software-factory .sf-swatch.sf-series-added { background: var(--sf-mark); }
+body.software-factory .sf-seg.sf-series-outside,
+body.software-factory .sf-seg.sf-series-removed { fill: var(--sf-neutral); }
+body.software-factory .sf-swatch.sf-series-outside,
+body.software-factory .sf-swatch.sf-series-removed { background: var(--sf-neutral); }
+body.software-factory .sf-seg.sf-series-exit { fill: var(--sf-c-exit); }
+body.software-factory .sf-swatch.sf-series-exit { background: var(--sf-c-exit); }
+body.software-factory .sf-seg.sf-series-rejected { fill: var(--sf-c-rejected); }
+body.software-factory .sf-swatch.sf-series-rejected { background: var(--sf-c-rejected); }
+body.software-factory .sf-seg.sf-series-denied { fill: var(--sf-c-denied); }
+body.software-factory .sf-swatch.sf-series-denied { background: var(--sf-c-denied); }
+body.software-factory .sf-seg.sf-series-other { fill: var(--sf-c-other); }
+body.software-factory .sf-swatch.sf-series-other { background: var(--sf-c-other); }
+body.software-factory .sf-chart .sf-day:hover .sf-seg {
+  filter: brightness(0.9);
+}
+
+/* The pointer's tooltip, one for every mark. */
+body.software-factory .sf-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  max-width: 20rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: var(--sf-text);
+  color: var(--sf-bg);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  pointer-events: none;
+}
+body.software-factory .sf-tip[hidden] {
+  display: none;
+}
+
+/* Tables of numbers: figures to the right, names to the left. */
+body.software-factory .sf-numbers :is(td, thead th:not(:first-child)),
+body.software-factory .sf-tool-tables .sf-table :is(td, thead th:not(:first-child)),
+body.software-factory .sf-code-tables .sf-table :is(td, thead th:not(:first-child)) {
+  text-align: right;
+  white-space: nowrap;
+}
+body.software-factory .sf-shell .sf-table .sf-left {
+  text-align: left;
+  white-space: normal;
+}
+body.software-factory .sf-numbers th a {
+  text-decoration: none;
+}
+body.software-factory .sf-share-warn > span {
+  background: var(--sf-c-rejected);
+}
+body.software-factory .sf-tool-tables,
+body.software-factory .sf-code-tables {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--sf-rule);
+}
+
+/* Campaigns: each a card with its runs as lanes on one clock. */
+body.software-factory .sf-campaigns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(27rem, 100%), 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+body.software-factory .sf-campaign {
+  min-width: 0;
+  padding: 1rem 1.1rem 0.6rem;
+  border: 1px solid var(--sf-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-raised);
+  scroll-margin-top: 1rem;
+}
+body.software-factory .sf-campaign header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+body.software-factory .sf-shell .sf-campaign h4 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-campaign h4 code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+body.software-factory .sf-shell .sf-campaign-meta {
+  margin: 0;
+}
+body.software-factory .sf-outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--sf-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+body.software-factory .sf-outcome::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--sf-neutral);
+}
+body.software-factory .sf-outcome-done::before { background: var(--sf-good); }
+body.software-factory .sf-outcome-waiting::before { background: var(--sf-wait); border-radius: 1px; }
+body.software-factory .sf-outcome-blocked::before,
+body.software-factory .sf-outcome-attention::before { background: var(--sf-stop); border-radius: 0; transform: rotate(45deg); }
+body.software-factory .sf-lanes {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.75rem 0 0.9rem;
+}
+body.software-factory .sf-lane {
+  display: grid;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+}
+body.software-factory .sf-lane-label {
+  overflow: hidden;
+  color: var(--sf-muted);
+  font-family: var(--sf-mono);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.software-factory .sf-lane-track {
+  position: relative;
+  height: 0.875rem;
+  border-radius: 3px;
+  background: var(--sf-grid);
+}
+body.software-factory .sf-run {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 3px;
+  border-radius: 3px;
+  background: var(--sf-mark);
+}
+body.software-factory .sf-run:hover {
+  background: var(--sf-mark-hover);
+}
+body.software-factory .sf-run i {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--sf-surface);
+  opacity: 0.75;
+}
+body.software-factory .sf-lane-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--sf-muted);
+  font-size: 0.75rem;
+}
+body.software-factory .sf-kv {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0 0 0.75rem;
+}
+body.software-factory .sf-kv dt {
+  color: var(--sf-muted);
+  font-size: 0.75rem;
+}
+body.software-factory .sf-kv dd {
+  margin: 0;
+  font-weight: 600;
+}
+body.software-factory .sf-campaign-runs {
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-campaign-runs > summary {
+  padding: 0.5rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+body.software-factory .sf-run-detail {
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--sf-rule);
+  font-size: 0.875rem;
+}
+body.software-factory .sf-run-detail > summary {
+  color: var(--sf-text);
+}
+body.software-factory .sf-run-detail > summary code {
+  font-weight: 600;
+}
+body.software-factory .sf-run-detail .sf-caption {
+  margin: 0.4rem 0;
+}
+body.software-factory .sf-cycles {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+body.software-factory .sf-cycles li {
+  padding: 0.25rem 0 0.25rem 3.5rem;
+  text-indent: -3.5rem;
+}
+body.software-factory .sf-cycle-time {
+  display: inline-block;
+  width: 3.25rem;
+  color: var(--sf-muted);
+  font-family: var(--sf-mono);
+  font-size: 0.8125rem;
+  text-indent: 0;
+}
+
+/* Running loops: not connected, and it says so. */
+body.software-factory .sf-live,
+body.software-factory .sf-note {
+  margin: 2rem 0 0;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--sf-rule-strong);
+  border-radius: var(--sf-radius);
+  background: var(--sf-raised);
+}
+body.software-factory .sf-live p,
+body.software-factory .sf-note p {
+  max-width: 52rem;
+  color: var(--sf-muted);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-live > :last-child,
+body.software-factory .sf-note > :last-child {
+  margin-bottom: 0;
+}
+body.software-factory .sf-live-preview .sf-example {
+  max-width: none;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--sf-note-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-note-bg);
+  color: var(--sf-text);
+}
+
+/* The usage panels' head: the filters sit with what they filter. */
+body.software-factory .sf-usage-head {
+  margin: 2.5rem 0 1rem;
+  scroll-margin-top: 1rem;
+}
+body.software-factory .sf-shell .sf-usage-head h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+body.software-factory .sf-usage-head .sf-controls {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 60rem) {
+  body.software-factory .sf-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding-bottom: 1.5rem;
+  }
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-feature {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+  body.software-factory .sf-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.software-factory .sf-strip dd {
+    font-size: 1.375rem;
+  }
+  body.software-factory .sf-ledger li {
+    grid-template-columns: 2.9rem minmax(0, 1fr);
+  }
+  body.software-factory .sf-ledger-cycle {
+    display: none;
+  }
+  body.software-factory .sf-kv {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.software-factory .sf-lane {
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+  }
+  body.software-factory .sf-numbers.sf-stack :is(td, th) {
+    text-align: left;
+    white-space: normal;
+  }
+  body.software-factory .sf-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (forced-colors: active) {
+  body.software-factory .sf-seg,
+  body.software-factory .sf-run {
+    fill: CanvasText;
+    background: CanvasText;
+  }
+}
+
+/* Refinements to the leading sections. */
+body.software-factory .sf-ledger-body code,
+body.software-factory .sf-ledger-bar code {
+  padding: 0;
+}
+body.software-factory .sf-intro > .sf-banner {
+  margin: 1rem 0 0;
+}
+body.software-factory .sf-figures {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+body.software-factory .sf-numbers tbody th code {
+  white-space: nowrap;
+}
+body.software-factory .sf-numbers abbr {
+  text-decoration: none;
+  cursor: help;
+}
+body.software-factory .sf-table-wrap > .sf-numbers {
+  min-width: 52rem;
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-table-wrap > .sf-numbers {
+    min-width: 0;
+  }
+  body.software-factory .sf-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* A cycle: when it committed, then its change and summary, wrapping under themselves. */
+body.software-factory .sf-cycles li {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  text-indent: 0;
+}
+body.software-factory .sf-cycle-time {
+  width: auto;
+}
+/* A wide data table scrolls inside its own block, never the page. */
+body.software-factory .sf-data-table {
+  overflow-x: auto;
+}
+body.software-factory .sf-tool-tables .sf-breakdown,
+body.software-factory .sf-code-tables .sf-breakdown {
+  overflow-x: auto;
+}

@@ -92,7 +92,7 @@ test('only the pointer and the files of the published layout have a key', () => 
     [`/software-factory/data/snapshots/${id}/manifest.json`]: `snapshots/${id}/manifest.json`,
     [`/software-factory/data/snapshots/${id}/overview.json`]: `snapshots/${id}/overview.json`,
   };
-  for (const name of ['sessions', 'changes', 'verification', 'examples'])
+  for (const name of ['sessions', 'changes', 'verification', 'examples', 'loops'])
     allowed[`/software-factory/data/snapshots/${id}/details/${name}.json`] = `snapshots/${id}/details/${name}.json`;
   for (const [pathname, key] of Object.entries(allowed)) assert.equal(keyFor(pathname), key, pathname);
 

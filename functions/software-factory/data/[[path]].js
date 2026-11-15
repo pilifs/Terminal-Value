@@ -10,7 +10,7 @@
 //   snapshots/<sf1-id>/details/<name>.json        change (public, a year, immutable)
 //
 // <name> is one of schema.json's detail collections: sessions, changes,
-// verification, examples. Any other path, an encoded one included, is 404.
+// verification, examples, loops. Any other path, an encoded one included, is 404.
 // Other methods get 405. A missing binding or a failing bucket is 503, so the
 // client falls back to the bundled snapshot. A bucket with no pointer yet (no
 // publish so far) is 404 with `Software-Factory-Data: none`, so the client can
@@ -36,7 +36,7 @@ import section from '../../../blog/software-factory/config/section.json' with { 
 
 export const ROUTE = '/software-factory/data/';
 export const POINTER = 'latest.json';
-const SNAPSHOT_FILE = /^snapshots\/sf1-[0-9a-f]{16}\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples))\.json$/;
+const SNAPSHOT_FILE = /^snapshots\/sf1-[0-9a-f]{16}\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples|loops))\.json$/;
 
 /** The header that marks a 404 as "nothing published yet", not "no route". */
 export const EMPTY_HEADER = 'Software-Factory-Data';

@@ -15,6 +15,8 @@ import { UPSTREAM } from './fixtures/cases.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const EXAMPLE = path.join(HERE, 'fixtures', 'snapshot-example');
 const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
+// The example's id follows the config, so it is read, not written here.
+const EXAMPLE_ID = readJson(path.join(EXAMPLE, 'latest.json')).snapshotId;
 const config = loadConfig();
 
 const byId = (records) => Object.fromEntries(records.map((r) => [r.id, r]));
@@ -108,7 +110,7 @@ test('the metric table equals config/metrics.json, in the overview’s order', (
     METRICS.map(({ id, unit, kind, filters }) => ({ id, unit, kind, filters })),
     single.map(({ id, unit, kind, filters }) => ({ id, unit, kind, filters })),
   );
-  const example = readJson(path.join(EXAMPLE, 'snapshots', 'sf1-61f97c6b5429a12c', 'overview.json'));
+  const example = readJson(path.join(EXAMPLE, 'snapshots', EXAMPLE_ID, 'overview.json'));
   assert.deepEqual(METRICS.map((m) => m.id), example.measures.map((m) => m.id));
 });
 
@@ -123,7 +125,7 @@ test('a plain browser module: no imports, no Node APIs', async () => {
 
 test('unfiltered, the values are the overview’s all-time measures', async () => {
   // The example snapshot, as published.
-  assertMatchesOverview(readJson(path.join(EXAMPLE, 'snapshots', 'sf1-61f97c6b5429a12c', 'overview.json')));
+  assertMatchesOverview(readJson(path.join(EXAMPLE, 'snapshots', EXAMPLE_ID, 'overview.json')));
   // aggregate() on the fixture, and on the hand input.
   const sha = readJson(path.join(UPSTREAM, 'SOURCE.json')).rev;
   const normalized = normalizeSources(await readSources({ dir: UPSTREAM, sha }), config);

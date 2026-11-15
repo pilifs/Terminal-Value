@@ -105,8 +105,9 @@ test('no prose field reaches a normalized record', async () => {
   write(dir, 'llm-dlc/index.json', index);
   const sid = index.sessions[1].session_id;
   const metrics = json(dir, `llm-dlc/traces/${sid}/metrics.json`);
-  metrics.prompts = [{ text: MARK }];
-  metrics.tools = [{ label: MARK, error: MARK }];
+  // Prompts and tool calls are read for who sent them and how they ended: never their text.
+  metrics.prompts = [{ ts: metrics.calls[0].start, end: metrics.calls[0].end, kind: 'human', text: MARK, first_prompt: MARK }];
+  metrics.tools = [{ start: metrics.calls[0].start, name: 'Bash', status: 'error', error_kind: 'exit_code', call: 0, family: 'sed', label: MARK, error: MARK }];
   Object.assign(metrics.calls[0], { prompt_text: MARK, tool_labels: [MARK], error: MARK });
   write(dir, `llm-dlc/traces/${sid}/metrics.json`, metrics);
   const results = json(dir, 'verification/results/index.json');

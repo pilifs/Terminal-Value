@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://terminalvalue.net/software-factory/schema/v1.json",
   "title": "Software Factory public data, version 1",
-  "description": "Frozen in Phase 0 (docs/software-factory.md). Every record a build or refresh publishes validates against one of these $defs, by name, with blog/software-factory/validate.mjs. A change to this file is a contract change: it goes through the merge loop, never one stream alone.",
+  "description": "Frozen in Phase 0 (docs/software-factory.md); the feature loops, tools and code were added on 2026-11-15 as optional fields and one more collection, so a version 1 reader still reads every snapshot. Every record a build or refresh publishes validates against one of these $defs, by name, with blog/software-factory/validate.mjs. A change to this file is a contract change: it goes through the merge loop, never one stream alone.",
   "$defs": {
     "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
@@ -121,8 +121,8 @@
             "required": ["name", "path", "sha256", "bytes", "records"],
             "additionalProperties": false,
             "properties": {
-              "name": { "enum": ["overview", "sessions", "changes", "verification", "examples"] },
-              "path": { "type": "string", "pattern": "^(overview|details/(sessions|changes|verification|examples))\\.json$" },
+              "name": { "enum": ["overview", "sessions", "changes", "verification", "examples", "loops"] },
+              "path": { "type": "string", "pattern": "^(overview|details/(sessions|changes|verification|examples|loops))\\.json$" },
               "sha256": { "$ref": "#/$defs/sha256" },
               "bytes": { "type": "integer", "minimum": 0 },
               "records": { "type": "integer", "minimum": 0 }
@@ -137,7 +137,7 @@
             "required": ["id", "kind", "from", "to", "coverage"],
             "additionalProperties": false,
             "properties": {
-              "id": { "enum": ["usage", "verification", "changes", "catalog"] },
+              "id": { "enum": ["usage", "verification", "changes", "catalog", "loops", "tools", "code"] },
               "kind": { "enum": ["period", "stock"] },
               "from": { "type": ["string", "null"] },
               "to": { "type": ["string", "null"] },
@@ -275,13 +275,16 @@
                 "required": ["collection"],
                 "additionalProperties": false,
                 "properties": {
-                  "collection": { "enum": ["overview", "sessions", "changes", "verification", "examples"] },
+                  "collection": { "enum": ["overview", "sessions", "changes", "verification", "examples", "loops"] },
                   "breakdown": { "type": ["string", "null"] }
                 }
               }
             }
           }
-        }
+        },
+        "loops": { "$ref": "#/$defs/loopsOverview" },
+        "tools": { "$ref": "#/$defs/toolsOverview" },
+        "code": { "$ref": "#/$defs/codeOverview" }
       }
     },
 
@@ -335,7 +338,14 @@
               "summary": { "type": "string" },
               "sessions": { "type": "array", "items": { "type": "string" } },
               "housekeeping": { "type": "boolean" },
-              "area": { "type": "string" }
+              "area": { "type": "string" },
+              "commit": { "$ref": "#/$defs/sha" },
+              "committedAt": { "$ref": "#/$defs/instant" },
+              "codeAdded": { "type": "integer", "minimum": 0 },
+              "codeRemoved": { "type": "integer", "minimum": 0 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "outputTokens": { "type": "integer", "minimum": 0 },
+              "usd": { "type": "number", "minimum": 0 }
             }
           }
         }
@@ -422,6 +432,421 @@
       }
     },
 
+    "loopsOverview": {
+      "description": "Feature loops: the recorded runs of feature-loop.sh, joined to their sessions' prompts by time (config/loops.json). Null when the source has no run record.",
+      "type": ["object", "null"],
+      "required": ["coverage", "totals", "campaigns", "peakParallel", "longest", "outcomes", "runs", "daily"],
+      "additionalProperties": false,
+      "properties": {
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "totals": {
+          "type": "object",
+          "required": ["runs", "loops", "cycles", "commits", "calls", "toolCalls", "toolErrors", "outputTokens", "usd", "agentSeconds", "runSeconds", "prompts", "codeAdded"],
+          "additionalProperties": false,
+          "properties": {
+            "runs": { "type": "integer", "minimum": 0 },
+            "loops": { "type": "integer", "minimum": 0 },
+            "cycles": { "type": "integer", "minimum": 0 },
+            "commits": { "type": "integer", "minimum": 0 },
+            "calls": { "type": "integer", "minimum": 0 },
+            "toolCalls": { "type": "integer", "minimum": 0 },
+            "toolErrors": { "type": "integer", "minimum": 0 },
+            "outputTokens": { "type": "integer", "minimum": 0 },
+            "usd": { "type": "number", "minimum": 0 },
+            "agentSeconds": { "type": "integer", "minimum": 0 },
+            "runSeconds": { "type": "integer", "minimum": 0 },
+            "prompts": {
+              "type": "object",
+              "required": ["harness", "person", "agent", "interrupt", "compactions"],
+              "additionalProperties": false,
+              "properties": {
+                "harness": { "type": "integer", "minimum": 0 },
+                "person": { "type": "integer", "minimum": 0 },
+                "agent": { "type": "integer", "minimum": 0 },
+                "interrupt": { "type": "integer", "minimum": 0 },
+                "compactions": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "codeAdded": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        },
+        "campaigns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "area", "areaLabel", "first", "last", "streams", "peakParallel", "outcome", "runs", "loops", "cycles", "commits", "calls", "toolCalls", "toolErrors", "outputTokens", "usd", "agentSeconds", "runSeconds", "prompts", "codeAdded"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "area": { "type": "string" },
+              "areaLabel": { "type": "string" },
+              "first": { "$ref": "#/$defs/instant" },
+              "last": { "type": ["string", "null"] },
+              "streams": { "type": "integer", "minimum": 0 },
+              "peakParallel": { "type": "integer", "minimum": 0 },
+              "outcome": { "enum": ["done", "waiting", "blocked", "attention", "ended", "open"] },
+              "runs": { "type": "integer", "minimum": 0 },
+              "loops": { "type": "integer", "minimum": 0 },
+              "cycles": { "type": "integer", "minimum": 0 },
+              "commits": { "type": "integer", "minimum": 0 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "toolCalls": { "type": "integer", "minimum": 0 },
+              "toolErrors": { "type": "integer", "minimum": 0 },
+              "outputTokens": { "type": "integer", "minimum": 0 },
+              "usd": { "type": "number", "minimum": 0 },
+              "agentSeconds": { "type": "integer", "minimum": 0 },
+              "runSeconds": { "type": "integer", "minimum": 0 },
+              "prompts": {
+                "type": "object",
+                "required": ["harness", "person", "agent", "interrupt", "compactions"],
+                "additionalProperties": false,
+                "properties": {
+                  "harness": { "type": "integer", "minimum": 0 },
+                  "person": { "type": "integer", "minimum": 0 },
+                  "agent": { "type": "integer", "minimum": 0 },
+                  "interrupt": { "type": "integer", "minimum": 0 },
+                  "compactions": { "type": "integer", "minimum": 0 }
+                }
+              },
+              "codeAdded": { "type": ["integer", "null"], "minimum": 0 }
+            }
+          }
+        },
+        "peakParallel": {
+          "type": "object",
+          "required": ["runs", "at"],
+          "additionalProperties": false,
+          "properties": { "runs": { "type": "integer", "minimum": 0 }, "at": { "type": ["string", "null"] } }
+        },
+        "longest": {
+          "type": ["object", "null"],
+          "required": ["run", "loop", "session", "model", "effort", "started", "seconds", "cycles", "commits", "toolCalls", "ledger"],
+          "additionalProperties": false,
+          "properties": {
+            "run": { "type": "string" },
+            "loop": { "type": "string" },
+            "session": { "type": "string" },
+            "model": { "type": "string" },
+            "effort": { "type": "string" },
+            "started": { "$ref": "#/$defs/instant" },
+            "seconds": { "type": "integer", "minimum": 0 },
+            "cycles": { "type": "integer", "minimum": 0 },
+            "commits": { "type": "integer", "minimum": 0 },
+            "toolCalls": { "type": "integer", "minimum": 0 },
+            "ledger": {
+              "type": "array",
+              "description": "The run's cycles as its record lists them: when each committed, and the commit's summary line.",
+              "items": { "type": "object", "required": ["n", "at", "summary"], "additionalProperties": false, "properties": { "n": { "type": "integer", "minimum": 0 }, "at": { "$ref": "#/$defs/instant" }, "summary": { "type": "string" } } }
+            }
+          }
+        },
+        "outcomes": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "loop", "campaign", "started", "ended", "seconds", "outcome", "cycles", "commits", "toolCalls", "usd", "person", "ticks"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "loop": { "type": "string" },
+              "campaign": { "type": "string" },
+              "started": { "$ref": "#/$defs/instant" },
+              "ended": { "type": ["string", "null"] },
+              "seconds": { "type": ["integer", "null"], "minimum": 0 },
+              "outcome": { "enum": ["done", "waiting", "blocked", "attention", "ended", "open"] },
+              "cycles": { "type": "integer", "minimum": 0 },
+              "commits": { "type": "integer", "minimum": 0 },
+              "toolCalls": { "type": ["integer", "null"], "minimum": 0 },
+              "usd": { "type": ["number", "null"] },
+              "person": { "type": ["integer", "null"], "minimum": 0 },
+              "ticks": { "type": "array", "items": { "type": "integer", "minimum": 0 } }
+            }
+          }
+        },
+        "daily": {
+          "$ref": "#/$defs/table",
+          "description": "Tool calls per day (index into days) made inside a recorded run, and outside one. Columns: day, inRuns, outside."
+        }
+      }
+    },
+    "toolsOverview": {
+      "description": "Tool calls and how they ended. errors = exit (the command ran and exited non-zero) + rejected (the harness refused the call: invalid input, or a pattern it blocks) + denied (a person or the permission classifier said no) + other. Null when no session has a tools table.",
+      "type": ["object", "null"],
+      "required": ["coverage", "totals", "daily", "byModel", "byTool", "byFamily", "byContext", "byMode", "dayTop"],
+      "additionalProperties": false,
+      "properties": {
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "totals": {
+          "type": "object",
+          "required": ["calls", "errors", "exit", "rejected", "denied", "other", "ok", "noResult"],
+          "additionalProperties": false,
+          "properties": {
+            "calls": { "type": "integer", "minimum": 0 },
+            "errors": { "type": "integer", "minimum": 0 },
+            "exit": { "type": "integer", "minimum": 0 },
+            "rejected": { "type": "integer", "minimum": 0 },
+            "denied": { "type": "integer", "minimum": 0 },
+            "other": { "type": "integer", "minimum": 0 },
+            "ok": { "type": "integer", "minimum": 0 },
+            "noResult": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "daily": {
+          "$ref": "#/$defs/table",
+          "description": "Columns: day (index into days), model (index into models, or null), calls, errors, exit, rejected, denied, other."
+        },
+        "byModel": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "byTool": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "byFamily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["family", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "family": { "type": "string" },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "byContext": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "type": "integer", "minimum": 0 },
+              "to": { "type": ["integer", "null"], "minimum": 0 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "byMode": {
+          "type": "object",
+          "required": ["runs", "outside"],
+          "additionalProperties": false,
+          "properties": {
+            "runs": {
+              "type": "object",
+              "required": ["calls", "errors", "exit", "rejected", "denied", "other"],
+              "additionalProperties": false,
+              "properties": {
+                "calls": { "type": "integer", "minimum": 0 },
+                "errors": { "type": "integer", "minimum": 0 },
+                "exit": { "type": "integer", "minimum": 0 },
+                "rejected": { "type": "integer", "minimum": 0 },
+                "denied": { "type": "integer", "minimum": 0 },
+                "other": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "outside": {
+              "type": "object",
+              "required": ["calls", "errors", "exit", "rejected", "denied", "other"],
+              "additionalProperties": false,
+              "properties": {
+                "calls": { "type": "integer", "minimum": 0 },
+                "errors": { "type": "integer", "minimum": 0 },
+                "exit": { "type": "integer", "minimum": 0 },
+                "rejected": { "type": "integer", "minimum": 0 },
+                "denied": { "type": "integer", "minimum": 0 },
+                "other": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        "dayTop": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["day", "source", "errors"],
+            "additionalProperties": false,
+            "properties": { "day": { "type": "integer", "minimum": 0 }, "source": { "type": "string" }, "errors": { "type": "integer", "minimum": 0 } }
+          }
+        }
+      }
+    },
+    "codeOverview": {
+      "description": "Lines in the source repository's git history, classed by config/code.json. Null when the snapshot was not made from a git checkout.",
+      "type": ["object", "null"],
+      "required": ["coverage", "commits", "languages", "docs", "data", "totals", "days", "daily", "outputTokens", "usd", "tokensPerLine", "usdPerLine", "retained", "removedShare"],
+      "additionalProperties": false,
+      "properties": {
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "commits": { "type": "integer", "minimum": 0 },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "added", "removed", "inTree"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "added": { "type": "integer", "minimum": 0 },
+              "removed": { "type": "integer", "minimum": 0 },
+              "inTree": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "docs": {
+          "type": "object",
+          "required": ["id", "label", "added", "removed", "inTree"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "added": { "type": "integer", "minimum": 0 },
+            "removed": { "type": "integer", "minimum": 0 },
+            "inTree": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "data": {
+          "type": "object",
+          "required": ["id", "label", "added", "removed", "inTree"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string" },
+            "label": { "type": "string" },
+            "added": { "type": "integer", "minimum": 0 },
+            "removed": { "type": "integer", "minimum": 0 },
+            "inTree": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "totals": {
+          "type": "object",
+          "required": ["added", "removed", "inTree"],
+          "additionalProperties": false,
+          "properties": {
+            "added": { "type": "integer", "minimum": 0 },
+            "removed": { "type": "integer", "minimum": 0 },
+            "inTree": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "days": { "type": "array", "items": { "$ref": "#/$defs/localDate" } },
+        "daily": {
+          "$ref": "#/$defs/table",
+          "description": "Code lines per commit day (index into this record's days). Columns: day, added, removed, commits."
+        },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "usd": { "type": "number", "minimum": 0 },
+        "tokensPerLine": { "type": ["number", "null"] },
+        "usdPerLine": { "type": ["number", "null"] },
+        "retained": { "type": ["number", "null"] },
+        "removedShare": { "type": ["number", "null"] }
+      }
+    },
+    "loops": {
+      "type": "object",
+      "required": ["schema", "snapshotId", "records"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "const": "software-factory-loops/v1" },
+        "snapshotId": { "$ref": "#/$defs/snapshotId" },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "loop", "campaign", "session", "model", "effort", "started", "ended", "seconds", "agentSeconds", "outcome", "limit", "commits", "calls", "toolCalls", "toolErrors", "outputTokens", "usd", "prompts", "codeAdded", "cycles", "recordUrl", "summaryUrl"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "loop": { "type": "string" },
+              "campaign": { "type": "string" },
+              "session": { "type": "string" },
+              "model": { "type": "string" },
+              "effort": { "type": "string" },
+              "started": { "$ref": "#/$defs/instant" },
+              "ended": { "type": ["string", "null"] },
+              "seconds": { "type": ["integer", "null"], "minimum": 0 },
+              "agentSeconds": { "type": ["integer", "null"], "minimum": 0 },
+              "outcome": { "enum": ["done", "waiting", "blocked", "attention", "ended", "open"] },
+              "limit": { "type": ["integer", "null"], "minimum": 0 },
+              "commits": { "type": "integer", "minimum": 0 },
+              "calls": { "type": ["integer", "null"], "minimum": 0 },
+              "toolCalls": { "type": ["integer", "null"], "minimum": 0 },
+              "toolErrors": { "type": ["integer", "null"], "minimum": 0 },
+              "outputTokens": { "type": ["integer", "null"], "minimum": 0 },
+              "usd": { "type": ["number", "null"] },
+              "prompts": {
+                "type": ["object", "null"],
+                "required": ["harness", "person", "agent", "interrupt", "compactions"],
+                "additionalProperties": false,
+                "properties": {
+                  "harness": { "type": "integer", "minimum": 0 },
+                  "person": { "type": "integer", "minimum": 0 },
+                  "agent": { "type": "integer", "minimum": 0 },
+                  "interrupt": { "type": "integer", "minimum": 0 },
+                  "compactions": { "type": "integer", "minimum": 0 }
+                }
+              },
+              "codeAdded": { "type": ["integer", "null"], "minimum": 0 },
+              "cycles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["n", "at", "change", "summary", "decision"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "n": { "type": "integer", "minimum": 0 },
+                    "at": { "$ref": "#/$defs/instant" },
+                    "change": { "type": "string" },
+                    "summary": { "type": "string" },
+                    "decision": { "enum": ["continue", "stop", null] }
+                  }
+                }
+              },
+              "recordUrl": { "type": "string" },
+              "summaryUrl": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "postSummary": {
       "type": "object",
       "description": "A published post as the Software Factory pages show it, made by editorial.mjs from the already draft-filtered post collection.",

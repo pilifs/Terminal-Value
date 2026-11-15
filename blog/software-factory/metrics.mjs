@@ -30,6 +30,12 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 2 adds the feature loops, the tools and the code (factory.mjs):
+//     overview.loops, overview.tools and overview.code, each null when nothing
+//     was measured for it, the loops collection (one record per run, with its
+//     cycles), and on a change its commit, code lines and what it took, where
+//     known. Records read without prompts, tools, run records or a git
+//     checkout give the same usage and verification values as version 1.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,11 +48,12 @@ import {
   sha256,
   snapshotId,
 } from './identity.mjs';
+import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '1' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '2' };
 
 const STATUSES = ['passed', 'failed'];
-const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples'];
+const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
 const SCOPE_TEXT = { 'all-time': 'all time', snapshot: 'at this revision' };
 const USAGE_COLUMNS = ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'];
 
@@ -241,13 +248,29 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   // Areas.
   const area = (record) => areaOf(record, areas);
   const areaLabel = (id) => (areas.areas.find((a) => a.id === id) ?? areas.unassigned).label;
-  const changeRecords = changeList.map((c) => ({
+  const baseChanges = changeList.map((c) => ({
     changeId: c.changeId,
     summary: c.summary,
     sessions: c.sessions,
     housekeeping: c.housekeeping,
     area: area({ campaign: c.campaign, housekeeping: c.housekeeping }),
   }));
+
+  // The feature loops, the tools and the code (factory.mjs).
+  const factory = aggregateFactory(
+    { prompts: [], tools: [], sessionCommits: [], runs: [], code: null, ...normalized },
+    { config: { ...config, loops: config.loops, code: config.code }, days, day, modelIds, label, area, areaLabel, changeRecords: baseChanges }
+  );
+  const tookOf = new Map(changeList.map((c) => [c.changeId, c.took ?? null]));
+  const changeRecords = baseChanges.map((c) => {
+    const fact = factory.changeFacts.get(c.changeId);
+    const took = tookOf.get(c.changeId);
+    return {
+      ...c,
+      ...(fact ? { commit: fact.commit, committedAt: fact.committedAt, codeAdded: fact.codeAdded, codeRemoved: fact.codeRemoved } : {}),
+      ...(took ? { calls: took.calls, outputTokens: took.outputTokens, usd: round6(took.usd) } : {}),
+    };
+  });
 
   // Breakdowns.
   const usdBy = (key, value) => priced.filter((c) => c[key] === value).reduce((t, c) => t + c.usd, 0);
@@ -363,11 +386,15 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       stocks,
       breakdowns,
       insights,
+      loops: factory.loops,
+      tools: factory.tools,
+      code: factory.code,
     },
     sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },
     verification: { schema: 'software-factory-verification/v1', snapshotId: id, records: verificationRecords },
     examples: { schema: 'software-factory-examples/v1', snapshotId: id, records: exampleRecords },
+    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: factory.runRecords },
   });
   const placeholder = build(PLACEHOLDER);
   const id = snapshotId({
@@ -380,6 +407,8 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const { overview, ...details } = build(id);
   const bounds = (sortedDays) =>
     sortedDays.length ? { from: dayStart(sortedDays[0], tz), to: dayStart(nextDay(sortedDays.at(-1)), tz) } : { from: null, to: null };
+  const runDays = (factory.loops?.runs ?? []).flatMap((r) => [r.started, r.ended].filter(Boolean)).map(day).sort();
+  const runBounds = bounds(runDays);
   const manifest = {
     schema: 'software-factory-snapshot/v1',
     snapshotId: id,
@@ -395,6 +424,9 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       { id: 'verification', kind: 'period', ...bounds(jobDays), coverage: coverage.completed },
       { id: 'changes', kind: 'stock', from: null, to: null, coverage: coverage.changes },
       { id: 'catalog', kind: 'stock', from: null, to: null, coverage: coverage.catalog },
+      ...(factory.loops ? [{ id: 'loops', kind: 'period', ...runBounds, coverage: factory.loops.coverage }] : []),
+      ...(factory.tools ? [{ id: 'tools', kind: 'period', ...bounds(callDays), coverage: factory.tools.coverage }] : []),
+      ...(factory.code ? [{ id: 'code', kind: 'period', ...bounds(factory.code.days), coverage: factory.code.coverage }] : []),
     ],
   };
   return { manifest, overview, details };
