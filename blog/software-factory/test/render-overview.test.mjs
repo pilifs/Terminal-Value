@@ -80,8 +80,8 @@ test('freshness comes from the snapshot dates and nothing is called live', () =>
 test('the overview is short: the headline, three findings, and where to go next', () => {
   const html = body('index.html', { snapshot: committed });
   inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-tools"', 'id="finding-code"', 'class="sf-more"']);
-  assert.equal((html.match(/<article class="sf-panel sf-finding"/g) ?? []).length, 3);
-  assert.equal((html.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 3, 'one chart to a finding');
+  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 3);
+  assert.equal((html.match(/<div class="sf-floor"/g) ?? []).length + (html.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 3, 'one figure to a finding');
   // Everything under a finding is on its own page, not folded away on this one.
   assert.doesNotMatch(html, /<table|<details|<form|sf-breakdown|sf-campaign|data-sf-detail|sf-live/);
   for (const sub of ['loops', 'tools', 'code', 'usage', 'methodology']) assert.ok(html.includes(`<a href="/software-factory/${sub}/">`), sub);

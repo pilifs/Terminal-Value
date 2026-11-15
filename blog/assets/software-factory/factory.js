@@ -7,9 +7,9 @@
 // inside of its section. A snapshot made before these were measured has no
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
-import { columnsSvg, lanesHtml, legendHtml, scatterSvg } from './figures.js';
+import { columnsSvg, floorHtml, lanesHtml, legendHtml, scatterSvg } from './figures.js';
 import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
-import { torontoDay } from './measures-local.js';
+import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
 const REPO = 'https://github.com/pilifs/in-the-loop';
 // Where the section is served: its pages link each other from here.
@@ -195,6 +195,128 @@ const DRIVERS = [
   { key: 'by-other', label: 'A slash command or another agent' },
 ];
 
+const HOUR = 3600e3;
+const PAUSE = 6 * HOUR; // with no loop running for longer than this, the floor's clock is cut
+const FLOOR_HOURS = 120; // the newest stretches the floor shows add up to about this much
+const NIGHT = { from: 22, to: 6 }; // shaded on the floor, on Toronto's clock
+const asked = (r) => r.outcome === 'blocked' || r.outcome === 'attention';
+const lull = (ms) => {
+  const h = Math.round(ms / HOUR);
+  return h < 48 ? plural(h, 'hour') : `${plural(Math.floor(h / 24), 'day')}${h % 24 ? ` ${plural(h % 24, 'hour')}` : ''}`;
+};
+const moment = (ms) => `${dayOf(ms)}, ${clockWords(torontoClock(ms))}`;
+
+/**
+ * The finished runs as stretches of work: a new stretch starts when no loop
+ * has run for PAUSE. Each has its runs, their commits, and how long at least
+ * one loop was running.
+ */
+export function stretches(loops) {
+  const runs = loops.runs
+    .filter((r) => r.ended)
+    .map((r) => ({ ...r, from: Date.parse(r.started), to: Date.parse(r.ended) }))
+    .sort((a, b) => a.from - b.from);
+  const out = [];
+  for (const r of runs) {
+    const s = out.at(-1);
+    if (s && r.from - s.to <= PAUSE) {
+      s.busy += Math.max(0, r.to - Math.max(r.from, s.to));
+      s.to = Math.max(s.to, r.to);
+      s.runs.push(r);
+    } else out.push({ from: r.from, to: r.to, busy: r.to - r.from, runs: [r] });
+  }
+  return out.map((s) => ({
+    ...s,
+    commits: s.runs.reduce((t, r) => t + r.commits, 0),
+    campaigns: new Set(s.runs.map((r) => r.campaign)).size,
+    typed: s.runs.reduce((t, r) => t + (r.person ?? 0), 0),
+  }));
+}
+
+/**
+ * Every run on one clock. A campaign takes a block of rows: a row for each of
+ * its loops, the one that merges the others last. Campaigns under way at the
+ * same time get blocks under each other.
+ */
+function floorFigure(loops) {
+  const all = stretches(loops);
+  if (!all.length) return null;
+  // The newest stretches, as many as fit; the newest always does.
+  const shown = [];
+  for (const s of all.toReversed()) {
+    if (shown.length && shown.reduce((t, q) => t + q.to - q.from, 0) + s.to - s.from > FLOOR_HOURS * HOUR) break;
+    shown.unshift(s);
+  }
+  const panels = shown.map((s, i) => ({ from: s.from, to: s.to, pause: i ? `No loop ran for ${lull(s.from - shown[i - 1].to)}` : '' }));
+  const panelOf = (ms) => panels.findLast((p) => ms >= p.from) ?? panels[0];
+  const runs = shown.flatMap((s) => s.runs);
+
+  const rowOf = new Map();
+  const blocks = [];
+  for (const c of loops.campaigns) {
+    const own = runs.filter((r) => r.campaign === c.id);
+    if (!own.length) continue;
+    const merges = (loop) => Boolean(c.streams) && loop === c.id;
+    const mine = [...new Set(own.map((r) => r.loop))].sort((a, b) => merges(a) - merges(b));
+    const from = Math.min(...own.map((r) => r.from));
+    const to = Math.max(...own.map((r) => r.to));
+    let base = 0;
+    while (blocks.some((b) => b.from < to && from < b.to && base < b.base + b.rows && b.base < base + mine.length)) base++;
+    blocks.push({ id: c.id, from, to, base, rows: mine.length });
+    mine.forEach((loop, i) => rowOf.set(loop, base + i));
+  }
+  blocks.sort((a, b) => a.from - b.from);
+
+  const nights = [];
+  const ticks = [];
+  for (const p of panels) {
+    ticks.push({ at: p.from, label: dayOf(p.from), kind: 'start' });
+    for (let t = Math.floor(p.from / HOUR) * HOUR; t < p.to; t += HOUR) {
+      const { hour } = torontoClock(t);
+      if (hour >= NIGHT.from || hour < NIGHT.to) {
+        const last = nights.at(-1);
+        if (last && last.to === t && t > p.from) last.to = Math.min(t + HOUR, p.to);
+        else nights.push({ from: Math.max(t, p.from), to: Math.min(t + HOUR, p.to) });
+      }
+      if (t > p.from && hour % 6 === 0) ticks.push({ at: t, label: hour ? clockWords({ hour, minute: 0 }) : dayOf(t), kind: hour ? 'hour' : 'day' });
+    }
+  }
+  const flagged = runs.filter(asked).length;
+  const html = floorHtml({
+    panels,
+    rows: Math.max(...blocks.map((b) => b.base + b.rows)),
+    nights,
+    ticks,
+    runs: runs.map((r) => ({
+      from: r.from,
+      to: r.to,
+      row: rowOf.get(r.loop),
+      ticks: (r.ticks ?? []).map((t) => r.from + t * 1000),
+      flag: asked(r),
+      tip: `${r.loop}, from ${moment(r.from)}: ${plural(r.cycles, 'cycle')} and ${plural(r.commits, 'commit')} in ${span(r.seconds)}. ${OUTCOMES[r.outcome] ?? r.outcome}.`,
+    })),
+    names: blocks.map((b, i) => {
+      const next = blocks.slice(i + 1).find((n) => n.from > b.from && panelOf(n.from) === panelOf(b.from));
+      return { at: b.from, until: next ? next.from : panelOf(b.from).to, label: b.id, href: `${ROUTE}loops/#loop-${b.id}` };
+    }),
+  });
+  const legend = `<ul class="sf-legend sf-floor-legend">
+              <li><span class="sf-swatch sf-swatch-run" aria-hidden="true"></span>A run, with a notch for each cycle’s commit</li>${
+                flagged ? `\n              <li><span class="sf-swatch sf-swatch-asked" aria-hidden="true"></span>Ended blocked on a person, or flagged for one</li>` : ''
+              }
+              <li><span class="sf-swatch sf-swatch-night" aria-hidden="true"></span>${e(clockWords({ hour: NIGHT.from, minute: 0 }))} to ${e(clockWords({ hour: NIGHT.to, minute: 0 }))} in Toronto</li>
+            </ul>`;
+  const cut = panels.length > 1 ? ` The clock skips ${panels.length === 2 ? `the ${lull(panels[1].from - panels[0].to)}` : 'each pause of more than six hours'} when no loop ran.` : '';
+  const partial = shown.length < all.length ? ` Runs before ${e(dayYear(shown[0].from))} are on the feature loops page.` : '';
+  return {
+    html,
+    legend,
+    stretches: all,
+    runs: runs.length,
+    caption: `${shown.length < all.length ? `${plural(runs.length, 'loop run')}` : `Every loop run`}, ${e(range(shown[0].from, shown.at(-1).to))}, on one clock. Rows are loops working at the same time on separate branches; the last row of a campaign is the loop that merges the others.${cut}${partial}`,
+  };
+}
+
 /** The loop's own scripts, commit by commit: how the loop itself changed. */
 function scriptsHtml(scripts, days) {
   if (!scripts?.commits.length) return '';
@@ -335,6 +457,18 @@ export function runningHtml(preview = null) {
         </aside>`;
 }
 
+/** The floor on the feature loops page, under its own heading. */
+function floorSection(loops) {
+  const floor = floorFigure(loops);
+  if (!floor) return '';
+  return `<div class="sf-subhead"><h2>Every run on one clock</h2></div>
+        <figure class="sf-floor-figure">
+          ${floor.legend}
+          ${floor.html}
+          <figcaption class="sf-caption">${floor.caption} Each campaign is drawn on its own clock <a href="#sf-campaigns">below</a>.</figcaption>
+        </figure>`;
+}
+
 /** The feature loops section. */
 export function loopsHtml(snapshot) {
   const { loops } = snapshot.overview;
@@ -343,7 +477,7 @@ export function loopsHtml(snapshot) {
   const t = loops.totals;
   const typed = t.prompts.person + t.prompts.interrupt;
   const campaigns = loops.campaigns;
-  const title = `${word(campaigns.length)} ${campaigns.length === 1 ? 'campaign' : 'campaigns'}, ${plural(t.runs, 'run')}, ${plural(t.cycles, 'cycle')}${typed ? '' : ', nobody at the keyboard'}`;
+  const title = `${word(campaigns.length)} ${campaigns.length === 1 ? 'campaign' : 'campaigns'}, ${plural(t.runs, 'run')}, ${plural(t.cycles, 'cycle')}${typed ? '' : ', no prompt from a person'}`;
   const stopped = (loops.outcomes.attention ?? 0) + (loops.outcomes.blocked ?? 0);
   const figures = [
     tile('Runs', count(t.runs), `${plural(t.loops, 'loop')} in ${plural(campaigns.length, 'campaign')}`),
@@ -360,11 +494,12 @@ export function loopsHtml(snapshot) {
         }</p>
         <dl class="sf-figures">${figures}</dl>
         <p class="sf-coverage">Coverage: ${e(formatCoverage(loops.coverage))} · All time; no filter applies · <a href="${ROUTE}methodology/#def-loop_person_prompts">What counts as a prompt from a person</a></p>
+        ${floorSection(loops)}
         ${driveFigure(snapshot.overview)}
         <div class="sf-subhead"><h2>Campaign by campaign</h2></div>
         <p class="sf-caption">In the order they ran. At once is the most loops under way together. Failed is the share of tool calls that failed, which is not a failed loop: see <a href="${ROUTE}tools/">model performance</a>.</p>
         ${campaignTable(campaigns)}
-        <div class="sf-subhead"><h2>Each campaign</h2></div>
+        <div class="sf-subhead" id="sf-campaigns"><h2>Each campaign</h2></div>
         <p class="sf-caption">Newest first. A bar is one run on the campaign's own clock; a notch is a cycle's commit. Open a campaign for every run and cycle, with links to its record and its session.</p>
         <div class="sf-campaigns">
           ${[...campaigns].reverse().map((c) => campaignCard(c, loops.runs)).join('\n          ')}
@@ -827,18 +962,30 @@ export function codeHtml(snapshot) {
  * One finding: a claim computed from the data, a sentence, three numbers and
  * the chart that carries it, with a link to the page that has everything.
  */
-function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, caption }) {
-  return `<article class="sf-panel sf-finding" id="finding-${id}" aria-labelledby="finding-${id}-title">
-          <div class="sf-finding-text">
-            <p class="sf-eyebrow">${e(eyebrow)}</p>
-            <h2 id="finding-${id}-title"><a href="${href}">${e(claim)}</a></h2>
+function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, caption, wide = false }) {
+  const head = `<p class="sf-eyebrow">${e(eyebrow)}</p>
+            <h2 id="finding-${id}-title"><a href="${href}">${e(claim)}</a></h2>`;
+  const numbers = `<dl class="sf-finding-facts">${facts
+    .filter(Boolean)
+    .map(([value, label]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`)
+    .join('')}</dl>
+            <p class="sf-finding-more"><a href="${href}">${e(more)}</a></p>`;
+  // A wide finding puts its numbers beside its sentence and its figure under both.
+  const text = wide
+    ? `<header class="sf-finding-head">
+            ${head}
+          </header>
+          <p class="sf-finding-lede">${lede}</p>
+          <div class="sf-finding-side">
+            ${numbers}
+          </div>`
+    : `<div class="sf-finding-text">
+            ${head}
             <p class="sf-finding-lede">${lede}</p>
-            <dl class="sf-finding-facts">${facts
-              .filter(Boolean)
-              .map(([value, label]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`)
-              .join('')}</dl>
-            <p class="sf-finding-more"><a href="${href}">${e(more)}</a></p>
-          </div>
+            ${numbers}
+          </div>`;
+  return `<article class="sf-panel sf-finding${wide ? ' sf-finding-wide' : ''}" id="finding-${id}" aria-labelledby="finding-${id}-title">
+          ${text}
           <figure class="sf-finding-chart">
             ${legend}
             <div class="sf-chart-wrap">${chart}</div>
@@ -848,56 +995,48 @@ function finding({ id, eyebrow, claim, lede, facts, href, more, legend, chart, c
 }
 
 function loopsFinding(overview) {
-  const { loops, days } = overview;
+  const { loops } = overview;
   if (!loops || !loops.totals.runs) return '';
   const t = loops.totals;
   const typed = t.prompts.person + t.prompts.interrupt;
   const campaigns = loops.campaigns.length;
-  const href = `${ROUTE}loops/`;
   const counts = `${word(campaigns)} ${campaigns === 1 ? 'campaign' : 'campaigns'}, ${plural(t.runs, 'run')}, ${plural(t.cycles, 'cycle')}`;
+  const floor = floorFigure(loops);
+  // The stretch with the most commits carries the claim.
+  const best = floor?.stretches.reduce((a, b) => (b.commits > a.commits ? b : a)) ?? null;
+  const length = best ? best.to - best.from : 0;
+  // A pace is a claim only over enough commits and hours to be one.
+  const pace = best && best.commits >= 10 && length >= 2 * HOUR ? Math.round(length / 60e3 / best.commits) : null;
+  const peak = Date.parse(loops.peakParallel?.at ?? '');
+  const peakHere = best && loops.peakParallel.runs > 1 && peak >= best.from && peak <= best.to;
+  const drive = loops.drive ? driveFacts(driveDays(overview)) : null;
   const facts = [
-    [count(t.cycles), `cycles in ${plural(t.runs, 'loop run')}`],
-    loops.longest ? [span(loops.longest.seconds), 'the longest run nobody typed into'] : [count(t.commits), 'commits'],
-    [count(loops.peakParallel.runs), loops.peakParallel.runs === 1 ? 'loop at a time' : 'loops side by side at the peak'],
+    drive ? [pct(rate(drive.byLoop, drive.all), 0), 'of all tool calls were set off by a loop’s own prompt'] : [count(t.cycles), `cycles in ${plural(t.runs, 'loop run')}`],
+    drive?.first && drive.peak && drive.peak !== drive.first
+      ? [count(drive.peak.per), `tool calls per typed prompt on ${shortDay(drive.peak)}, from ${count(drive.first.per)} on ${shortDay(drive.first)}`]
+      : loops.longest
+        ? [span(loops.longest.seconds), 'the longest run nobody typed into']
+        : null,
+    t.commits ? [formatValue(t.usd / t.commits, 'usd'), 'estimated usage for each commit'] : null,
   ];
-  const works = 'A feature loop gives an agent a written brief and lets it work, cycle after cycle.';
-  const more = campaigns === 1 ? 'The campaign, run by run' : `All ${word(campaigns).toLowerCase()} campaigns, run by run`;
-  if (!loops.drive)
-    return finding({
-      id: 'loops',
-      eyebrow: 'Feature loops',
-      claim: `${counts}${typed ? '' : ', nobody at the keyboard'}`,
-      lede: e(works),
-      facts,
-      href,
-      more,
-      legend: '',
-      chart: '',
-      caption: 'This snapshot was made before each day’s tool calls were traced to the prompt that set them off.',
-    });
-  const rows = driveDays(overview).map(({ flag, ...p }) => p);
-  const { measured, byLoop, all, firstLoop, first, peak } = driveFacts(rows);
   return finding({
     id: 'loops',
     eyebrow: 'Feature loops',
-    claim: `${pct(rate(byLoop, all), 0)} of all tool calls were set off by the loop’s own prompt`,
-    lede: `${e(works)}${
-      first && peak && peak !== first
-        ? ` For each prompt a person typed, agents made ${count(first.per)} tool calls on ${e(shortDay(first))} and ${count(peak.per)} on ${e(shortDay(peak))}.`
-        : ''
-    }`,
+    wide: true,
+    claim: pace ? `A commit every ${plural(pace, 'minute')} for ${plural(Math.round(length / HOUR), 'hour')}` : `${counts}${typed ? '' : ', no prompt from a person'}`,
+    lede: pace
+      ? `That is the average from ${e(moment(best.from))} to ${e(moment(best.to))}, Toronto time: ${plural(best.commits, 'commit')} from ${
+          best.campaigns === 1 ? 'one campaign' : `${word(best.campaigns).toLowerCase()} campaigns`
+        }, with a loop running for ${count(best.busy / HOUR)} of the ${count(length / HOUR)} hours${peakHere ? ` and up to ${word(loops.peakParallel.runs).toLowerCase()} at once` : ''}.${
+          best.typed ? '' : ' Nobody typed a prompt into any of them.'
+        }`
+      : 'A feature loop gives an agent a written brief and lets it work, cycle after cycle.',
     facts,
-    href,
-    more,
-    legend: legendHtml(DRIVERS),
-    chart: columnsSvg(rows, {
-      id: 'sf-chart-drive',
-      title: 'Tool calls per day, by who set them off',
-      series: { up: DRIVERS },
-      desc: `${measured.length} of ${days.length} days with tool calls.`,
-      table: 'The feature loops page lists every day.',
-    }),
-    caption: `Tool calls per day, by who sent the prompt that set them off${firstLoop ? `. None came from a loop before ${e(shortDay(firstLoop))}` : ''}.`,
+    href: `${ROUTE}loops/`,
+    more: campaigns === 1 ? 'The campaign, run by run' : `All ${word(campaigns).toLowerCase()} campaigns, run by run`,
+    legend: floor?.legend ?? '',
+    chart: floor?.html ?? '',
+    caption: floor?.caption ?? '',
   });
 }
 

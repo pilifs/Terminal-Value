@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, span, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { floorHtml } from '../../assets/software-factory/figures.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
 import { aggregate } from '../metrics.mjs';
@@ -491,16 +492,22 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   // Described, never explained or ranked; and nothing is called live.
   // The overview's findings: a claim from the data, three numbers, one chart and a link, per section.
   const findings = findingsHtml(snap);
-  assert.equal((findings.match(/<article class="sf-panel sf-finding"/g) ?? []).length, 3);
-  assert.match(findings, /<h2 id="finding-loops-title"><a href="\/software-factory\/loops\/">50% of all tool calls were set off by the loop’s own prompt<\/a><\/h2>/);
+  assert.equal((findings.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 3);
+  // One run and one commit are no pace to claim: the loops finding counts them instead.
+  assert.match(findings, /<h2 id="finding-loops-title"><a href="\/software-factory\/loops\/">One campaign, 1 run, 1 cycle, no prompt from a person<\/a><\/h2>/);
+  assert.match(findings, /<dt>of all tool calls were set off by a loop’s own prompt<\/dt><dd>50%<\/dd>/);
   assert.match(findings, /<dt>the longest run nobody typed into<\/dt><dd>2 h<\/dd>/);
   assert.match(findings, /<a href="\/software-factory\/tools\/">16\.7% of 6 tool calls succeeded<\/a>/);
   assert.match(findings, /Of the 4 that failed, 1 was a command that ran and exited non-zero/);
   assert.match(findings, /<a href="\/software-factory\/code\/">100 lines of code, about 10 output tokens each<\/a>/);
-  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 3, 'one chart each');
-  assert.equal((findings.match(/<ul class="sf-legend">/g) ?? []).length, 3, 'each chart has its legend');
+  // The loops finding carries every run on one clock; the other two a chart of days.
+  assert.equal((findings.match(/<div class="sf-floor"/g) ?? []).length, 1);
+  assert.match(findings, /<li style="left:0%;width:[\d.]+%"><a href="\/software-factory\/loops\/#loop-demo"><code>demo<\/code><\/a><\/li>/);
+  assert.match(findings, /data-tip="demo-heap, from Nov 6, 11 pm: 1 cycle and 1 commit in 2 h\. Done\."/);
+  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 2, 'one chart each');
+  assert.equal((findings.match(/<ul class="sf-legend[ "]/g) ?? []).length, 3, 'each figure has its legend');
   assert.doesNotMatch(findings, /The table below/, 'the tables are on the pages the findings open');
-  assert.match(findings, /The feature loops page lists every day\./);
+  assert.match(loops, /<h2>Every run on one clock<\/h2>/, 'and the loops page has the same figure');
   const text = [hero, findings, loops, tools, code, runningHtml()].join(' ').replace(/<[^>]+>/g, ' ');
   assert.doesNotMatch(text, /\blive\b|\bbetter than\b|\bbecause\b/i);
   assert.match(runningHtml(), /Not connected yet/);
@@ -532,4 +539,103 @@ test('the failed-calls chart: one model’s days, clean share ticks, and duratio
   assert.deepEqual(shareTicks(0.009), [0, 0.002, 0.004, 0.006, 0.008, 0.01]);
   assert.deepEqual([span(50), span(2700), span(29997), span(7200), span(null)], ['50 s', '45 min', '8 h 20 min', '2 h', 'No data']);
   assert.deepEqual(stumbles({ byTool: [{ name: 'Monitor', calls: 107, errors: 26 }, { name: 'Bash', calls: 9, errors: 9 }, { name: 'Read', calls: 1000, errors: 4 }], byFamily: [{ family: 'sleep', calls: 117, errors: 42 }] }).map((s) => s.label), ['sleep', 'Monitor']);
+});
+
+// --- The floor: every run on one clock ---------------------------------------
+
+const H = 3600e3;
+const at = (hours) => new Date(Date.parse('2026-11-07T04:00:00Z') + hours * H).toISOString().replace('.000', '');
+const floorRun = (loop, campaign, from, to, o = {}) => ({
+  id: `${loop}-${from}`, loop, campaign, started: at(from), ended: to === null ? null : at(to), seconds: to === null ? null : (to - from) * 3600,
+  outcome: 'done', cycles: 2, commits: 3, toolCalls: 10, usd: 1, person: 0, ticks: [600, 1200], ...o,
+});
+
+test('runs group into stretches: a pause of more than six hours starts a new one', () => {
+  const loops = {
+    runs: [
+      floorRun('a-x', 'a', 0, 2),
+      floorRun('a-y', 'a', 1, 3),
+      floorRun('a', 'a', 5, 6), // two hours after the last end: the same stretch
+      floorRun('b', 'b', 12.5, 13, { person: 2 }), // six and a half hours after: a new one
+      floorRun('b', 'b', 14, null, { outcome: 'open' }), // no end recorded: not on the clock
+    ],
+  };
+  const list = stretches(loops);
+  assert.equal(list.length, 2);
+  const [first, second] = list;
+  assert.equal(first.runs.length, 3);
+  assert.equal((first.to - first.from) / H, 6);
+  assert.equal(first.busy / H, 4, 'a loop was running from 0 to 3 and from 5 to 6: overlap counts once');
+  assert.deepEqual([first.commits, first.campaigns, first.typed], [9, 1, 0]);
+  assert.deepEqual([second.runs.length, second.commits, second.typed, second.busy / H], [1, 3, 2, 0.5]);
+  assert.deepEqual(stretches({ runs: [] }), []);
+});
+
+test('the floor draws each stretch to one scale, with the pause between them cut out', () => {
+  const html = floorHtml({
+    panels: [{ from: 0, to: 30 * H, pause: '' }, { from: 100 * H, to: 109 * H, pause: 'No loop ran for 2 days 22 hours' }],
+    rows: 2,
+    runs: [
+      { from: 0, to: 15 * H, row: 0, ticks: [5 * H, 30 * H], tip: 'one <b>', flag: false },
+      { from: 100 * H, to: 100.01 * H, row: 1, ticks: [100.005 * H], tip: 'two', flag: true },
+    ],
+    names: [{ at: 0, until: 30 * H, label: 'first', href: '/software-factory/loops/#loop-first' }],
+    nights: [{ from: 8 * H, to: 16 * H }],
+    ticks: [
+      { at: 0, label: 'Nov 6', kind: 'start' },
+      { at: H, label: '6 pm', kind: 'hour' }, // 2.5% after the start: would run into its label
+      { at: 10 * H, label: 'Nov 7', kind: 'day' },
+      { at: 100 * H, label: 'Nov 14', kind: 'start' },
+      { at: 108 * H, label: 'Nov 15', kind: 'day' },
+    ],
+  });
+  // 39 hours share 97.5% of the width: 2.5% an hour, and 2.5% for the cut.
+  assert.match(html, /<div class="sf-floor" style="--sf-rows:2">/);
+  assert.match(html, /<span class="sf-run" style="left:0%;width:37\.5%;--sf-row:0" title="one &lt;b&gt;" data-tip="one &lt;b&gt;"><i style="left:33\.33%"><\/i><\/span>/, 'a notch only inside its run');
+  assert.match(html, /<span class="sf-run sf-run-flag" style="left:77\.5%;width:0\.0\d%;--sf-row:1"[^>]*><\/span>/, 'a sliver has a marker and no notch');
+  assert.match(html, /<span class="sf-floor-break" style="left:75%;width:2\.5%" title="No loop ran for 2 days 22 hours"/);
+  assert.match(html, /<span class="sf-floor-night" style="left:20%;width:20%"><\/span>/);
+  assert.match(html, /<li style="left:0%;width:74\.4%"><a href="\/software-factory\/loops\/#loop-first"><code>first<\/code><\/a><\/li>/);
+  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-start" style="left:0%">Nov 6<\/span>/);
+  assert.doesNotMatch(html, /6 pm/);
+  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-day" style="left:25%">Nov 7<\/span>/);
+  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-start" style="left:77\.5%">Nov 14<\/span>/);
+  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-day sf-floor-tick-end" style="left:97\.5%">Nov 15<\/span>/, 'a label at the right edge ends at its mark');
+  assert.match(html, /<div class="sf-floor-plot" aria-hidden="true">/, 'the plot is a picture; the names are links');
+});
+
+test('the loops finding claims a pace only from the data, and says who it asked', () => {
+  const out = run();
+  const snap = snapshotOf(out);
+  const base = snap.overview.loops;
+  const campaign = (id, streams) => ({ ...base.campaigns[0], id, streams });
+  // Two campaigns, one after the other: three loops at once in the first, then one that ends blocked.
+  const runs = [
+    floorRun('demo-x', 'demo', 0, 4, { commits: 9 }),
+    floorRun('demo-y', 'demo', 0, 3, { commits: 6 }),
+    floorRun('demo', 'demo', 4, 5, { commits: 2 }),
+    floorRun('later', 'later', 6, 10, { commits: 7, outcome: 'blocked' }),
+    floorRun('later', 'later', 40, 41, { commits: 1 }),
+  ];
+  const loops = { ...base, runs, campaigns: [campaign('demo', 2), campaign('later', 0)], peakParallel: { runs: 2, at: at(0) } };
+  const html = findingsHtml({ ...snap, overview: { ...snap.overview, loops } });
+  // 24 commits in the ten hours of the first stretch: one every 25 minutes.
+  assert.match(html, /<article class="sf-panel sf-finding sf-finding-wide" id="finding-loops"/);
+  assert.match(html, />A commit every 25 minutes for 10 hours<\/a><\/h2>/);
+  assert.match(html, /That is the average from Nov 6, 11 pm to Nov 7, 9 am, Toronto time: 24 commits from two campaigns, with a loop running for 9 of the 10 hours and up to two at once\. Nobody typed a prompt into any of them\./);
+  // The merging loop takes the last row of its campaign; the next campaign starts again from the top.
+  const row = (loop) => Number(html.match(new RegExp(`--sf-row:(\\d)" title="${loop}, `))[1]);
+  assert.deepEqual([row('demo-x'), row('demo-y'), row('demo'), row('later')], [0, 1, 2, 0]);
+  assert.match(html, /style="--sf-rows:3"/);
+  assert.equal((html.match(/class="sf-run sf-run-flag"/g) ?? []).length, 1);
+  assert.match(html, /Ended blocked on a person, or flagged for one/);
+  assert.match(html, /title="later, from Nov 7, 5 am: 2 cycles and 7 commits in 4 h\. Blocked on a person\."/);
+  // 10 pm to 6 am is shaded: the first stretch starts at 11 pm, inside a night.
+  assert.match(html, /<span class="sf-floor-night" style="left:0%;width:[\d.]+%">/);
+  assert.match(html, /title="No loop ran for 30 hours"/);
+  assert.match(html, /Every loop run, Nov 6 to Nov 8, 2026, on one clock\./);
+  assert.match(html, /The clock skips the 30 hours when no loop ran\./);
+  // A person's prompt in the stretch is never passed over.
+  const typed = findingsHtml({ ...snap, overview: { ...snap.overview, loops: { ...loops, runs: runs.map((r, i) => (i ? r : { ...r, person: 1 })) } } });
+  assert.doesNotMatch(typed, /Nobody typed/);
 });

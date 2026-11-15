@@ -158,6 +158,72 @@ export function lanesHtml(lanes, { from, to, startLabel, endLabel }) {
   return `<div class="sf-lanes" aria-hidden="true">${rows}<div class="sf-lane sf-lane-axis"><span class="sf-lane-label"></span><span class="sf-lane-scale"><span>${e(startLabel)}</span><span>${e(endLabel)}</span></span></div></div>`;
 }
 
+const BREAK = 2.5; // the width of a cut in the floor's clock, in percent
+
+/**
+ * Every run on one clock, with the long pauses cut out of it: the floor.
+ *
+ *   panels: [{ from, to, pause }] in order, times in ms; each is drawn to the
+ *     same scale, and `pause` says how long the cut before it was.
+ *   rows: how many rows the plot has. A run sits in row `row`, from 0.
+ *   runs: [{ from, to, row, ticks: [ms], tip, flag }]; a notch per tick, and a
+ *     marker on a run's end when `flag` is set.
+ *   names: [{ at, until, label, href }]: a link over the plot, with room to `until`.
+ *   nights: [{ from, to }], shaded behind the runs.
+ *   ticks: [{ at, label, kind }], kind 'start' (a panel's first), 'day' or 'hour'.
+ * The plot is a picture of records that the linked page lists, so only the
+ * names are read out.
+ */
+export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
+  const total = panels.reduce((t, p) => t + (p.to - p.from), 0) || 1;
+  const scale = (100 - BREAK * (panels.length - 1)) / total;
+  let left = 0;
+  const placed = panels.map((p) => {
+    const at = { ...p, left, width: (p.to - p.from) * scale };
+    left += at.width + BREAK;
+    return at;
+  });
+  const x = (ms) => {
+    const p = placed.findLast((q) => ms >= q.from) ?? placed[0];
+    return Number((p.left + (Math.min(Math.max(ms, p.from), p.to) - p.from) * scale).toFixed(2));
+  };
+  const box = (from, to) => `left:${x(from)}%;width:${Number(Math.max(0, x(to) - x(from)).toFixed(2))}%`;
+  const shade = nights.map((n) => `<span class="sf-floor-night" style="${box(n.from, n.to)}"></span>`).join('');
+  const cuts = placed
+    .slice(1)
+    .map((p) => `<span class="sf-floor-break" style="left:${Number((p.left - BREAK).toFixed(2))}%;width:${BREAK}%" title="${e(p.pause)}" data-tip="${e(p.pause)}"></span>`)
+    .join('');
+  const bars = runs
+    .map((r) => {
+      const width = x(r.to) - x(r.from);
+      const length = Math.max(1, r.to - r.from);
+      // A run too short to be more than a sliver carries no notches.
+      const notches =
+        width < 0.6
+          ? ''
+          : r.ticks
+              .filter((t) => t > r.from && t < r.to)
+              .map((t) => `<i style="left:${Number((((t - r.from) / length) * 100).toFixed(2))}%"></i>`)
+              .join('');
+      return `<span class="sf-run${r.flag ? ' sf-run-flag' : ''}" style="${box(r.from, r.to)};--sf-row:${r.row}" title="${e(r.tip)}" data-tip="${e(r.tip)}">${notches}</span>`;
+    })
+    .join('');
+  const labels = names
+    .map((n) => `<li style="left:${x(n.at)}%;width:${Number(Math.max(0, x(n.until) - x(n.at) - 0.6).toFixed(2))}%"><a href="${e(n.href)}"><code>${e(n.label)}</code></a></li>`)
+    .join('');
+  // A label starts at its mark. One near a panel's start would run into the
+  // start's own label, and one near the right edge ends at its mark instead.
+  const marks = ticks
+    .filter((t) => t.kind === 'start' || x(t.at) - (placed.findLast((q) => t.at >= q.from) ?? placed[0]).left >= 8)
+    .map((t) => `<span class="sf-floor-tick sf-floor-tick-${e(t.kind)}${x(t.at) > 90 ? ' sf-floor-tick-end' : ''}" style="left:${x(t.at)}%">${e(t.label)}</span>`)
+    .join('');
+  return `<div class="sf-floor" style="--sf-rows:${rows}">
+              <ul class="sf-floor-names">${labels}</ul>
+              <div class="sf-floor-plot" aria-hidden="true">${shade}${cuts}${bars}</div>
+              <div class="sf-floor-axis" aria-hidden="true">${marks}</div>
+            </div>`;
+}
+
 const PLOTS = {
   wide: { W: 640, H: 340, PAD: { top: 22, right: 14, bottom: 40, left: 52 }, r: 3.4 },
   compact: { W: 360, H: 330, PAD: { top: 22, right: 10, bottom: 40, left: 44 }, r: 3 },

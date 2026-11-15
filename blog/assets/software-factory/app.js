@@ -227,7 +227,7 @@ async function start(shell) {
     const control = $('[data-sf-tool-model]');
     if (control) control.hidden = false;
     for (const title of $$('[data-tip] > title', root)) title.parentNode.removeChild(title);
-    for (const run of $$('.sf-run[title]', root)) run.removeAttribute('title');
+    for (const mark of $$('[data-tip][title]', root)) mark.removeAttribute('title');
   }
 
   function drawFactory(snap) {

@@ -67,6 +67,21 @@ export function torontoDay(instant) {
   return TORONTO.format(new Date(instant));
 }
 
+const TORONTO_CLOCK = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit', hourCycle: 'h23' });
+
+/** The America/Toronto wall clock of an instant: { hour: 0..23, minute }. */
+export function torontoClock(instant) {
+  const parts = Object.fromEntries(TORONTO_CLOCK.formatToParts(new Date(instant)).map((p) => [p.type, p.value]));
+  return { hour: Number(parts.hour) % 24, minute: Number(parts.minute) };
+}
+
+/** That wall clock as words: '2:15 pm', '6 am', 'noon', 'midnight'. */
+export function clockWords({ hour, minute }) {
+  if (minute === 0 && hour === 0) return 'midnight';
+  if (minute === 0 && hour === 12) return 'noon';
+  return `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, '0')}` : ''} ${hour < 12 ? 'am' : 'pm'}`;
+}
+
 /**
  * The date-range control's choice as a half-open range of local days, ending
  * with the snapshot's last day (not the reader's clock: the data is as of the

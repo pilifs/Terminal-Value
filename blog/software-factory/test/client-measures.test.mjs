@@ -10,7 +10,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, niceTicks } from '../../assets/software-factory/chart.js';
 import { formatCoverage, formatTick, formatValue } from '../../assets/software-factory/format.js';
-import { datasetDays, METRICS, periodRange, torontoDay, trend } from '../../assets/software-factory/measures-local.js';
+import { clockWords, datasetDays, METRICS, periodRange, torontoClock, torontoDay, trend } from '../../assets/software-factory/measures-local.js';
 import { computeMeasures, series } from '../measures.mjs';
 import { loadSnapshot } from '../index.mjs';
 
@@ -107,4 +107,16 @@ test('the chart has clean ticks and an accessible name', () => {
   // A compact shape for phones, with ids of its own.
   assert.match(svg, /<svg class="sf-chart sf-chart-compact" viewBox="0 0 360 240"[^>]*aria-labelledby="sf-trend-compact-title sf-trend-compact-desc"/);
   assert.equal(new Set(svg.match(/id="[^"]+"/g)).size, 4);
+});
+
+test('the Toronto wall clock of an instant, and that clock in words', () => {
+  assert.deepEqual(torontoClock('2026-11-06T19:15:03Z'), { hour: 14, minute: 15 }); // EST, UTC-5
+  assert.deepEqual(torontoClock('2026-10-31T04:00:00Z'), { hour: 0, minute: 0 }); // EDT, UTC-4: midnight is hour 0, never 24
+  assert.deepEqual(torontoClock(Date.parse('2026-11-07T05:00:00Z')), { hour: 0, minute: 0 });
+  assert.equal(clockWords({ hour: 14, minute: 15 }), '2:15 pm');
+  assert.equal(clockWords({ hour: 0, minute: 5 }), '12:05 am');
+  assert.equal(clockWords({ hour: 22, minute: 0 }), '10 pm');
+  assert.equal(clockWords({ hour: 6, minute: 0 }), '6 am');
+  assert.equal(clockWords({ hour: 12, minute: 0 }), 'noon');
+  assert.equal(clockWords({ hour: 0, minute: 0 }), 'midnight');
 });

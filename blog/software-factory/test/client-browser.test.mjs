@@ -282,6 +282,21 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           }));
           assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 3 : 0, h1: 1, overflow: 0 }, pathname);
+          // Every run on one clock, on the overview and on the loops page: a run under the pointer says what it was.
+          if (name === 'overview' || name === 'loops') {
+            const run = page.locator('.sf-floor .sf-run').first();
+            await run.scrollIntoViewIfNeeded();
+            await run.hover();
+            const floor = await page.evaluate(() => ({
+              runs: document.querySelectorAll('.sf-floor .sf-run').length,
+              names: document.querySelectorAll('.sf-floor-names a[href^="/software-factory/loops/#loop-"]').length,
+              tip: document.querySelector('.sf-tip').hidden ? null : document.querySelector('.sf-tip').textContent,
+              said: document.querySelector('.sf-floor .sf-run').dataset.tip,
+            }));
+            assert.ok(floor.runs > 1 && floor.names > 1, `${pathname}: ${JSON.stringify(floor)}`);
+            assert.equal(floor.tip, floor.said, pathname);
+            assert.match(floor.tip, /, from \w+ \d+, [\d:]+ [ap]m: \d+ cycles? and \d+ commits? in /);
+          }
           assert.deepEqual(errors, [], pathname);
         } finally {
           await context.close();

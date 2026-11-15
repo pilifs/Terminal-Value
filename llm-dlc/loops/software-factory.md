@@ -838,6 +838,12 @@ Settled by the author on 2026-11-14:
   each have their own page (`loops/`, `tools/`, `code/`, `usage/`) under one navigation row. At 1280 wide the
   overview went from 12,750 px to 2,300 px. No change to the contract or the snapshot. `app.js` runs on every page
   of numbers; the filters live on the usage page.
+- **Every run on one clock** (2026-11-15, interactive): docs/software-factory.md, "Every run on one clock". The
+  loops finding now claims the pace of the busiest stretch ("A commit every 13 minutes for 49 hours") over one
+  figure of all 47 runs: a bar a run, a notch a cycle's commit, a diamond where a run ended asking for a person,
+  nights shaded, the idle days cut out of the clock. The same figure is on the loops page. Drawn from
+  `overview.loops.runs`; no change to the contract or the snapshot. The loops page's title says "no prompt from a
+  person", not "nobody at the keyboard".
 - Status: done
 
 ## Loop settings

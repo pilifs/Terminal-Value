@@ -111,7 +111,7 @@ The author found the overview too cluttered: at 1280 wide it was 12,750 px tall,
 
 | Page | What is on it |
 | --- | --- |
-| `/software-factory/` | The headline and the longest run's record. Then three findings, one each for the loops, the tools and the code: a claim computed from the data, a sentence, three numbers, one chart and a link. Then where to go next: usage, analysis, methodology |
+| `/software-factory/` | The headline and the longest run's record. Then three findings, one each for the loops, the tools and the code: a claim computed from the data, a sentence, three numbers, one figure and a link. Then where to go next: usage, analysis, methodology |
 | `/software-factory/loops/` | Everything the feature loops section had, and the "Loops running now" panel |
 | `/software-factory/tools/` | Model performance: tool call success, failures by day, recovery, and the six tables |
 | `/software-factory/code/` | Code: rework by day, what a change took, languages, and loops against the rest |
@@ -130,6 +130,31 @@ How it is put together:
 - **Links between pages are absolute**, from `/software-factory/`. A link to a closed `<details>`, such as
   `usage/#explore-changes`, opens it. A test follows every link between the pages to a page and an id that exist.
 - **Each section's title is the page's `h1`**, and the headings under it moved up a level.
+
+### Every run on one clock
+
+The loops finding leads the overview with one figure of every finished loop run, and its claim is the pace of the
+busiest stretch: "A commit every 13 minutes for 49 hours". The same figure is on the loops page under "Every run on
+one clock". It needs nothing new in the snapshot: `overview.loops.runs` already has each run's start, end, outcome
+and the seconds at which its cycles committed.
+
+- **A stretch** is a run of work with no pause longer than six hours (`stretches` in `factory.js`). The claim comes
+  from the stretch with the most commits, and only when it has at least ten commits over at least two hours.
+  Otherwise the finding counts campaigns, runs and cycles instead. "Nobody typed a prompt into any of them" is
+  printed only when the runs of that stretch record no prompt from a person.
+- **The clock is cut** where no loop ran for more than six hours, and each stretch is drawn to the same scale. The
+  cut is hatched, and the caption says how long it was. The figure shows the newest stretches, up to about 120
+  hours of them; when older ones are left out the caption says so.
+- **Rows.** A campaign takes a block of rows, one for each of its loops, with the loop that merges the others last.
+  Campaigns that overlap in time get blocks under each other.
+- **Marks.** A bar is a run and a notch is a cycle's commit. A diamond on a run's end means it ended blocked on a
+  person or flagged for one. The shaded bands are 10 pm to 6 am on Toronto's clock: a definition, not a measurement.
+- **`floorHtml` in `figures.js` is HTML and CSS**, positioned in percent, so it needs no second shape for a phone.
+  The axis shows hours from 60rem wide, days from 36rem, and each stretch's first day below that. The campaign
+  names over the plot are links to the campaign's card on the loops page; the plot itself is hidden from a screen
+  reader, because that page lists every run.
+- The loops page's title no longer says "nobody at the keyboard". The record shows no prompt from a person inside
+  the runs; it does not show where the person was. It now says "no prompt from a person".
 
 The contract and the snapshot did not change. The filters' link, `?period=…`, now belongs to
 `/software-factory/usage/`. The section isn't published, so no public link moved.
