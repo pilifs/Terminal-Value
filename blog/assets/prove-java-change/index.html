@@ -94,7 +94,7 @@ always GET, POST, … or UNKNOWN</span>
           </div>
           <div class="grid g3">
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag">Unit tests: passed</span></p>
               <h3>A refactor that stops sending a Kafka event</h3>
               <p>The route returns the same total on every request. For an order of 100 items or more, it no longer sends the event.</p>
               <pre class="witness">POST /quotes: cents=1, quantity=100
@@ -103,14 +103,14 @@ after:  returns 90; no modeled call</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/193-a-bulk-order-s-quote-event-dropped-in-the-refactor-refuted-on-the-route-s-trace-of-sends/README.md">Read example 193 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag">Unit tests: passed</span></p>
               <h3>A cleanup that breaks every quorum</h3>
               <p><code>n / 2 + 1</code> becomes <code>(n + 1) / 2</code>. They agree on every odd cluster size the tests use. At two nodes, a "majority" is one.</p>
               <pre class="witness">majority(n=2) returns 1</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/015-rounded-half-is-not-a-majority/README.md">Read example 015 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag">Unit tests: passed</span></p>
               <h3>A codec that loads any class a message names</h3>
               <p>A convenience for one consumer gives the module reflection. No dependency is vulnerable, so there is no CVE to look up.</p>
               <pre class="witness">reflection: MessageCodec.decode
@@ -167,7 +167,7 @@ after:  returns 90; no modeled call</pre>
             <div class="card engine">
               <p class="engine-n"><b>91,049</b> lines of Rust</p>
               <h3><code>jvmcontract</code>, the verifier</h3>
-              <p>A class-file reader, a bytecode interpreter and its own bounded model checker over a bundled SAT solver. It derives contracts without a JVM and proves without <code>javac</code>. JBMC stays available as a second engine.</p>
+              <p>A class-file reader, a bytecode interpreter and its own bounded model checker over a bundled SAT solver. It derives contracts without a JVM and proves without <code>javac</code>. JBMC, the CBMC project's model checker for Java bytecode, stays available as a second engine.</p>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md">Read how each verdict is proved →</a>
             </div>
             <div class="card engine">
@@ -235,7 +235,7 @@ decisions a person made: 0</pre>
           <p class="loop-back"><span>each run extends your local copy, and the next one is cheaper</span></p>
           <p class="note"><b>This happened on the first real target.</b> Every proof task of example 285 first stopped at something the verifier could not model. The proof loop extended <code>jvmcontract</code> in three commits and reran the unchanged claims on the same JARs. All four gave the answer written down beforehand, one of them a refutation of a deliberately broken copy of the fix. <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md#closed-gaps">Read the closed gaps →</a> · <a href="#verifier">What stops it bending the verifier? →</a></p>
 
-          <h3 class="sub">The four steps</h3>
+          <h3 class="sub">The plugin's four steps</h3>
           <ol class="steps four">
             <li><h3>Set up and measure</h3><p>It installs a released copy of the repository, checked against a hash the skill carries, and measures your machine.</p><p class="you">You confirm.</p></li>
             <li><h3>State the claims</h3><p>It pins the change to two exact commits, sizes it against the closest past examples, and writes each claim in full.</p><p class="you">You confirm the claims and the estimate.</p></li>
@@ -327,21 +327,21 @@ decisions a person made: 0</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">Read example 285 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Regression proof</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag">Regression proof</span></p>
               <h3>A fast path that writes a class file the JVM rejects</h3>
               <p>The encoder's own properties allow it. Only the previous version disagrees, found in 1.1 s where JBMC ran out of memory.</p>
               <pre class="witness">encodeInto(chars=['\u0080'], out=[0])</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/143-an-ascii-fast-path-that-admits-u0080-writes-it-in-one-byte-which-the-properties-allow/README.md">Read example 143 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag model">TLA+ model</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag model">TLA+ model</span></p>
               <h3>A Raft leader that loses a committed entry</h3>
               <p>Counting replicas looks right, and holds in all 25,666 states of the usual configuration. Figure 8 of the Raft paper breaks it.</p>
               <pre class="witness">LeaderCompleteness, 16-step trace</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/097-leader-that-commits-an-earlier-terms-entry-by-counting-replicas-loses-it-to-a-rival/README.md">Read example 097 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Build comparison</span></p>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="tag">Build comparison</span></p>
               <h3>A retry shortcut that loses a delivery</h3>
               <p>A client error now answers 200 at once. The answer is the same as before, but the delivery is no longer dead-lettered.</p>
               <pre class="witness">status=400, idempotent=false, attempts=0
@@ -359,7 +359,7 @@ after:  -2147483648</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/105-commons-numbers-223-pow-of-minus-two-to-the-31/README.md">Read example 105 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill unverifiable">Unverifiable</span> <span class="tag">jackson-core</span></p>
+              <p class="ex-tags"><span class="pill unverifiable">Left open</span> <span class="tag">jackson-core</span></p>
               <h3>A division trick where nothing was proved</h3>
               <p>A multiply-and-shift replaces a division by 1000. The solver ran out of time and memory, and the report says exactly that.</p>
               <pre class="witness">out of memory (3 GiB) in 11 s</pre>
