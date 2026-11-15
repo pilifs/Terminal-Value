@@ -303,7 +303,9 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
     usd: r.usd,
     prompts: r.prompts,
     codeAdded: r.codeAdded,
-    cycles: r.record.cycles.map((c) => ({ n: c.n, at: c.at, change: c.change, summary: c.summary, decision: c.decision })),
+    cycles: r.record.cycles.map((c) => ({ n: c.n, at: c.at, change: c.change, summary: c.summary, decision: c.decision, ...(c.commits > 1 ? { commits: c.commits } : {}) })),
+    // What was taken from the source's index of loops for a record still being written: 'cycles'.
+    ...(r.record.completed ? { completed: r.record.completed } : {}),
     recordUrl: config.source.runUrl.replace('{sha}', normalized.source.sha).replace('{session}', r.session).replace('{run}', r.id),
     summaryUrl: config.source.summaryUrl.replace('{sha}', normalized.source.sha).replace('{session}', r.session),
   }));

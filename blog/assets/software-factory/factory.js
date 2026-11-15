@@ -826,15 +826,19 @@ export function runRecordHtml(r, { models = [] } = {}) {
   const ended = [who, e(OUTCOMES[r.outcome] ?? r.outcome)].filter(Boolean);
   const links = `${link(r.recordUrl, 'Run record')}${link(r.summaryUrl, 'Session summary')}`.replace(/^ · /, '');
   const name = session ? `verification loop${r.loop === VERIFICATION ? '' : `: ${e(r.loop)}`}` : `feature loop: ${e(r.loop)}`;
+  // A run record still being written at the revision was completed from the index: say what was.
+  const lagging = (r.completed ?? []).includes('cycles');
   const note = session
     ? 'This session left no run record. What it took is from the source’s index of its loops.'
     : r.source
       ? 'This run left no run record. Each line is a cycle as the source’s index of its loops read it from the session, by the summary line of its commit.'
-      : 'Each line is a cycle, by the summary line of its own commit.';
+      : `Each line is a cycle, by the summary line of its own commit.${
+          lagging ? ' The run record was still being written at this revision: the cycles it does not list yet are from the source’s index of its loops.' : ''
+        }`;
   return `<div class="sf-ledger sf-ledger-full">
             <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>${name}</code></div>
             <div class="sf-ledger-body">
-              <p class="sf-ledger-meta">started ${e(dayYear(r.started))}, ${e(clockWords(torontoClock(started)))} · ${label ? `${e(label)} (<code>${e(r.model)}</code>)` : `<code>${e(r.model)}</code>`}, ${e(r.effort)} effort</p>
+              <p class="sf-ledger-meta">started ${e(dayYear(r.started))}, ${e(clockWords(torontoClock(started)))} · ${label && label !== r.model ? `${e(label)} (<code>${e(r.model)}</code>)` : `<code>${e(r.model)}</code>`}, ${e(r.effort)} effort</p>
               <ol>
               ${lines || `<li class="sf-ledger-more${session ? ' sf-ledger-plain' : ''}">${session ? '' : '<span class="sf-ledger-time"></span><span class="sf-ledger-cycle"></span>'}<span class="sf-ledger-text">${none}</span></li>`}
               </ol>

@@ -539,6 +539,40 @@ const loopsDoc = () => {
 };
 const LOOPS_FILE = 'llm-dlc/traces/loops.json';
 
+test('a run record still being written is completed from the index, and its quoted instruction is the loop’s own prompt', async () => {
+  const { dir } = materialize('stale-source');
+  const sid = json(dir, 'llm-dlc/index.json').sessions[1].session_id;
+  const id = '2026-11-02-100000-core-values';
+  // The record has its header and the instruction it gives each cycle, and no cycle line or end yet.
+  const record = `# Feature loop: core-values\n\nStarted 2026-11-02 10:00:00 UTC, 16 cycles, session ${sid}, claude-opus-5-5 at high effort, after change kkkkkkkkkkkl.\n\n> Formally prove example {} as well as it can be proved\n\nEach cycle puts the next item in place of {}: 7 8.\n\n## Commits\n`;
+  write(dir, `llm-dlc/traces/${sid}/runs/${id}.md`, record);
+  // The session's prompts: the instruction with an item in place, the same words after other whitespace, and two a person typed.
+  const rel = `llm-dlc/traces/${sid}/metrics.json`;
+  const metrics = json(dir, rel);
+  const prompt = (text, minute) => ({ ts: `2026-11-02T10:${minute}:00.000Z`, end: `2026-11-02T10:${minute}:30.000Z`, kind: 'human', text });
+  metrics.prompts = [prompt('Formally prove example 7 as well as it can be proved', '01'), prompt('Formally  prove\nexample 8 as well', '20'), prompt('Formally prove it', '40'), prompt('Why did example 7 fail?', '50')];
+  write(dir, rel, metrics);
+  // Without the index the record stands as written: no cycle. The instruction is still the loop's.
+  const alone = await load(dir);
+  assert.deepEqual(alone.prompts.filter((p) => p.session === sid).map((p) => p.sender), ['harness', 'harness', 'person', 'person']);
+  assert.deepEqual([alone.runs.find((r) => r.id === id).cycles, alone.runs.find((r) => r.id === id).completed], [[], undefined]);
+  assert.doesNotMatch(JSON.stringify(alone), /Formally prove/, 'the instruction is prompt text: it goes no further');
+  // The index has the run's first cycle, of two commits: the record's list is completed from it, and says so.
+  const doc = loopsDoc();
+  Object.assign(doc.cycles.find((c) => c.run === id), { changes: ['kkkkkkkkkkkm', 'kkkkkkkkkkkn'], summary: 'Example 7 is decided', decision: 'continue' });
+  write(dir, LOOPS_FILE, doc);
+  const run = (await load(dir)).runs.find((r) => r.id === id);
+  assert.deepEqual(run.cycles, [{ n: 1, at: '2026-11-02T10:45:00.500Z', change: 'kkkkkkkkkkkm', summary: 'Example 7 is decided', decision: 'continue', commits: 2 }]);
+  assert.deepEqual(run.completed, ['cycles']);
+  // The record's own end stays what it says: none yet.
+  assert.deepEqual([run.ended, run.outcome], [null, 'open']);
+  // A record that lists the cycle itself takes nothing from the index.
+  write(dir, `llm-dlc/traces/${sid}/runs/${id}.md`, `${record}\n- cycle 1, 2026-11-02 10:44:00, \`kkkkkkkkkkkm\`: As the record says\n`);
+  const whole = (await load(dir)).runs.find((r) => r.id === id);
+  assert.deepEqual(whole.cycles.map((c) => [c.n, c.summary, c.commits]), [[1, 'As the record says', undefined]]);
+  assert.equal(whole.completed, undefined);
+});
+
 test('the source’s account of its loops is read as it stands, checked to add up, and not required', async () => {
   const { dir } = materialize('stale-source');
   // The fixture has none: no account, and no input listed.

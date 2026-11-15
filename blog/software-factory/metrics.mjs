@@ -30,6 +30,10 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 14 completes a run record that was still being written at the
+//     revision from the index of loops (import.mjs): the cycles it lacks.
+//     Such a record of the loops collection says `completed`. A prompt that
+//     opens with the instruction a run record quotes is the loop's own.
 //   - Version 13 moves the list of source inputs out of the manifest, into a
 //     collection of its own (details/inputs.json): the manifest's source says
 //     inputCount. Each example result file is an input of its own again. The
@@ -74,7 +78,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '13' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '14' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 

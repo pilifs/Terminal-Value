@@ -1330,6 +1330,7 @@
               "source": { "enum": ["transcript", "session"], "description": "On a record read from the source's index of loops, where the index read the run: a session's transcript, or a session of the verification loop. Absent on a record read from the run's own run record. Since generator 11." },
               "reason": { "type": ["string", "null"], "description": "The index's word on how it read the run's end: typed by hand, no end recorded, summarized." },
               "interjections": { "type": "integer", "minimum": 0, "description": "Prompts in the run that are not the loop's own, by the index." },
+              "completed": { "type": "array", "items": { "enum": ["cycles"] }, "description": "On a record read from a run record that was still being written at the revision: what was taken from the source's index of loops to complete it (the cycles that committed and the record doesn't list yet). Since generator 14." },
               "limit": { "type": ["integer", "null"], "minimum": 0 },
               "commits": { "type": "integer", "minimum": 0 },
               "calls": { "type": ["integer", "null"], "minimum": 0 },
@@ -1360,7 +1361,7 @@
                     "n": { "type": "integer", "minimum": 0 },
                     "at": { "$ref": "#/$defs/instant" },
                     "change": { "type": ["string", "null"], "description": "The change the cycle committed, the first when it committed several; null for a cycle that ended without a commit." },
-                    "commits": { "type": "integer", "minimum": 0, "description": "The commits the cycle made, on a record read from the index of loops." },
+                    "commits": { "type": "integer", "minimum": 0, "description": "The commits the cycle made, on a cycle read from the index of loops." },
                     "summary": { "type": "string" },
                     "decision": { "enum": ["continue", "stop", null] }
                   }

@@ -6,6 +6,7 @@
 //
 //   parseRunRecord(text, loopsConfig) -> { started, limit, session, model, effort,
 //     ended, outcome, cycles: [{ n, at, change, summary, decision }] } | null
+//   instructionOpening(text)          -> the opening words of the instruction a run record quotes | null
 //   senderOf(text, loopsConfig)       -> 'harness' | 'agent' | 'interrupt' | 'person'
 //   campaignOf(loop, briefs)          -> the campaign a loop runs in
 //   classOf(path, codeConfig)         -> a language id, 'docs' or 'data'
@@ -66,6 +67,29 @@ export function parseRunRecord(text, loops) {
     outcome: ended === null ? 'open' : outcomeOf(reason, loops),
     cycles,
   };
+}
+
+// An instruction is told by its opening words, and fewer than this could be anyone's.
+const MIN_OPENING = 16;
+const squash = (s) => s.replace(/\s+/g, ' ').trim();
+
+/**
+ * The opening words of the instruction a run record quotes under its header
+ * (`> ...`): what the loop's script sends each cycle. A list's place (`{}`)
+ * ends them, and they are at most 80 characters, as the source's own
+ * loop_stats.py reads them. Null for a record that quotes none, or one too
+ * short to tell from anyone's words. The words are prompt text: they are used
+ * to tell who sent a prompt and go no further.
+ */
+export function instructionOpening(text) {
+  const header = text.match(HEADER);
+  if (!header) return null;
+  const from = header.index + header[0].length;
+  const until = text.indexOf('\n## Commits', from);
+  const quoted = (until === -1 ? text.slice(from) : text.slice(from, until)).match(/^> (.*)$/m);
+  if (!quoted) return null;
+  const opening = squash(quoted[1]).split('{}')[0].slice(0, 80);
+  return opening.length >= MIN_OPENING ? opening : null;
 }
 
 function outcomeOf(reason, loops) {

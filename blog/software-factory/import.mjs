@@ -75,7 +75,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_DIR, serialize, sha256 } from './identity.mjs';
 import { aggregate, collectionFiles } from './metrics.mjs';
-import { campaignOf as loopCampaign, classOf, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from './records.mjs';
+import { campaignOf as loopCampaign, classOf, instructionOpening, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from './records.mjs';
 import { validate, validateSnapshotDir } from './validate.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -417,6 +417,14 @@ export function normalizeSources(raw, config = loadConfig()) {
     if (m) sessionCampaign.set(m[1], m[3]);
   }
 
+  // The instruction each run record quotes, by its opening words: what a loop's
+  // script sends that config/loops.json has no pattern for, such as a
+  // moonshot's own instruction. A prompt that opens with one is the loop's,
+  // as the source's own statistics count it.
+  const openings = [...new Set((raw.runs ?? []).map((p) => (RUN.test(p) && raw.files.get(p) ? instructionOpening(raw.files.get(p).toString('utf8')) : null)).filter(Boolean))];
+  const squashed = (s) => s.replace(/\s+/g, ' ').trim();
+  const loopsOwn = (text) => openings.length > 0 && openings.some((o) => squashed(text).startsWith(o.trimEnd()));
+
   // Sessions and their calls, prompts, tool calls and commits.
   const calls = [];
   const sessions = [];
@@ -471,7 +479,7 @@ export function normalizeSources(raw, config = loadConfig()) {
           session: s.session_id,
           start: new Date(q.ts).toISOString(),
           end: isInstant(q.end) ? new Date(q.end).toISOString() : null,
-          sender: q.kind === 'human' ? senderOf(text, config.loops) : q.kind === 'command' ? 'command' : 'notification',
+          sender: q.kind === 'human' ? (loopsOwn(text) ? 'harness' : senderOf(text, config.loops)) : q.kind === 'command' ? 'command' : 'notification',
           command: q.kind === 'command' ? (text.match(/^\/[a-z][a-z-]*/)?.[0] ?? null) : null,
           calls: num(q.api_calls),
           toolCalls: num(q.tool_calls),
@@ -848,6 +856,23 @@ export function normalizeSources(raw, config = loadConfig()) {
     runs.push({ id: m[2], loop: m[3], campaign: loopCampaign(m[3], briefs), ...record, session: m[1] });
   }
   runs.sort((a, b) => a.started.localeCompare(b.started) || a.id.localeCompare(b.id));
+  // A run record still being written at the revision has no Ended line yet, or
+  // fewer cycle lines than the source's index of its loops has for the run.
+  // It is completed from the index: the cycles that committed and the record
+  // doesn't list. The run says what was taken (`completed`). Its end stays
+  // what the record and the session's prompts give.
+  for (const run of loopAccount ? runs : []) {
+    const indexed = loopAccount.runs.find((x) => x.run === run.id);
+    if (!indexed) continue;
+    const listed = new Set(run.cycles.map((c) => c.n));
+    const more = indexed.cycleList.filter((c) => !listed.has(c.n) && c.commits > 0 && c.changes.length && c.summary);
+    const completed = [];
+    if (more.length) {
+      run.cycles = [...run.cycles, ...more.map((c) => ({ n: c.n, at: c.at, change: c.changes[0], summary: c.summary, decision: c.decision, commits: c.commits }))].sort((a, b) => a.n - b.n);
+      completed.push('cycles');
+    }
+    if (completed.length) run.completed = completed;
+  }
 
   // Code: git's own account of each commit, where the source was a checkout.
   const code = raw.code

@@ -11,7 +11,7 @@ import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
 import { aggregate } from '../metrics.mjs';
-import { campaignOf, classOf, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from '../records.mjs';
+import { campaignOf, classOf, instructionOpening, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from '../records.mjs';
 import { validate } from '../validate.mjs';
 
 const config = loadConfig();
@@ -74,6 +74,19 @@ test('a run record: every way a run ends, a cycle limit, no end, and no header',
   assert.equal(open.ended, null, 'the quoted instruction’s "Stopped" is not an end: it does not start a line');
   assert.equal(parseRunRecord(RECORD.replace('no limit on cycles', 'at most 5 cycles'), config.loops).limit, 5);
   assert.equal(parseRunRecord('# Notes\n\nNot a record.\n', config.loops), null);
+});
+
+test('the instruction a run record quotes is read by its opening words, as the source reads it', () => {
+  // The quoted line under the header, whitespace collapsed, at most 80 characters.
+  assert.equal(instructionOpening(RECORD), 'Work on the brief. Stopped 2026-01-01 00:00:00: this is the instruction, quoted,');
+  // A list's place ends the opening: each cycle puts another item there.
+  const templated = RECORD.replace(/^> .*$/m, '> Formally  prove example {} as elegantly and efficiently as possible');
+  assert.equal(instructionOpening(templated), 'Formally prove example ');
+  // Fewer than 16 characters could be anyone's words; a record that quotes nothing has none; only the header's quote counts.
+  assert.equal(instructionOpening(RECORD.replace(/^> .*$/m, '> Prove {} now')), null);
+  assert.equal(instructionOpening(RECORD.replace(/^> .*$/m, '')), null);
+  assert.equal(instructionOpening(RECORD.replace(/^> .*$/m, '').replace('## Summary\n', '## Summary\n\n> A quote in the summary, long enough to be one\n')), null);
+  assert.equal(instructionOpening('# Notes\n\n> Not a record, however long the quoted line is.\n'), null);
 });
 
 test('who sent a prompt: the loop, another agent, an interruption, or a person', () => {
@@ -1454,6 +1467,13 @@ test('a run the loops collection has a record for can be picked, and a record re
   assert.match(session, /<p class="sf-ledger-note">This session left no run record\. What it took is from the source’s index of its loops\.<\/p>/);
   // A campaign's card counts the runs that left a run record, and its list keeps to them.
   assert.match(campaignRunsHtml([base], 'spring'), /No runs recorded/);
+  // A run record still being written at the revision, completed from the index, says what was taken.
+  const { source, kind, reason, interjections, ...own } = base;
+  const lagging = runRecordHtml({ ...own, prompts: { harness: 1, person: 0, agent: 0, interrupt: 0, compactions: 0 }, completed: ['cycles'], recordUrl: 'https://github.com/pilifs/in-the-loop/blob/abc/r.md' });
+  assert.match(lagging, /Each line is a cycle, by the summary line of its own commit\. The run record was still being written at this revision: the cycles it does not list yet are from the source’s index of its loops\. <a href="https:[^"]+">Run record<\/a>/);
+  assert.doesNotMatch(runRecordHtml({ ...own, prompts: null, recordUrl: null }), /still being written/);
+  // A model the snapshot has no display name for is said once, by its id.
+  assert.match(runRecordHtml({ ...own, model: 'claude-new-9' }, { models: [{ id: 'claude-new-9', label: 'claude-new-9' }] }), / · <code>claude-new-9<\/code>, high effort/);
 });
 
 test('the loops page leads with the source’s account: by kind, then every loop, then the runs that left a record', () => {

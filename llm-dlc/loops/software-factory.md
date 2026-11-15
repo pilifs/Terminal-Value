@@ -941,6 +941,11 @@ Settled by the author on 2026-11-14:
   docs/software-factory.md, same title. `details/inputs.json` is a collection of its own (generator 13, snapshot
   `sf1-7e1442d028000062`), 721 files, one per example result again; the manifest counts them. The usage page lists
   them under Deeper exploration. First load 131.5 KB of 300 KB.
+- **The proof loop's run reads as it ran** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, same title. A run record still being written is completed from the index of loops,
+  and a prompt that opens with the instruction a run record quotes is the loop's own (generator 14, snapshot
+  `sf1-5ef466da137fab14`). `prove-examples` opens with 1 cycle, 5 commits, 481 model calls and 2 h 59 min, as the
+  landing page says; tool calls set off by a loop's own prompt are 73%, from 71%.
 - Status: done
 
 ## Loop settings

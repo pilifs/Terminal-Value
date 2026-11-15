@@ -3,7 +3,7 @@
   "note": "How a feature loop's run is read from in-the-loop: the run records under llm-dlc/traces/{session}/runs/, joined to that session's prompts by time. Prompt text is read only to tell who sent a prompt, and is never published.",
   "window": "A prompt, a tool call or a commit belongs to a run when it starts in [the record's Started time, its Ended or Stopped time]. A run with no end recorded lasts until its session's next run starts, or until its last prompt from the loop ends.",
   "senders": {
-    "note": "Who sent a prompt that the trace records as typed input, by the start of its text. The first matching group wins; a prompt that matches none was typed by a person.",
+    "note": "Who sent a prompt that the trace records as typed input, by the start of its text. The first matching group wins; a prompt that matches none was typed by a person. Before these, a prompt that opens with the instruction a run record quotes under its header is the harness's: the opening words up to a list's place ({}), at most 80 characters and at least 16, as the source's loop_stats.py reads them.",
     "harness": [
       "^Work on the brief in ",
       "^Cycle \\d+ of the feature loop is committed",

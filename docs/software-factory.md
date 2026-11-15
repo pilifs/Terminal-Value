@@ -452,6 +452,32 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### The proof loop's run reads as it ran (generator 14)
+
+`/prove-java-change/` says "The proof loop ran unattended for 2 h 59 min" and that the run made 481 model calls.
+On these pages that run opened as an empty record: no cycle, no commit, no calls, no time. Two things were wrong.
+
+- **Its run record was still being written.** At `e9908ab3` the record of `prove-examples` has its header and no
+  cycle line or end yet. The source's index of loops has the run whole. The importer now completes such a record
+  from the index: the cycles that committed and the record doesn't list (`completed: ['cycles']` on the run and
+  on its record in the loops collection). Two runs were completed this way, the proof loop's and one of
+  `test-cost`. The panel says so under the cycles.
+- **Its instruction counted as a person's prompt.** A moonshot's script sends the instruction itself, such as
+  "Formally prove example 285 …", and `config/loops.json` had no pattern for it. So the run had no prompt of the
+  loop's own to end its window, and its 491 tool calls were given to a person. A run record quotes its
+  instruction under its header. A prompt that opens with those words (up to a list's place, at most 80
+  characters and at least 16, as the source's `loop_stats.py` reads them) is now the loop's own
+  (`instructionOpening` in `records.mjs`). The words are used to tell the sender and go no further.
+- **What moved.** The run now says 1 cycle, 5 commits, 481 model calls, 491 tool calls, 2 h 59 min, $65.63 and 0
+  prompts from a person: the landing page's figures. "Of all tool calls set off by a loop's own prompt" is 73%,
+  from 71%. The runs that left a record add up to 255 cycles, 328 commits and $954.51, from 253, 323 and
+  $888.88. The account's totals (34 loops, 109 runs, 350 cycles, 590 commits) did not move: they were the
+  index's all along.
+- **Also:** a model the snapshot has no display name for is said once in a run's panel, by its id.
+
+Metric definitions are version 13 (`loop_drive` and `loop_person_prompts` say how a loop's own prompt is told).
+Snapshot `sf1-5ef466da137fab14`, the same revision; the share image was rendered again from it.
+
 ### The list of source files is out of the first load (generator 13)
 
 The author decided on 2026-11-15 to move the manifest's list of inputs out of the first load. The manifest is
