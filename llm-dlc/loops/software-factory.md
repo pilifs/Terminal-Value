@@ -323,8 +323,53 @@ Settled by the author on 2026-11-14:
     - Headless Chromium on `PORT=8790` (shots in `/tmp/sf-m12/`): home, a post and the overview, desktop and mobile,
       light and dark. The header link sits right of the site title, muted. The home block sits between the tagline
       and the posts. Nothing wraps or overflows at 390 px.
-- Next: M1.3, real data in the drafts build, with the gzip sizes of the overview page, `overview.json` and the
-  scripts measured against the ~150 KB budget.
+- **M1.3 real data and sizes: done** (cycle 4).
+  - `software-factory:validate`: valid. The drafts build renders the three pages from the committed
+    `sf1-95bf08f3ebdea3fa` (in-the-loop `7384f8c2`). The overview's static HTML already holds $1,936.42 and 19,963
+    calls, and the methodology page holds the source SHA. The page has no post links yet, because no Software
+    Factory post is published. The empty state says so, and the draft is never listed.
+  - **First load of the overview, gzip (level 6)**: 67.3 KB in total, under the ~150 KB budget.
+    - Page: 6.7 KB.
+    - CSS: 6.6 KB (site 2.2 KB, section 4.4 KB).
+    - Scripts: 25.6 KB (`zoom.js` plus `app.js` and its 9 modules; `measures.js` is 3.6 KB).
+    - `latest.json`: 0.2 KB.
+    - `manifest.json`: 24.5 KB, mostly `source.inputs`, as A said.
+    - `overview.json`: 3.6 KB.
+    - Brotli would make the total about 57 KB.
+    - The details (95 KB gzip, `changes.json` 42 KB and `verification.json` 36 KB) load only when a reader opens
+      them. Headless Chromium fetched none on first load.
+  - **Script only where it runs.** `app.js` was loaded on the analysis and methodology pages too, along with its
+    whole module graph, and did nothing there. It now goes only on the overview, and only when there is a snapshot
+    to load.
+  - **`modulepreload`: added.** `index.mjs`'s `moduleGraph()` follows `app.js`'s static imports, and `layout()`'s
+    new `preloads` option lists them in the head.
+    - Measured at 100 ms RTT on the local HTTP/1.1 preview: the modules arrive by 324 ms instead of 439 ms. Without
+      preload they wait for `app.js` and come in later waves.
+    - The data shows at 844 ms instead of 860 ms. Chromium allows only six HTTP/1.1 connections per host, and the
+      deferred `zoom.js`, which runs before the module, queued behind the preloads.
+    - Over HTTP/2 the preloads should save one whole round trip. That is reasoning, not a measurement: only the
+      local HTTP/1.1 preview was tested.
+  - Waterfall, for M2:
+    - The data chain is serial: the remote `latest.json` (404 until the Function exists), the bundled `latest.json`,
+      the manifest, then the overview.
+    - Fetching the overview beside the manifest and checking it afterwards would save one more round trip. That
+      change is in `snapshot.js`, and it is left as a finding.
+  - Checks:
+    - `test/site-load.test.mjs` (with `test/site-build.mjs`, the build harness now shared with `site-entry`):
+      - `moduleGraph` on a small graph;
+      - the overview preloads every shipped module, and the analysis and methodology pages carry no script;
+      - the first load is under 150 KB gzip;
+      - with no data, the overview carries no script.
+    - With preloads removed, the test fails.
+    - 195 of 195 tests pass.
+    - The production build is byte for byte `d4d33a0`'s (85 files).
+    - `?period=7d` in headless Chromium still recomputes ($224.22, 3,498 calls), with no script error.
+- Next: M1.4, the end-to-end checks:
+  - the production build against Phase 0;
+  - no draft leak on any surface;
+  - noindex throughout the drafts build;
+  - the empty, populated (temporary published copy), unavailable and fixture states;
+  - existing posts and the project demo unchanged.
 - Status: working
 
 ## Loop settings

@@ -20,7 +20,28 @@ export const SECTION = JSON.parse(fs.readFileSync(path.join(HERE, 'config', 'sec
 // Public browser files: blog/assets/software-factory/ is copied by build.mjs
 // with the other assets; measures.mjs is shared with the importer and copied here.
 const STYLES = [`/${ROUTE}/style.css`];
-const SCRIPTS = [`/${ROUTE}/app.js`];
+const APP = 'app.js';
+
+/**
+ * Every module app.js reaches by its static imports, in the order first met,
+ * so the page can preload them with app.js instead of a round trip later.
+ */
+export function moduleGraph(dir, entry = APP) {
+  const seen = new Set([entry]);
+  const order = [];
+  const visit = (file) => {
+    const source = fs.readFileSync(path.join(dir, file), 'utf8');
+    for (const [, spec] of source.matchAll(/^import\s+(?:[^;]*?\sfrom\s+)?['"](\.\.?\/[^'"]+)['"]/gm)) {
+      const next = path.posix.normalize(path.posix.join(path.posix.dirname(file), spec));
+      if (seen.has(next)) continue;
+      seen.add(next);
+      order.push(next);
+      visit(next);
+    }
+  };
+  visit(entry);
+  return order;
+}
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 
@@ -71,6 +92,10 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   fs.mkdirSync(out, { recursive: true });
   fs.copyFileSync(path.join(HERE, 'measures.mjs'), path.join(out, 'measures.js'));
 
+  // The client module runs only on the overview, and only with a snapshot to load.
+  const hasApp = Boolean(snapshot) && fs.existsSync(path.join(out, APP));
+  const preloads = hasApp ? moduleGraph(out).map((file) => `/${ROUTE}/${file}`) : [];
+
   const selection = selectPosts(posts, { postImage: helpers.postImage });
   const pages = renderPages({
     snapshot,
@@ -83,6 +108,7 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   });
   for (const page of pages) {
     const file = path.join(out, page.path);
+    const overview = hasApp && page.path === 'index.html';
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(
       file,
@@ -93,7 +119,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
         body: page.body,
         pageClass: ROUTE,
         styles: fs.existsSync(path.join(out, 'style.css')) ? STYLES : [],
-        scripts: fs.existsSync(path.join(out, 'app.js')) ? SCRIPTS : [],
+        scripts: overview ? [`/${ROUTE}/${APP}`] : [],
+        preloads: overview ? preloads : [],
       })
     );
   }

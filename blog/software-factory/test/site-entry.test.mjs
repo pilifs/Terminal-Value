@@ -5,48 +5,13 @@
 // Coordinator-owned. Run: npm run test:software-factory
 
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { headerNav, homeEntry, STYLES } from '../site.mjs';
+import { buildCopy, read, REPO, skip, texts } from './site-build.mjs';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const REPO = path.resolve(HERE, '../../..');
-const PROJECT_DIST = path.join(REPO, 'projects', 'terminal-value-pipeline', 'dist');
 const DRAFT = 'fable-5-1-vs-5-2';
-const read = (file) => fs.readFileSync(file, 'utf8');
-
-/** Builds a copy of blog/ with section.json's published set, and returns its dist/. */
-const copies = [];
-test.after(() => copies.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
-
-function buildCopy({ published, drafts = false }) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-site-'));
-  copies.push(root);
-  fs.cpSync(path.join(REPO, 'blog'), path.join(root, 'blog'), { recursive: true });
-  fs.symlinkSync(path.join(REPO, 'node_modules'), path.join(root, 'node_modules'));
-  fs.cpSync(PROJECT_DIST, path.join(root, 'projects', 'terminal-value-pipeline', 'dist'), { recursive: true });
-  const config = path.join(root, 'blog', 'software-factory', 'config', 'section.json');
-  fs.writeFileSync(config, `${JSON.stringify({ ...JSON.parse(read(config)), published }, null, 2)}\n`);
-  const env = { ...process.env };
-  delete env.SOFTWARE_FACTORY_DATA_DIR;
-  execFileSync(process.execPath, ['blog/build.mjs', ...(drafts ? ['--drafts'] : [])], { cwd: root, env, stdio: 'pipe' });
-  return path.join(root, 'dist');
-}
-
-/** Every text file in dir, as [relative path, contents]. */
-function texts(dir) {
-  return fs
-    .readdirSync(dir, { recursive: true })
-    .filter((f) => /\.(html|xml|txt|md|css|js)$/.test(f) || path.basename(f) === '_headers')
-    .map((f) => [f, read(path.join(dir, f))]);
-}
-
-const canBuild = fs.existsSync(path.join(PROJECT_DIST, 'index.html'));
-const skip = canBuild ? false : 'needs `npm run build:projects` first';
 
 test('the header link names the section and marks its own pages', () => {
   assert.equal(

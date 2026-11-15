@@ -167,6 +167,7 @@ function layout({
   pageClass, // a class on <body>, for a section's own styles
   styles = [], // extra stylesheets, after /style.css
   scripts = [], // extra ES modules
+  preloads = [], // the modules those import, fetched alongside them (modulepreload)
 }) {
   const pageTitle = title ? `${title} · ${SITE.title}` : SITE.title;
   return `<!doctype html>
@@ -206,7 +207,7 @@ function layout({
     }
     <script src="/zoom.js" defer></script>${scripts
       .map((src) => `\n    <script type="module" src="${src}"></script>`)
-      .join('')}
+      .join('')}${preloads.map((href) => `\n    <link rel="modulepreload" href="${href}">`).join('')}
   </head>
   <body${pageClass ? ` class="${escapeHtml(pageClass)}"` : ''}>
     ${
