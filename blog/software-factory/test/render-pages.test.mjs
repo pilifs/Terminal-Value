@@ -131,6 +131,8 @@ test('methodology: the area mapping with its status, and comparison limits', () 
   for (const a of areas.areas) assert.ok(body.includes(`<th scope="row">${escapeHtml(a.label)}</th>`), a.id);
   assert.ok(body.includes('<th scope="row">Unassigned</th>'));
   assert.ok(body.includes(escapeHtml(metrics.periods.note)));
+  // import.mjs leaves a change with no summary yet out of the count; the page says so.
+  assert.match(body, /Recorded changes leave out a change the source lists without a summary yet/);
 });
 
 test('methodology without a snapshot: says so, keeps the definitions', () => {

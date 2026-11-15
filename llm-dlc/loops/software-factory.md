@@ -718,9 +718,41 @@ Settled by the author on 2026-11-14:
     - The production build is byte for byte Phase 0's (85 files).
     - The drafts build has 3 posts.
     - `software-factory:validate`: valid.
-- Next: decide the importer finding above: a rollup change with `summary: null`, perhaps an unsummarized change that
-  is never housekeeping. Weigh a generator version bump, which changes every snapshot id, against keeping the
-  content of already valid inputs the same. Then M2.6, the runbook.
+- **The importer finding (M2.4): decided** (cycle 12). A rollup change with `summary: null` is now accepted and
+  left out of the changes.
+  - **What null means upstream.** in-the-loop's `sync.py` (`commit_summary`) writes None "while the change has no
+    message besides trailers", and its session summaries skip such a row as "the working copy before its first
+    commit message". It is transient: `vntrxswn…`, null at `e26b4eb0`, is gone from the rollup at the local HEAD
+    `6e9a99ee`, which has 683 changes, all with summaries.
+  - **Why it is left out, not kept with a null summary.** schema.json requires a change's `summary` to be a string.
+    Allowing null is a contract change, so it means `software-factory-changes/v2`. That would change every changes
+    file, so every snapshot id, the committed snapshot and the example, for a state upstream itself doesn't count.
+    A stand-in text would be an invented value.
+  - **No version bump.** Every input that imported before imports byte for byte the same. Before, an input with a
+    null summary had no snapshot at all, so no id now means two contents. `GENERATOR` stays version 1. The rule is in
+    `import.mjs`'s header.
+  - A null row whose change id also has a described row gives that change its sessions. Its sessions' calls count
+    in usage from their own metrics files either way. Any other non-string summary is still refused.
+  - The methodology's Comparison limits now say that Recorded changes leave such a change out until it has a
+    summary.
+  - **Checks**:
+    - A new `data-import` test: a null row left out, a null row merged into its described twin, and calls, sessions,
+      totals, verification and examples unchanged. `undefined`, `42` and `['x']` are still refused. The old importer
+      fails it, and so does a version that doesn't merge sessions. `render-pages` asserts the methodology line.
+    - `refresh` from the local in-the-loop checkout: `7384f8c2` still gives `sf1-95bf08f3ebdea3fa` (599 changes),
+      and `f542897f` still gives `sf1-19b881c0147e875a` (681). `e26b4eb0`, refused before, gives
+      `sf1-4bb97a65b3f676db` with 682 changes from 683 rows. `6e9a99ee` gives `sf1-8938373b929f3465` (683).
+    - 258 of 259 tests pass, with the browser test skipped. With `NODE_PATH` set, its 19 cases pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts, and its methodology page has the new line.
+    - `software-factory:validate`: valid.
+- Next: M2.6, the runbook in docs/software-factory.md. It covers:
+  - what runs locally: the tests and the browser test, `wrangler pages dev`, `software-factory:publish` against a
+    fake;
+  - what is configured: `wrangler.toml`, the function's gate, and the workflow;
+  - the importer's rules a publish can meet, including this one;
+  - what the author must create and run.
+  It must claim nothing as running remotely. Then set the status.
 - Status: working
 
 ## Loop settings

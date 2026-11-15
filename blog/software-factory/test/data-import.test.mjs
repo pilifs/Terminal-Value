@@ -165,6 +165,41 @@ test('a change listed twice is kept once, with the sessions of both', async () =
   assert.deepEqual(c.sessions, [...new Set([...first.sessions, '2e359813-25c2-4259-888b-42d3a5f0eee6'])]);
 });
 
+test("a change without a summary yet is left out of the changes, and its sessions' calls still count", async () => {
+  // in-the-loop at e26b4eb0: the rollup's commits[681] was a working copy before
+  // its first commit message, `"summary": null` (its sync.py's commit_summary).
+  const { dir } = materialize('stale-source');
+  const before = await load(dir);
+  const rollup = json(dir, 'llm-dlc/traces/metrics.json');
+  const [described, open] = [rollup.commits[0], rollup.commits[1]];
+  const fresh = 'z'.repeat(32);
+  const S = '2e359813-25c2-4259-888b-42d3a5f0eee6';
+  open.summary = null;
+  rollup.commits.push({ ...described, summary: null, sessions: [S] }); // the same id, also described
+  rollup.commits.push({ ...open, change_id: fresh, sessions: [S] }); // never described
+  write(dir, 'llm-dlc/traces/metrics.json', rollup);
+  const n = await load(dir);
+  const ids = n.changes.map((c) => c.changeId);
+  assert.ok(!ids.includes(open.change_id) && !ids.includes(fresh));
+  assert.equal(n.changes.length, before.changes.length - 1);
+  assert.ok(n.changes.every((c) => typeof c.summary === 'string'));
+  const kept = n.changes.find((c) => c.changeId === described.change_id);
+  assert.equal(kept.summary, described.summary);
+  assert.deepEqual(kept.sessions, [...new Set([...described.sessions, S])]);
+  // Nothing else moves: calls, sessions, totals and verification are the same.
+  for (const key of ['calls', 'sessions', 'rollup', 'verification', 'examples']) assert.deepEqual(n[key], before[key], key);
+
+  // A summary that is neither text nor null is still refused.
+  for (const summary of [undefined, 42, ['x']]) {
+    const r = json(dir, 'llm-dlc/traces/metrics.json');
+    r.commits[2].summary = summary;
+    write(dir, 'llm-dlc/traces/metrics.json', r);
+    const e = await failure(load(dir));
+    assert.equal(e.code, 'schema');
+    assert.match(e.message, /commits\[2\] lacks a change_id or summary/);
+  }
+});
+
 test('a session file that disagrees with its rollup entry fails to reconcile', async () => {
   const { dir } = materialize('stale-source');
   const rel = 'llm-dlc/traces/2e359813-25c2-4259-888b-42d3a5f0eee6/metrics.json';

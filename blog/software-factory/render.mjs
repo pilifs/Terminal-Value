@@ -488,6 +488,7 @@ function limits(e) {
           <li>Periods are the last 7 or 30 calendar days of the data, ending on its last day, not on today: the numbers are as of the snapshot.</li>
           <li>The model and effort filters apply to usage only. Verification jobs aren't linked well enough to sessions to filter by model, and stocks are totals at the source revision.</li>
           <li>Estimated usage is priced from token counts at one date's list prices. It is not a bill, and models with different task mixes aren't comparable by it.</li>
+          <li>Recorded changes leave out a change the source lists without a summary yet, a working copy before its first commit message, until it has one. The calls made while working on it count in usage like any others.</li>
         </ul>
       </section>`;
 }

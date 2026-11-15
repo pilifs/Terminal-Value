@@ -54,6 +54,10 @@
 //         one named in a post's evidence.json (namedSnapshots); the rest are
 //         deleted and listed in `pruned`.
 //       - Output depends on the input and `now` only.
+//   - A rollup change whose summary is null (a working copy before its first
+//     commit message) is accepted and left out of `changes`. Every input that
+//     imported before imports the same, so GENERATOR's version and every
+//     snapshot id made so far stay as they were.
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -382,18 +386,31 @@ export function normalizeSources(raw, config = loadConfig()) {
   for (const id of rollupSessions.keys())
     if (!sessions.some((s) => s.id === id)) bad(ROLLUP, `session ${id} is not in ${INDEX}`);
 
-  // Changes, once per change id; housekeeping kept identifiable.
+  // Changes, once per change id; housekeeping kept identifiable. A summary of
+  // null is in-the-loop's working copy before its first commit message
+  // (sync.py's commit_summary): not a change yet, so it is left out, as its own
+  // session summaries leave it out. Its sessions' calls still count, from their
+  // metrics files. If the same id also has a described row, its sessions join it.
   const housekeeping = new Set(config.source.housekeeping.summaries);
   const byChange = new Map();
+  const undescribed = new Map();
   for (const [i, c] of list(ROLLUP, rollup, 'commits').entries()) {
-    if (!isObject(c) || !/^[k-z]{32}$/.test(c.change_id ?? '') || typeof c.summary !== 'string') bad(ROLLUP, `commits[${i}] lacks a change_id or summary`);
+    if (!isObject(c) || !/^[k-z]{32}$/.test(c.change_id ?? '') || (typeof c.summary !== 'string' && c.summary !== null)) bad(ROLLUP, `commits[${i}] lacks a change_id or summary`);
     const own = Array.isArray(c.sessions) ? c.sessions.filter((s) => typeof s === 'string') : [];
+    if (c.summary === null) {
+      undescribed.set(c.change_id, [...(undescribed.get(c.change_id) ?? []), ...own]);
+      continue;
+    }
     const seen = byChange.get(c.change_id);
     if (seen) {
       for (const s of own) if (!seen.sessions.includes(s)) seen.sessions.push(s);
       continue;
     }
     byChange.set(c.change_id, { changeId: c.change_id, summary: c.summary, sessions: [...own], housekeeping: housekeeping.has(c.summary) });
+  }
+  for (const [id, own] of undescribed) {
+    const seen = byChange.get(id);
+    if (seen) for (const s of own) if (!seen.sessions.includes(s)) seen.sessions.push(s);
   }
   const changes = [...byChange.values()].map((c) => {
     const own = [...new Set(c.sessions.map((s) => sessionCampaign.get(s) ?? null))];
