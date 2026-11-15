@@ -1273,6 +1273,10 @@ td code {
   .g3 {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Side by side, the model table and the chart are both cut off. */
+  .stats-detail {
+    grid-template-columns: minmax(0, 44rem);
+  }
 }
 @media (max-width: 1180px) {
   .nav-links {
@@ -1345,33 +1349,67 @@ td code {
   .foot-cols > div:first-child {
     grid-column: 1 / -1;
   }
-  /* The coverage and results tables become stacked rows on a phone. */
+  /* The model table becomes one compact block per model on a phone:
+     the name and its share on top, the three counts in a row below. */
+  .stack,
+  .stack tbody {
+    display: block;
+  }
   .stack thead {
     display: none;
   }
-  .stack tr,
-  .stack td {
-    display: block;
-    width: 100%;
-  }
   .stack tr {
-    padding: 0.5rem 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
+    gap: 0.5rem 0.75rem;
+    padding: 0.8rem 1rem;
     border-bottom: 1px solid var(--line);
   }
   .stack tr:last-child {
     border-bottom: 0;
   }
   .stack td {
-    padding: 0.3rem 1rem;
+    display: block;
+    padding: 0;
     border: 0;
     text-align: left;
   }
-  .stack td[data-label]::before {
+  .stack td:first-child {
+    grid-column: 1 / 3;
+    font-weight: 600;
+  }
+  .stack td:first-child code,
+  .stack td:first-child small {
+    font-weight: 400;
+  }
+  .stack td:last-child {
+    grid-area: 1 / 3;
+    text-align: right;
+  }
+  .stack td.num[data-label]::before {
     content: attr(data-label);
     display: block;
     color: var(--muted);
     font-family: var(--sans);
     font-size: 0.72rem;
     font-weight: 600;
+  }
+  /* The chart fits the column instead of scrolling, so its end label
+     is in view. Its text is set larger to stay readable when scaled. */
+  .chart-scroll,
+  .chart svg {
+    overflow: visible;
+  }
+  .chart svg {
+    min-width: 0;
+  }
+  .chart .axis text {
+    font-size: 17px;
+  }
+  .chart .end {
+    font-size: 19px;
+  }
+  .chart .end-sub {
+    font-size: 16px;
   }
 }
