@@ -3,6 +3,7 @@ title: What a six-day agent session looks like from the inside
 date: 2026-10-30
 description: One Claude Code session built a formal verification demo and left a 10 MB trace behind. Read back, the trace shows where 64 million tokens, two hours and about $39 went, and what to change next time.
 image: cover.png
+draft: true
 ---
 
 <style>

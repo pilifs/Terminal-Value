@@ -23,7 +23,8 @@ folder already qualifies them.
   `verify-bytecode-page` branch was merged here: the hand-written page in `blog/assets/verify-bytecode/`,
   `blog/assets/_redirects`, build.mjs's `PAGES`, and `reading-the-trace` moved to `blog/archive/`, which the build
   doesn't publish. With the section unpublished, the merge's production build equals that branch's byte for byte
-  (82 files).
+  (82 files). The same day `reading-the-trace` went back to `blog/posts/` as a draft: readable on the dev site as
+  background for the data, never in production, which it likely never reaches.
 - **Upstream baseline.** in-the-loop `origin/main` was `7384f8c23eef441817ddb714c6ef5571cdc138bd`, the brief's
   audited revision. It is public: a refresh fetches by SHA from `raw.githubusercontent.com` with no token. The
   local checkout's HEAD moves while its loops run, so always pin a SHA.
@@ -367,7 +368,7 @@ In this order. Each step is the author's, on a machine logged in to Cloudflare o
    then production.
 8. **Launch**: set `published: true` in `config/section.json` and deploy (`npm run deploy`). The production
    function serves only once the section is published. The plan linked `reading-the-trace` from the section with
-   `related: software-factory`, but that post is now archived. Add the line to whichever published post, if any,
+   `related: software-factory`, but that post is now a draft, and the section never links a draft. Add the line to whichever published post, if any,
    should appear as related background.
 
 The author also writes the Fable 5.1 vs. 5.2 draft's content, evidence and cover, and the template's cover, if one
