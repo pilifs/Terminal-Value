@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>/prove-java-change · Formally prove any Java change in one command</title>
-    <meta name="description" content="A Claude Code plugin that formally proves a change to Java code from its compiled bytecode: it states the claims, proves them in an unattended loop, and reports what was established, refuted or left open.">
+    <meta name="description" content="Find any side effects in your code effortlessly. A Claude Code plugin that formally proves a change to Java code from its compiled bytecode: it states the claims, proves them in an unattended loop, and reports what was established, refuted or left open.">
     <meta name="author" content="Filip Stankovic">
     <link rel="canonical" href="https://terminalvalue.net/prove-java-change/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Terminal Value">
     <meta property="og:url" content="https://terminalvalue.net/prove-java-change/">
     <meta property="og:title" content="/prove-java-change: formally prove any Java change in one command">
-    <meta property="og:description" content="A Claude Code plugin that proves a Java change from its bytecode in an unattended loop, and extends its own verifier where it falls short. 183 examples and every session that built it are public.">
+    <meta property="og:description" content="Find any side effects in your code effortlessly. A Claude Code plugin that proves a Java change from its bytecode in an unattended loop, and extends its own verifier where it falls short. 183 examples and every session that built it are public.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/prove-java-change/style.css">
   </head>
@@ -39,6 +39,7 @@
         <div class="wrap">
           <div>
             <h1>Formally prove any Java change in one command</h1>
+            <p class="punch">Find any side effects in your code effortlessly.</p>
             <p class="lede">Point Claude Code at a pull request or a commit. It states what the change must do and must keep, proves each claim from the compiled bytecode in an unattended loop, and shows you an input wherever a claim fails. You write no specification.</p>
 
             <div class="install" id="install">
@@ -409,7 +410,23 @@ after:  -2147483648</pre>
         </div>
       </section>
 
-      <section id="contribute" class="alt">
+      <section id="evals" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">A note on evals</p>
+            <h2>How do you eval a moonshot?</h2>
+          </div>
+          <div class="prose">
+            <p>There is no benchmark score on this page. Evals work well for discrete tasks, where there is a fixed input and an answer to grade. This is a much bigger task: an open-ended loop that runs for hours and may extend the verifier it runs on.</p>
+            <p>Large models are very hard to evaluate, and a moonshot on one is harder. I have an idea of how I would do it, but it would take far more resources.</p>
+            <p>For now I am evaluating qualitatively, in my head, as we work. Take that for what it's worth.</p>
+            <p>A verdict is not the model's opinion, though. It comes from the verifier, and a refuted claim is run on a real JVM. What I can't measure yet is the loop around it: how often it gets there, and at what cost. So the page shows the record instead: <a href="#examples">every example with its receipts</a>, <a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/README.md">every session that produced them</a>, and a request for <a href="#contribute">your failed runs</a>.</p>
+            <p class="signed">Filip Stankovic</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="contribute">
         <div class="wrap">
           <div class="head">
             <p class="kicker">Contribute back</p>
@@ -439,7 +456,7 @@ after:  -2147483648</pre>
         </div>
       </section>
 
-      <section id="faq">
+      <section id="faq" class="alt">
         <div class="wrap">
           <div class="head">
             <p class="kicker">Before you run it</p>
@@ -471,8 +488,8 @@ after:  -2147483648</pre>
 
       <div class="cta">
         <div class="wrap">
-          <h2>Prove your next Java change</h2>
-          <p>Two commands to install, one to run. Tell me how it went, especially if it failed.</p>
+          <h2>Find any side effects in your code effortlessly</h2>
+          <p>Prove your next Java change. Two commands to install, one to run. Tell me how it went, especially if it failed.</p>
           <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
           <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
           <div class="actions">
