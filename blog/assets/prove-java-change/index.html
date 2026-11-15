@@ -156,41 +156,39 @@ after:  returns 90; no modeled call</pre>
             <p>Nobody writes a specification. Each proof takes its statement from something your project already has, and checks it against the bytecode your build produced.</p>
           </div>
           <div class="grid g4">
-            <div class="card"><p class="from"><b>Previous version</b> →</p><h3>Regression proof</h3><p>The new method behaves as the old one on every input, outside the change you meant to make. Or here is the input where it doesn't.</p></div>
-            <div class="card"><p class="from"><b>Types</b> →</p><h3>Behavioural contract</h3><p>Every input of a finite method (enums, booleans, records, sealed types) is executed, before and after, and the outcomes are diffed.</p></div>
-            <div class="card"><p class="from"><b>Bytecode</b> →</p><h3>Capability and boundary contracts</h3><p>What the module can reach (clock, network, reflection) and where Spring enters it: routes, listeners, advice, and what each one reads, writes and sends.</p></div>
-            <div class="card"><p class="from"><b>The change's intent</b> →</p><h3>Property proof</h3><p>One line stated beside the code and proved on every input. The plugin drafts these from the change and its history. You confirm them in plain words.</p></div>
+            <div class="card"><p class="from"><b>Previous version</b> →</p><h3>Regression proof</h3><p>The new method behaves as the old one on every input, outside the change you meant to make.</p></div>
+            <div class="card"><p class="from"><b>Types</b> →</p><h3>Behavioural contract</h3><p>Every input of a finite method is executed, before and after, and the outcomes are diffed.</p></div>
+            <div class="card"><p class="from"><b>Bytecode</b> →</p><h3>Capability and boundary contracts</h3><p>What the module can reach, such as the clock, the network and reflection, and where Spring enters it.</p></div>
+            <div class="card"><p class="from"><b>The change's intent</b> →</p><h3>Property proof</h3><p>One line stated beside the code, proved on every input. The plugin drafts it and you confirm it.</p></div>
           </div>
 
           <div class="grid g2 engines">
             <div class="card engine">
               <p class="engine-n"><b>91,049</b> lines of Rust</p>
               <h3><code>jvmcontract</code>, the verifier</h3>
-              <p>A class-file reader, a bytecode interpreter, and its own bounded model checker over a bundled SAT solver (CaDiCaL), with 17 JDK classes modelled. It derives contracts without a JVM and builds its proofs without <code>javac</code>. JBMC stays available as a second engine.</p>
+              <p>A class-file reader, a bytecode interpreter and its own bounded model checker over a bundled SAT solver. It derives contracts without a JVM and proves without <code>javac</code>. JBMC stays available as a second engine.</p>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md">Read how each verdict is proved →</a>
             </div>
             <div class="card engine">
               <p class="engine-n"><b>45,879</b> lines of Python</p>
               <h3>The orchestration around it</h3>
-              <p>It prepares a change as an example with pinned sources, runs each proof as a queued job under a memory and CPU cap, keeps a receipt per attempt, and drives the unattended loops.</p>
+              <p>It pins a change's sources, runs each proof as a queued job under a memory and CPU cap, keeps a receipt per attempt, and drives the unattended loops.</p>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/verification/README.md">Read how a proof job runs →</a>
             </div>
           </div>
 
           <ul class="facts">
-            <li><b>A proof where JBMC ran out of memory.</b> An encoder fast path that JBMC could not finish in 2.8 GB is proved equal to its previous version in 7 s and 76 MB. The buggy variant is refuted in 1.1 s.<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/142-an-ascii-fast-path-for-the-constant-pool-encoder-proved-equal-to-the-previous-version-at-bound-eight/README.md">Example 142</a></li>
+            <li><b>A proof where JBMC ran out of memory.</b> A fast path JBMC could not finish in 2.8 GB is proved equal to its previous version in 7 s and 76 MB.<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/142-an-ascii-fast-path-for-the-constant-pool-encoder-proved-equal-to-the-previous-version-at-bound-eight/README.md">Example 142</a></li>
             <li><b>Two engines, one answer.</b> On the 35 recorded obligations both engines decide, none is decided differently.<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/coverage.md">Engine coverage</a></li>
-            <li><b>Witnesses you can run.</b> A counterexample is shrunk to a small input, replayed in the interpreter, then run on a real JVM.</li>
-            <li><b>Proofs are cached.</b> The key is a SHA-256 over the method's code, the tool, the JDK and the models. A rerun with nothing changed takes 66 ms.</li>
+            <li><b>Proofs are cached.</b> A rerun with nothing changed takes 66 ms.</li>
           </ul>
 
           <div class="split">
             <div>
               <p class="kicker">JAR → JAR</p>
               <h3 class="split-title">Compare two builds, with nothing written by hand</h3>
-              <p><code>jvmcontract compare</code> takes the compiled classes of two builds. It works out which old method became which new one, checks every HTTP route and message listener by the calls it makes, in order, and proves each changed method against its predecessor.</p>
-              <p>It ends with what a person decided, what it asks of one, and what it assumed. In this run a refactor adds a cent per item, and the proof finds it at the route and in the kernel.</p>
-              <p>A release works the same way. Example 285 ran on the published Spring Boot 2.7.17 and 2.7.18 JARs, each on its own dependencies.</p>
+              <p><code>jvmcontract compare</code> takes the compiled classes of two builds. It matches each old method to its new one, checks every route by the calls it makes, and proves each changed method against its predecessor.</p>
+              <p>Here a refactor adds a cent per item. Two published releases can be proved against each other too, as example 285 did with the Spring Boot 2.7.17 and 2.7.18 JARs.</p>
               <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/191-a-cent-too-much-per-item-refuted-at-the-route-and-in-the-kernel-no-inferred-mapping-absorbing-it/README.md">Read example 191 →</a>
             </div>
             <figure class="term" aria-label="Abridged output of jvmcontract compare on example 191">
@@ -204,20 +202,15 @@ after:  returns 90; no modeled call</pre>
     new build returns 1, attempts
       KafkaTemplate.send(topic="quotes",
         data.total=1)
-  <span class="p">found in 0.1 s, replayed on a JVM</span>
 
-<span class="ok">shop.Pricing#discount: verified</span>
 <span class="no">shop.Pricing#total: refuted</span>
-  correspondence (inferred):
-    old.q.cents == new.q.amount.cents
   witness: total(q=new Quote(
              new Money(0), 1))
     before, 0; after, 1
 
 kernel: 2 verified, 1 refuted,
         0 unresolved, 2 unsupported
-decisions a person made: 0
-questions for a person: none</pre>
+decisions a person made: 0</pre>
             </figure>
           </div>
         </div>
