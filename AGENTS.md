@@ -46,4 +46,4 @@ This repo is the source of an AI engineering blog. Posts are Markdown files that
 - The repo uses jj, colocated with git. Run `python3 llm-dlc/tools/sync.py init` once per clone. Never run `git commit`.
 - Commit each feature as soon as it's finished and verified, without asking: `python3 llm-dlc/tools/sync.py commit -m "Summary line" -m "What changed, why, and how it was verified."` The check that follows must report 0 errors.
 - Push only when the author asks: `python3 llm-dlc/tools/sync.py push --bookmark main`.
-- Unattended loops work through briefs in `llm-dlc/loops/`. See [`llm-dlc/README.md`](./llm-dlc/README.md). A loop never pushes or deploys.
+- Unattended loops work through briefs in `llm-dlc/loops/`, or repeat one open-ended instruction from `llm-dlc/moonshots/`. See [`llm-dlc/README.md`](./llm-dlc/README.md). A loop never pushes or deploys.

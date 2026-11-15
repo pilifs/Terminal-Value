@@ -13,6 +13,9 @@ llm-dlc/
   loop-summaries/            each run's record, and run-streams.sh's state (gitignored)
   tools/sync.py              commit, check and push with jj; test_sync.py tests it
   tools/feature-loop.sh      works through a brief unattended: instruction, commit, compact, repeat, then a summary
+  tools/moonshot-loop.sh     repeats one open-ended instruction unattended, until a cycle makes no commit;
+                             test_moonshot_loop.py tests it
+  moonshots/                 the instructions moonshot-loop.sh repeats, one file each
   tools/run-streams.sh       runs a brief's parallel streams, each in a jj workspace, then the merge
   tools/loop-common.sh       what the two share: log lines and the live display of a session
   tools/streams_status.py    run-streams.sh's state and status bar; test_streams_status.py tests it
@@ -110,6 +113,33 @@ While it runs, it reads commands typed in its terminal:
 | `0`, `stop` | end after the current cycle |
 | `inf` | no limit |
 | `?`, `help` | where the loop stands, or the list of commands |
+
+### Moonshots
+
+A brief lists steps and says when it is done. A moonshot is a goal with no end: one instruction, given again every
+cycle. [`tools/moonshot-loop.sh`](tools/moonshot-loop.sh) is the simple loop for it, after the moonshots of
+in-the-loop's `llm-dlc`.
+
+```sh
+llm-dlc/tools/moonshot-loop.sh software-factory-impact       # llm-dlc/moonshots/software-factory-impact.md
+llm-dlc/tools/moonshot-loop.sh software-factory-impact 5     # at most 5 cycles
+```
+
+- **The instruction** is the whole of `llm-dlc/moonshots/NAME.md`, word for word. The loop adds one paragraph after
+  it: take one improvement, verify it, commit it with `sync.py`, never push or deploy, and end without a commit when
+  the author is needed.
+- **No commit stops the loop.** A cycle that ends without a new commit may mean the work isn't finished or a person
+  is needed. The loop exits with status 1 and leaves the session as it is, to be read with `claude --resume`.
+- **Compact only when large.** After a commit, if the session ended the cycle above 400,000 tokens of context, the
+  loop compacts it and then gives the instruction again. A smaller session gets the instruction again as it is.
+  The size is the tokens of the main conversation's last request; a size that can't be read counts as too large.
+  `MOONSHOT_COMPACT_ABOVE` changes the 400,000.
+- **One session.** Its id is kept in `llm-dlc/loop-summaries/moonshot-NAME.session`, so the same command continues
+  it. The first run starts a fresh session, or continues the one `MOONSHOT_SESSION` names. `MOONSHOT_MODEL` and
+  `MOONSHOT_EFFORT` set the model and effort; without them the session runs on Claude Code's own defaults.
+- **Record.** Each run writes one to `llm-dlc/loop-summaries/`: the instruction, a line per commit, and how it ended.
+- **Limits.** It commits locally and never pushes or deploys. Unlike `feature-loop.sh` it has no memory cap, no
+  commands while it runs and no closing summary, and like it no spending limit. Ctrl-C stops it.
 
 ### Parallel streams
 
