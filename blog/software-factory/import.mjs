@@ -560,6 +560,51 @@ export function normalizeSources(raw, config = loadConfig()) {
   if (reported && totals.reported_usd != null && !near(totals.reported_usd, reported.usd))
     throw new SourceError('reconcile', `${ROLLUP}: totals say $${totals.reported_usd} reported, its sessions add up to $${reported.usd.toFixed(6)}`, { path: ROLLUP });
 
+  // How the sessions lasted, as the rollup has it: each session's time at
+  // work, how often its context was compacted and how large it got; the time
+  // added over all of them; and what made a call write to the cache anew. The
+  // source's specification.md defines each (Time, Cache events). Null when the
+  // rollup says none of it; a part it doesn't say is null.
+  const ms = (v) => (isCount(v) ? Math.round(v / 1000) : null);
+  const lasting = covered.filter((s) => isCount(s.compactions));
+  const time = isObject(rollup.time)
+    ? {
+        elapsedSeconds: ms(rollup.time.elapsed_ms),
+        agentSeconds: ms(rollup.time.agent_ms),
+        modelSeconds: ms(rollup.time.model_ms),
+        toolSeconds: ms(rollup.time.tool_ms),
+        busySeconds: ms(rollup.time.busy_ms),
+        compactionSeconds: ms(rollup.time.compaction_ms),
+        pausedSeconds: ms(rollup.time.paused_ms),
+      }
+    : null;
+  const CAUSE = /^[a-z][a-z_]*$/;
+  const cacheCauses = Array.isArray(rollup.by_cache_cause)
+    ? rollup.by_cache_cause.map((c, i) => {
+        if (!isObject(c) || !CAUSE.test(c.cause ?? '') || !isCount(c.events) || !isCount(c.tokens)) bad(ROLLUP, `by_cache_cause[${i}] lacks a cause, events or tokens`);
+        return { cause: c.cause, events: c.events, tokens: c.tokens, writeUsd: price(c.write_usd), excessUsd: price(c.excess_usd), rereadUsd: price(c.reread_usd) };
+      })
+    : null;
+  if (lasting.length && isCount(totals.compactions) && lasting.reduce((t, s) => t + s.compactions, 0) !== totals.compactions)
+    throw new SourceError('reconcile', `${ROLLUP}: totals say ${totals.compactions} compactions, its sessions add up to ${lasting.reduce((t, s) => t + s.compactions, 0)}`, { path: ROLLUP });
+  const sessionStats =
+    lasting.length || time || cacheCauses
+      ? {
+          time,
+          cacheCauses,
+          sessions: lasting.map((s) => ({
+            id: s.session_id,
+            compactions: s.compactions,
+            peakContextTokens: isCount(s.peak_context_tokens) ? s.peak_context_tokens : null,
+            agentSeconds: ms(s.agent_ms),
+            elapsedSeconds: ms(s.elapsed_ms),
+            calls: s.api_calls,
+            toolCalls: isCount(s.tool_calls) ? s.tool_calls : null,
+            usd: s.usd,
+          })),
+        }
+      : null;
+
   // The source's own account of its loops: every loop, run and cycle added up
   // by loop_stats.py, moonshots and the verification loop included, and runs
   // from before the scripts left records. Read as it stands and checked to add
@@ -807,6 +852,7 @@ export function normalizeSources(raw, config = loadConfig()) {
     pricingAsOf: strOrNull(rollup.pricing_as_of),
     rollup: { calls: totals.api_calls, usd: totals.usd, sessions: rollupSessions.size },
     reported,
+    sessionStats,
     loopAccount,
     calls,
     sessions,

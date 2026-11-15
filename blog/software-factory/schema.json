@@ -349,6 +349,71 @@
             "callsUsd": { "type": "number", "minimum": 0, "description": "Estimated usage of the same sessions: the calls in their logs at list prices." },
             "unattributedUsd": { "type": ["number", "null"], "minimum": 0, "description": "The part of the client's count that no call in a log explains, as the source adds it up session by session." }
           }
+        },
+        "endurance": {
+          "description": "How the sessions lasted, from the source's rollup: time at work, compactions, the largest context, the sessions compacted at least once set against the rest, and what made a call write to the cache anew. The source's specification.md defines the times and the cache events. Null when the rollup says none of it. Since generator 10.",
+          "type": ["object", "null"],
+          "required": ["time", "sessions", "compactions", "compacted", "rest", "peakContext", "most", "cacheCauses"],
+          "additionalProperties": false,
+          "properties": {
+            "time": {
+              "description": "Seconds, added over every session. Model, tool and busy time are unions, since calls overlap: the time at least one was under way.",
+              "type": ["object", "null"],
+              "required": ["elapsedSeconds", "agentSeconds", "modelSeconds", "toolSeconds", "busySeconds", "compactionSeconds", "pausedSeconds"],
+              "additionalProperties": false,
+              "properties": {
+                "elapsedSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "agentSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "modelSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "toolSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "busySeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "compactionSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "pausedSeconds": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            },
+            "sessions": { "type": "integer", "minimum": 0, "description": "Sessions the rollup gives a count of compactions." },
+            "compactions": { "type": "integer", "minimum": 0 },
+            "compacted": { "$ref": "#/$defs/sessionPart", "description": "The sessions whose context was compacted at least once." },
+            "rest": { "$ref": "#/$defs/sessionPart", "description": "The sessions never compacted." },
+            "peakContext": {
+              "description": "The largest context a session reached, in tokens: the most over the sessions, and their median.",
+              "type": ["object", "null"],
+              "required": ["max", "median", "sessions"],
+              "additionalProperties": false,
+              "properties": { "max": { "type": "integer", "minimum": 0 }, "median": { "type": "number", "minimum": 0 }, "sessions": { "type": "integer", "minimum": 0 } }
+            },
+            "most": {
+              "description": "The session compacted most often. Null when none was.",
+              "type": ["object", "null"],
+              "required": ["session", "compactions", "agentSeconds", "elapsedSeconds", "peakContextTokens", "summaryUrl"],
+              "additionalProperties": false,
+              "properties": {
+                "session": { "type": "string" },
+                "compactions": { "type": "integer", "minimum": 1 },
+                "agentSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "elapsedSeconds": { "type": ["integer", "null"], "minimum": 0 },
+                "peakContextTokens": { "type": ["integer", "null"], "minimum": 0 },
+                "summaryUrl": { "type": "string" }
+              }
+            },
+            "cacheCauses": {
+              "description": "Cache events by the source's cause, in its order: a call that lost the cached prefix, or wrote 20,000 tokens or more with it intact. excessUsd is what the write cost above reading the same tokens from the cache; rereadUsd what later calls paid to read a large input again.",
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "required": ["cause", "events", "tokens", "writeUsd", "excessUsd", "rereadUsd"],
+                "additionalProperties": false,
+                "properties": {
+                  "cause": { "type": "string" },
+                  "events": { "type": "integer", "minimum": 0 },
+                  "tokens": { "type": "integer", "minimum": 0 },
+                  "writeUsd": { "type": ["number", "null"], "minimum": 0 },
+                  "excessUsd": { "type": ["number", "null"], "minimum": 0 },
+                  "rereadUsd": { "type": ["number", "null"], "minimum": 0 }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -894,6 +959,19 @@
             "streaks": { "type": "array", "items": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2, "maxItems": 2 } }
           }
         }
+      }
+    },
+    "sessionPart": {
+      "type": "object",
+      "required": ["sessions", "compactions", "agentSeconds", "calls", "toolCalls", "usd"],
+      "additionalProperties": false,
+      "properties": {
+        "sessions": { "type": "integer", "minimum": 0 },
+        "compactions": { "type": "integer", "minimum": 0 },
+        "agentSeconds": { "type": "integer", "minimum": 0 },
+        "calls": { "type": "integer", "minimum": 0 },
+        "toolCalls": { "type": "integer", "minimum": 0 },
+        "usd": { "type": "number", "minimum": 0 }
       }
     },
     "loopStat": {

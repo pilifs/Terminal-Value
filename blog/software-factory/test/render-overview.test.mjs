@@ -78,12 +78,12 @@ test('freshness comes from the snapshot dates and nothing is called live', () =>
   }
 });
 
-test('the overview is short: the headline, five findings, and where to go next', () => {
+test('the overview is short: the headline, six findings, and where to go next', () => {
   const html = body('index.html', { snapshot: committed });
-  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'id="finding-usage"', 'class="sf-more"']);
-  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 5);
-  const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<div class="sf-rates"/g, /<svg class="sf-chart sf-chart-wide"/g].map((re) => (html.match(re) ?? []).length);
-  assert.deepEqual(figures, [1, 1, 1, 2], 'one figure to a finding');
+  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'id="finding-sessions"', 'id="finding-usage"', 'class="sf-more"']);
+  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 6);
+  const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<div class="sf-rates"/g, /<svg class="sf-chart sf-chart-wide"/g, /<div class="sf-scales"/g].map((re) => (html.match(re) ?? []).length);
+  assert.deepEqual(figures, [1, 1, 1, 2, 1], 'one figure to a finding');
   // Everything under a finding is on its own page, not folded away on this one.
   assert.doesNotMatch(html, /<table|<details|<form|sf-breakdown|sf-campaign|data-sf-detail|sf-live/);
   for (const sub of ['loops', 'tools', 'code', 'usage', 'methodology']) assert.ok(html.includes(`<a href="/software-factory/${sub}/">`), sub);
@@ -101,7 +101,7 @@ test('each page under the overview leads with its own statement, and the usage p
   }
   assert.match(of('loops/index.html'), /id="sf-live-title">Loops running now <span class="sf-tag">Not connected yet<\/span>/);
   // The usage page: its statement and figure for all time, then the filters with what they apply to.
-  inOrder(of('usage/index.html'), ['id="usage"', 'data-sf-section="usage"', 'class="sf-scales"', 'id="usage-tokens-by-model"', 'id="by-date"', 'data-sf-filters', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="output"', 'id="explore"']);
+  inOrder(of('usage/index.html'), ['id="usage"', 'data-sf-section="usage"', 'class="sf-scales"', 'id="usage-tokens-by-model"', 'id="sessions"', 'data-sf-section="sessions"', 'id="sf-sessions-title"', 'id="cache-events"', 'id="by-date"', 'data-sf-filters', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="output"', 'id="explore"']);
 });
 
 test('the navigation lists every page and marks the one it is on', () => {

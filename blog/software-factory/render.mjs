@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
-import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts, usageHtml } from '../assets/software-factory/factory.js';
+import { codeHtml, enduranceFacts, enduranceHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts, usageHtml } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -467,7 +467,7 @@ function dataPages(input) {
       {
         title: 'Usage',
         description: 'What the model calls in in-the-loop read and wrote, what caching did to the price, and estimated usage by date, model and effort, with every record under it.',
-        parts: [feature('usage', 'usage', usageHtml(snapshot)), usageHead(), summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), output(snapshot, e), explore(snapshot, { e, paths })],
+        parts: [feature('usage', 'usage', usageHtml(snapshot)), ...(enduranceFacts(snapshot.overview) ? [feature('sessions', 'sessions', enduranceHtml(snapshot))] : []), usageHead(), summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), output(snapshot, e), explore(snapshot, { e, paths })],
       },
       input
     ),
@@ -644,7 +644,7 @@ ${items}
       </section>`;
 }
 
-const FIGURE_SECTIONS = { loops: 'Feature loops', tools: 'Tools', code: 'Code' };
+const FIGURE_SECTIONS = { loops: 'Feature loops', tools: 'Tools', code: 'Code', sessions: 'Sessions, on the usage page' };
 
 /** The figures of the feature loops, tools and code: defined like the metrics, with the patterns they rest on. */
 function figureDefinitions(e) {

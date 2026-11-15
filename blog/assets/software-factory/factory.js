@@ -1678,6 +1678,158 @@ function usageFinding(overview) {
   });
 }
 
+// --- Sessions: how long they last ---------------------------------------------
+
+// The source's causes of a cache event, in words: what happened, then what that means.
+const CACHE_CAUSES = {
+  large_input: ['A large input', 'one input of 20,000 tokens or more, such as a skill or a big tool result'],
+  compaction: ['A compaction', 'the session went on from a summary of its context'],
+  cache_expired: ['The cache expired', 'the call before was longer ago than the cache keeps an entry'],
+  session_start: ['A session started', 'the first call of a session or of a subagent'],
+  model_switch: ['The model changed', 'a cache belongs to one model'],
+  effort_change: ['The effort level changed', ''],
+  unexplained: ['Unexplained', 'the cached context was lost and the log does not say why'],
+};
+const SESSION_PARTS = [
+  { key: 'compacted', label: 'In sessions compacted at least once' },
+  { key: 'uncompacted', label: 'In sessions never compacted' },
+];
+
+/**
+ * What the finding and the usage page both say of how the sessions lasted:
+ * the compactions, the sessions that had one set against the rest, the time
+ * at work and the largest context. Null for a snapshot without the figure,
+ * or one where no session was compacted.
+ */
+export function enduranceFacts(overview) {
+  const en = overview.endurance;
+  if (!en?.compactions || !en.compacted.sessions) return null;
+  const whole = (k) => en.compacted[k] + en.rest[k];
+  const share = (k) => rate(en.compacted[k], whole(k));
+  const hoursOf = (k) => `${hours(en.compacted[k])} of ${hours(whole(k))}`;
+  const rows = [
+    { label: 'Sessions', value: `${count(en.compacted.sessions)} of ${count(en.sessions)}`, share: share('sessions') },
+    whole('agentSeconds') ? { label: 'Agent time', value: hoursOf('agentSeconds'), share: share('agentSeconds') } : null,
+    whole('toolCalls') ? { label: 'Tool calls', value: `${count(en.compacted.toolCalls)} of ${count(whole('toolCalls'))}`, share: share('toolCalls') } : null,
+    whole('usd') ? { label: 'Estimated usage', value: `${formatValue(en.compacted.usd, 'usd')} of ${formatValue(whole('usd'), 'usd')}`, share: share('usd') } : null,
+  ].filter(Boolean);
+  return {
+    en,
+    share,
+    rows,
+    claim: `Sessions compacted their context ${count(en.compactions)} ${en.compactions === 1 ? 'time' : 'times'} and kept working`,
+    lede: `When a session’s context grows too large, Claude Code compacts it: what came before is summarised, and the session goes on from the summary. ${count(en.compacted.sessions)} of the ${plural(
+      en.sessions,
+      'session'
+    )} ${en.compacted.sessions === 1 ? 'was' : 'were'} compacted at least once${
+      whole('agentSeconds') && whole('usd') ? `, and they hold ${pct(share('agentSeconds'), 0)} of the agent time and ${pct(share('usd'), 0)} of the estimated usage` : ''
+    }.`,
+  };
+}
+
+/** Each quantity as one bar, split between the sessions compacted at least once and the rest. */
+function enduranceShares(f) {
+  return scaleHtml(
+    [
+      {
+        title: 'Where the work was',
+        rows: f.rows.map((r) => ({
+          label: r.label,
+          value: r.value,
+          amount: 1,
+          parts: [
+            { key: 'compacted', amount: r.share },
+            { key: 'uncompacted', amount: 1 - r.share },
+          ],
+          tip: `${r.label}: ${r.value} in sessions compacted at least once (${pct(r.share, 0)})`,
+        })),
+        legend: SESSION_PARTS,
+      },
+    ],
+    { label: `The share in sessions compacted at least once: ${f.rows.map((r) => `${r.label.toLowerCase()} ${r.value}`).join('; ')}.` }
+  );
+}
+
+function enduranceFinding(overview) {
+  const f = enduranceFacts(overview);
+  if (!f) return '';
+  const { en } = f;
+  const t = en.time;
+  return finding({
+    id: 'sessions',
+    eyebrow: 'Sessions',
+    claim: f.claim,
+    lede: `${f.lede} <a href="${ROUTE}methodology/#def-session_endurance">Definition</a>`,
+    facts: [
+      en.most ? [count(en.most.compactions), `compactions in one session${en.most.agentSeconds ? `, over ${hours(en.most.agentSeconds)} of work` : ''}`] : null,
+      t?.agentSeconds ? [hours(t.agentSeconds), `of agent time${t.modelSeconds && t.toolSeconds ? `: a model at work for ${hours(t.modelSeconds)}, a tool for ${hours(t.toolSeconds)}` : ''}`] : null,
+      en.peakContext ? [count(en.peakContext.max), 'tokens in one session’s context at its largest'] : null,
+    ],
+    href: `${ROUTE}usage/#sessions`,
+    more: 'Time at work, context, and what made the cache miss',
+    legend: '',
+    chart: enduranceShares(f),
+    caption: 'Each bar is all of one quantity. From the source’s own rollup at this revision.',
+  });
+}
+
+/**
+ * The usage page's part on the sessions: the same claim, the time at work,
+ * the largest context, the shares, and what made a call write to the cache
+ * anew, by the source's cause.
+ */
+export function enduranceHtml(snapshot) {
+  const f = enduranceFacts(snapshot.overview);
+  if (!f) return unavailable('Sessions', 'This snapshot doesn’t say how its sessions lasted: the source’s rollup had no count of compactions at its revision, or none was compacted.');
+  const { en } = f;
+  const t = en.time;
+  const usd = (v) => (v === null ? '<span class="sf-muted">No data</span>' : e(formatValue(v, 'usd')));
+  const tiles = [
+    t?.agentSeconds ? tile('Agent time', hours(t.agentSeconds), `from a prompt to the end of its turn, over ${plural(en.sessions, 'session')}`) : '',
+    t?.modelSeconds ? tile('A model at work', hours(t.modelSeconds), 'at least one model call under way') : '',
+    t?.toolSeconds ? tile('A tool at work', hours(t.toolSeconds), 'at least one tool call under way; the two overlap') : '',
+    tile('Compactions', count(en.compactions), t?.compactionSeconds ? `${hours(t.compactionSeconds)} spent compacting` : `in ${plural(en.compacted.sessions, 'session')}`),
+    en.peakContext ? tile('Largest context', count(en.peakContext.max), `tokens; the median session peaked at ${count(en.peakContext.median)}`) : '',
+    en.most ? tile('Most in one session', count(en.most.compactions), `compactions${en.most.agentSeconds ? `, over ${hours(en.most.agentSeconds)} of work` : ''}`) : '',
+  ].join('');
+  const causes = en.cacheCauses ?? [];
+  const sum = (k) => (causes.every((c) => c[k] !== null) ? causes.reduce((n, c) => n + c[k], 0) : null);
+  const causeRows = causes
+    .map((c) => {
+      const [name, means] = CACHE_CAUSES[c.cause] ?? [c.cause, ''];
+      return `<tr><th scope="row">${e(name)}${means ? ` <span class="sf-muted">${e(means)}</span>` : ''}</th><td>${count(c.events)}</td><td>${e(tokens(c.tokens))}</td><td>${usd(c.writeUsd)}</td><td>${usd(c.excessUsd)}</td><td>${
+        c.rereadUsd ? usd(c.rereadUsd) : '<span class="sf-muted">None</span>'
+      }</td></tr>`;
+    })
+    .join('');
+  const top = causes.length ? causes.reduce((a, b) => ((b.excessUsd ?? 0) > (a.excessUsd ?? 0) ? b : a)) : null;
+  const cacheTable = causes.length
+    ? `<div class="sf-breakdowns sf-tool-tables sf-loop-tables">
+          <section class="sf-breakdown" id="cache-events" aria-labelledby="cache-events-title">
+            <h3 id="cache-events-title">What made a call write to the cache anew</h3>
+            <p class="sf-caption">A cache event is a call that lost its cached context, or wrote 20,000 tokens or more with it intact. The cause is the source’s own. Above a cache read is what the write cost over reading the same tokens from cache${
+              top && sum('excessUsd') ? `: ${e(lower(CACHE_CAUSES[top.cause]?.[0] ?? top.cause))} is ${e(formatValue(top.excessUsd, 'usd'))} of ${e(formatValue(sum('excessUsd'), 'usd'))}` : ''
+            }. A large input is paid for again by each later call that reads it. <a href="${ROUTE}methodology/#def-cache_events">Definition</a></p>
+            <table class="sf-table"><thead><tr><th scope="col">Cause</th><th scope="col">Events</th><th scope="col">Tokens written</th><th scope="col">Cost of the write</th><th scope="col">Above a cache read</th><th scope="col">Read again later</th></tr></thead><tbody>${causeRows}</tbody><tfoot><tr><th scope="row">All</th><td>${count(
+              sum('events')
+            )}</td><td>${e(tokens(sum('tokens')))}</td><td>${usd(sum('writeUsd'))}</td><td>${usd(sum('excessUsd'))}</td><td>${usd(sum('rereadUsd'))}</td></tr></tfoot></table>
+          </section>
+        </div>`
+    : '';
+  return `<p class="sf-eyebrow">Sessions</p>
+        <h2 id="sf-sessions-title">${e(f.claim)}</h2>
+        <p class="sf-section-lede">${f.lede}${
+          en.most
+            ? ` One session was compacted ${plural(en.most.compactions, 'time')}${en.most.elapsedSeconds ? ` in ${hours(en.most.elapsedSeconds)} on the clock` : ''}${link(en.most.summaryUrl, 'its summary').replace(/^ · /, ': ')}.`
+            : ''
+        } <a href="${ROUTE}methodology/#def-session_endurance">Definition</a></p>
+        <dl class="sf-figures">${tiles}</dl>
+        <p class="sf-coverage">Coverage: ${plural(en.sessions, 'session')} the source’s rollup counts · All time: the filters lower on the page don’t change this part</p>
+        ${enduranceShares(f)}
+        <p class="sf-caption">Each bar is all of one quantity. A session is one Claude Code conversation, with everything after a compaction.</p>
+        ${cacheTable}`;
+}
+
 // The verdicts an example can have alone: the first three of the legend's (format.js).
 const SINGLE = VERDICTS.slice(0, 3);
 const LIBRARY = 'real-world';
@@ -2202,5 +2354,5 @@ export function examplesHtml(snapshot, examples = null) {
  */
 export function findingsHtml(snapshot, { examples = null } = {}) {
   const { overview } = snapshot;
-  return [loopsFinding(overview), outputFinding(snapshot, examples), toolsFinding(overview), codeFinding(overview), usageFinding(overview)].filter(Boolean).join('\n        ');
+  return [loopsFinding(overview), outputFinding(snapshot, examples), toolsFinding(overview), codeFinding(overview), enduranceFinding(overview), usageFinding(overview)].filter(Boolean).join('\n        ');
 }

@@ -917,6 +917,11 @@ Settled by the author on 2026-11-14:
   drawn from the source's account (generator 9, `overview.loopAccount.runs`, snapshot `sf1-a9d0b91194c5ab43`): 109
   runs from Oct 31, the verification loop's sessions in a gray row of their own. The pace claim stays on the loops
   that write code. Runs with a run record still open; the other 59 don't yet.
+- **How the sessions lasted** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md,
+  "How the sessions lasted: a sixth finding". Time at work, compactions, peak context and the cache events by
+  cause are read from the rollup (generator 10, `overview.endurance`, snapshot `sf1-dc701302bcf135a5`). The
+  overview's sixth finding is "Sessions compacted their context 392 times and kept working"; the usage page has
+  the numbers, the shares and the table of cache events under it.
 - Status: done
 
 ## Loop settings

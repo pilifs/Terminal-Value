@@ -63,7 +63,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '9' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '10' };
 
 // An example's verdict as the pages count it. The catalog gives most examples
 // one verdict. Where it gives none, the label may still record a result for
@@ -244,6 +244,45 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
         usd: round6(r.usd),
         callsUsd: round6(r.callsUsd),
         unattributedUsd: r.unattributedUsd == null ? null : round6(r.unattributedUsd),
+      }
+    : null;
+
+  // How the sessions lasted: the time at work, the compactions, the largest
+  // context, and the sessions whose context was compacted at least once set
+  // against the rest. Then what made a call write to the cache anew, by the
+  // source's cause. Since generator 10; null when the source says none of it.
+  const ss = normalized.sessionStats ?? null;
+  const partOf = (rows) => ({
+    sessions: rows.length,
+    compactions: rows.reduce((t, s) => t + s.compactions, 0),
+    agentSeconds: rows.reduce((t, s) => t + (s.agentSeconds ?? 0), 0),
+    calls: rows.reduce((t, s) => t + s.calls, 0),
+    toolCalls: rows.reduce((t, s) => t + (s.toolCalls ?? 0), 0),
+    usd: round6(rows.reduce((t, s) => t + s.usd, 0)),
+  });
+  const peaks = ss ? ss.sessions.map((s) => s.peakContextTokens).filter((v) => v !== null).sort((a, b) => a - b) : [];
+  const most = ss ? ss.sessions.filter((s) => s.compactions > 0).sort((a, b) => b.compactions - a.compactions || (b.agentSeconds ?? 0) - (a.agentSeconds ?? 0) || byValue(a.id, b.id))[0] : null;
+  const endurance = ss
+    ? {
+        time: ss.time,
+        sessions: ss.sessions.length,
+        compactions: ss.sessions.reduce((t, s) => t + s.compactions, 0),
+        compacted: partOf(ss.sessions.filter((s) => s.compactions > 0)),
+        rest: partOf(ss.sessions.filter((s) => !s.compactions)),
+        peakContext: peaks.length ? { max: peaks.at(-1), median: median(peaks), sessions: peaks.length } : null,
+        most: most
+          ? {
+              session: most.id,
+              compactions: most.compactions,
+              agentSeconds: most.agentSeconds,
+              elapsedSeconds: most.elapsedSeconds,
+              peakContextTokens: most.peakContextTokens,
+              summaryUrl: source.summaryUrl.replace('{sha}', normalized.source.sha).replace('{session}', most.id),
+            }
+          : null,
+        cacheCauses: ss.cacheCauses
+          ? ss.cacheCauses.map((c) => ({ ...c, writeUsd: c.writeUsd === null ? null : round6(c.writeUsd), excessUsd: c.excessUsd === null ? null : round6(c.excessUsd), rereadUsd: c.rereadUsd === null ? null : round6(c.rereadUsd) }))
+          : null,
       }
     : null;
 
@@ -510,6 +549,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       catalog,
       reported,
       loopAccount,
+      endurance,
     },
     sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },

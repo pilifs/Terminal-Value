@@ -457,6 +457,53 @@ test('what the client counted itself is summed over the sessions that have it, b
   assert.equal((await load(dir)).reported, null);
 });
 
+test('how the sessions lasted is read from the rollup: each session, the time added up, and the cache events by cause', async () => {
+  const { dir } = materialize('stale-source');
+  const ROLLUP_FILE = 'llm-dlc/traces/metrics.json';
+  const rollup = json(dir, ROLLUP_FILE);
+  const counted = rollup.sessions.filter((s) => Number.isInteger(s.compactions));
+  assert.ok(counted.length && counted.length < rollup.sessions.length, 'the fixture has sessions with a count of compactions and without');
+  // The fixture's rollup has the sessions' own figures and neither the time nor the cache events: unknown, not zero.
+  const n = await load(dir);
+  assert.equal(n.sessionStats.time, null);
+  assert.equal(n.sessionStats.cacheCauses, null);
+  assert.deepEqual(
+    n.sessionStats.sessions.map((s) => [s.id, s.compactions, s.peakContextTokens, s.agentSeconds, s.calls, s.usd]),
+    counted.map((s) => [s.session_id, s.compactions, s.peak_context_tokens, Math.round(s.agent_ms / 1000), s.api_calls, s.usd])
+  );
+
+  // With them: times in seconds, and each cause as the source has it, in its order.
+  rollup.totals.compactions = counted.reduce((t, s) => t + s.compactions, 0);
+  rollup.time = { elapsed_ms: 7_200_000, agent_ms: 3_600_499, model_ms: 1_800_000, tool_ms: 2_000_000, busy_ms: 3_500_000, compaction_ms: 60_000, paused_ms: 3_600_000 };
+  rollup.by_cache_cause = [
+    { cause: 'large_input', events: 3, tokens: 90_000, write_usd: 0.9, excess_usd: 0.8, reread_usd: 0.5 },
+    { cause: 'compaction', events: 2, tokens: 40_000, write_usd: 0.4, excess_usd: 0.35, reread_usd: 0 },
+  ];
+  write(dir, ROLLUP_FILE, rollup);
+  const full = (await load(dir)).sessionStats;
+  assert.deepEqual(full.time, { elapsedSeconds: 7200, agentSeconds: 3600, modelSeconds: 1800, toolSeconds: 2000, busySeconds: 3500, compactionSeconds: 60, pausedSeconds: 3600 });
+  assert.deepEqual(full.cacheCauses, [
+    { cause: 'large_input', events: 3, tokens: 90_000, writeUsd: 0.9, excessUsd: 0.8, rereadUsd: 0.5 },
+    { cause: 'compaction', events: 2, tokens: 40_000, writeUsd: 0.4, excessUsd: 0.35, rereadUsd: 0 },
+  ]);
+
+  // A total that disagrees with its sessions fails to reconcile; a cause that isn't one is a schema error.
+  rollup.totals.compactions += 1;
+  write(dir, ROLLUP_FILE, rollup);
+  assert.equal((await failure(load(dir))).code, 'reconcile');
+  rollup.totals.compactions -= 1;
+  rollup.by_cache_cause[1].cause = 'A <b>cause</b>';
+  write(dir, ROLLUP_FILE, rollup);
+  assert.equal((await failure(load(dir))).code, 'schema');
+
+  // A rollup that says none of it: no figure at all.
+  delete rollup.time;
+  delete rollup.by_cache_cause;
+  for (const s of rollup.sessions) delete s.compactions;
+  write(dir, ROLLUP_FILE, rollup);
+  assert.equal((await load(dir)).sessionStats, null);
+});
+
 // --- The source's own account of its loops ---------------------------------------
 
 // A small llm-trace-loops/v1 document that adds up: two loops, three runs.

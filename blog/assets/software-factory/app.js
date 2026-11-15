@@ -29,6 +29,7 @@ import {
   toolChartHtml,
   toolsHtml,
   usageHtml,
+  enduranceHtml,
 } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
@@ -254,6 +255,7 @@ async function start(shell) {
       tools: () => toolsHtml(snap),
       code: () => codeHtml(snap),
       usage: () => usageHtml(snap),
+      sessions: () => enduranceHtml(snap),
     };
     catalog = null;
     for (const [name, html] of Object.entries(sections)) {

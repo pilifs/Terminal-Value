@@ -21,7 +21,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { usageFacts, usageHtml } from '../../assets/software-factory/factory.js';
+import { enduranceFacts, usageFacts, usageHtml } from '../../assets/software-factory/factory.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { fitState, parseState, queryOptions } from '../../assets/software-factory/state.js';
 import { computeMeasures } from '../measures.mjs';
@@ -284,7 +284,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
             h1: document.querySelectorAll('h1').length,
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           }));
-          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 5 : 0, h1: 1, overflow: 0 }, pathname);
+          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 6 : 0, h1: 1, overflow: 0 }, pathname);
           // Every run on one clock, on the overview and on the loops page: a run under the pointer says what it was.
           if (name === 'overview' || name === 'loops') {
             const run = page.locator('.sf-floor .sf-run').first();
@@ -570,8 +570,11 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         const shown = await built.page.evaluate(() => ({
           page: document.querySelector('[data-sf-page]').dataset.sfPage,
           h1: [...document.querySelectorAll('h1')].map((el) => el.textContent),
-          rows: [...document.querySelectorAll('.sf-scale-row')].map((el) => el.querySelector('span').textContent),
+          rows: [...document.querySelectorAll('#usage .sf-scale-row')].map((el) => el.querySelector('span').textContent),
           widths: [...document.querySelectorAll('.sf-scale-bar')].map((el) => el.getBoundingClientRect().width > 0),
+          sessions: [...document.querySelectorAll('#sessions .sf-scale-row')].map((el) => el.querySelector('span').textContent),
+          sessionsTitle: document.querySelector('#sf-sessions-title')?.textContent ?? null,
+          causes: document.querySelectorAll('#cache-events tbody tr').length,
           tip: document.querySelector('.sf-tip').hidden ? null : document.querySelector('.sf-tip').textContent,
           said: document.querySelector('.sf-scale-row').dataset.tip,
           filters: !document.querySelector('[data-sf-filters]').hidden,
@@ -583,6 +586,11 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         assert.match(shown.h1[0], /^[\d.,]+ (billion |million )?tokens read to write [\d.,]+( billion| million)?$/);
         assert.equal(shown.rows.length, 2 + (u.uncached !== null) + 1 + (u.reported ? 1 : 0));
         assert.ok(shown.widths.every(Boolean), 'every bar can be seen, however short');
+        // Under it, how the sessions lasted: the claim, a bar for each quantity, and the cache events by cause.
+        const en = overviewOf(COMMITTED).endurance;
+        assert.equal(shown.sessionsTitle, enduranceFacts(overviewOf(COMMITTED)).claim);
+        assert.deepEqual(shown.sessions, ['Sessions', 'Agent time', 'Tool calls', 'Estimated usage']);
+        assert.equal(shown.causes, en.cacheCauses.length);
         assert.equal(shown.tip, shown.said);
         assert.ok(shown.filters);
         assert.equal(shown.overflow, 0);
@@ -595,6 +603,9 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
       try {
         await until(() => other.page.evaluate((id) => document.querySelector('[data-sf-page]').dataset.snapshot === id, EXAMPLE_ID), 'the other snapshot');
         assert.equal(await other.page.evaluate(() => document.querySelector('#sf-usage-title').textContent), usageTitle(overviewOf(EXAMPLE)));
+        // That snapshot doesn't say how its sessions lasted, and the part says so in place of the other snapshot's numbers.
+        assert.match(await other.page.evaluate(() => document.querySelector('#sessions').textContent), /This snapshot doesn’t say how its sessions lasted/);
+        assert.equal(await other.page.evaluate(() => document.querySelectorAll('#sessions .sf-scale-row').length), 0);
         assert.notEqual(usageTitle(overviewOf(EXAMPLE)), usageTitle(overviewOf(COMMITTED)));
         assert.deepEqual(other.errors, []);
       } finally {

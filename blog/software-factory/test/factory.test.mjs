@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf, accountClock } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf, accountClock, enduranceFacts, enduranceHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
@@ -1239,6 +1239,87 @@ test('with the source’s account, the headline is the commits made inside a loo
   const loops = finding.slice(finding.indexOf('id="finding-loops"'), finding.indexOf('id="finding-output"'));
   assert.match(loops, /<dt>estimated usage for each commit made in a loop run<\/dt><dd>\$2\.50<\/dd>/);
   assert.match(loops, /All 3 loops, and each campaign run by run/);
+});
+
+// --- Sessions: how long they last ---------------------------------------------
+
+const enduranceOf = (o = {}) => ({
+  time: { elapsedSeconds: 360_000, agentSeconds: 72_000, modelSeconds: 36_000, toolSeconds: 45_000, busySeconds: 70_000, compactionSeconds: 1800, pausedSeconds: 200_000 },
+  sessions: 10,
+  compactions: 30,
+  compacted: { sessions: 4, compactions: 30, agentSeconds: 64_800, calls: 900, toolCalls: 950, usd: 96 },
+  rest: { sessions: 6, compactions: 0, agentSeconds: 7200, calls: 100, toolCalls: 50, usd: 4 },
+  peakContext: { max: 400_000, median: 60_000.5, sessions: 10 },
+  most: { session: 's-long', compactions: 12, agentSeconds: 36_000, elapsedSeconds: 90_000, peakContextTokens: 400_000, summaryUrl: 'https://github.com/pilifs/in-the-loop/blob/abc/llm-dlc/traces/s-long/summary.md' },
+  cacheCauses: [
+    { cause: 'compaction', events: 28, tokens: 2_000_000, writeUsd: 20, excessUsd: 18, rereadUsd: 0 },
+    { cause: 'large_input', events: 10, tokens: 500_000, writeUsd: 5, excessUsd: 4.5, rereadUsd: 6 },
+    { cause: 'a <new> cause', events: 1, tokens: 900, writeUsd: 0.01, excessUsd: 0.01, rereadUsd: 0 },
+  ],
+  ...o,
+});
+
+test('how the sessions lasted: a finding on the overview and a part of the usage page, from the same facts', () => {
+  const snap = snapshotOf(run());
+  const withEndurance = (endurance) => ({ ...snap, overview: { ...snap.overview, endurance } });
+  // No figure, or no session compacted: no finding, and the page says what is missing.
+  for (const en of [undefined, null, enduranceOf({ compactions: 0, compacted: { sessions: 0, compactions: 0, agentSeconds: 0, calls: 0, toolCalls: 0, usd: 0 } })]) {
+    assert.equal(enduranceFacts(withEndurance(en).overview), null);
+    assert.doesNotMatch(findingsHtml(withEndurance(en)), /id="finding-sessions"/);
+    assert.match(enduranceHtml(withEndurance(en)), /<p class="sf-eyebrow">Sessions<\/p><div class="sf-empty" role="status"><p>This snapshot doesn’t say how its sessions lasted/);
+  }
+
+  const s = withEndurance(enduranceOf());
+  const f = enduranceFacts(s.overview);
+  assert.equal(f.claim, 'Sessions compacted their context 30 times and kept working');
+  assert.deepEqual(f.rows.map((r) => [r.label, r.value, Number(r.share.toFixed(3))]), [
+    ['Sessions', '4 of 10', 0.4],
+    ['Agent time', '18.0 h of 20.0 h', 0.9],
+    ['Tool calls', '950 of 1,000', 0.95],
+    ['Estimated usage', '$96.00 of $100.00', 0.96],
+  ]);
+  const all = findingsHtml(s);
+  inOrderOf(all, ['id="finding-code"', 'id="finding-sessions"', 'id="finding-usage"']);
+  const html = all.slice(all.indexOf('id="finding-sessions"'), all.indexOf('id="finding-usage"'));
+  assert.match(html, /<h2 id="finding-sessions-title"><a href="\/software-factory\/usage\/#sessions">Sessions compacted their context 30 times and kept working<\/a><\/h2>/);
+  assert.match(html, /4 of the 10 sessions were compacted at least once, and they hold 90% of the agent time and 96% of the estimated usage\. <a href="\/software-factory\/methodology\/#def-session_endurance">Definition<\/a>/);
+  assert.match(html, /<dt>compactions in one session, over 10\.0 h of work<\/dt><dd>12<\/dd>/);
+  assert.match(html, /<dt>of agent time: a model at work for 10\.0 h, a tool for 12\.5 h<\/dt><dd>20\.0 h<\/dd>/);
+  assert.match(html, /<dt>tokens in one session’s context at its largest<\/dt><dd>400,000<\/dd>/);
+  // Each quantity is one whole bar, split between the two kinds of session, with a legend.
+  const bars = [...html.matchAll(/<span class="sf-scale-bar" style="width:100%"><span class="sf-series-compacted" style="flex:([\d.]+)"><\/span><span class="sf-series-uncompacted" style="flex:([\d.]+)"><\/span><\/span>/g)].map((m) => [Number(Number(m[1]).toFixed(2)), Number(Number(m[2]).toFixed(2))]);
+  assert.deepEqual(bars, [[0.4, 0.6], [0.9, 0.1], [0.95, 0.05], [0.96, 0.04]]);
+  assert.match(html, /<li><span class="sf-swatch sf-series-compacted" aria-hidden="true"><\/span>In sessions compacted at least once<\/li><li><span class="sf-swatch sf-series-uncompacted" aria-hidden="true"><\/span>In sessions never compacted<\/li>/);
+
+  const page = enduranceHtml(s);
+  assert.match(page, /<h2 id="sf-sessions-title">Sessions compacted their context 30 times and kept working<\/h2>/);
+  assert.match(page, /One session was compacted 12 times in 25\.0 h on the clock: <a href="https:\/\/github\.com\/pilifs\/in-the-loop\/blob\/abc\/llm-dlc\/traces\/s-long\/summary\.md">its summary<\/a>\./);
+  const tiles = [...page.matchAll(/<div class="sf-figure"><dt>([^<]+)<\/dt><dd><span class="sf-figure-value">([^<]+)<\/span>(?:<span class="sf-figure-note">([^<]*)<\/span>)?/g)].map((m) => m.slice(1, 4));
+  assert.deepEqual(tiles, [
+    ['Agent time', '20.0 h', 'from a prompt to the end of its turn, over 10 sessions'],
+    ['A model at work', '10.0 h', 'at least one model call under way'],
+    ['A tool at work', '12.5 h', 'at least one tool call under way; the two overlap'],
+    ['Compactions', '30', '0.5 h spent compacting'],
+    ['Largest context', '400,000', 'tokens; the median session peaked at 60,001'],
+    ['Most in one session', '12', 'compactions, over 10.0 h of work'],
+  ]);
+  // The cache events by cause: in the source's order and words of ours, an unknown cause as it is and escaped, then all.
+  const table = page.slice(page.indexOf('id="cache-events"'));
+  const cells = (row) => [...row.matchAll(/<td>(.*?)<\/td>/g)].map((c) => c[1].replace(/<[^>]+>/g, ''));
+  assert.deepEqual(
+    [...table.matchAll(/<tr><th scope="row">(.*?)<\/th>(.*?)<\/tr>/g)].map((m) => [m[1].replace(/<[^>]+>/g, ''), cells(m[2])]),
+    [
+      ['A compaction the session went on from a summary of its context', ['28', '2.0 million', '$20.00', '$18.00', 'None']],
+      ['A large input one input of 20,000 tokens or more, such as a skill or a big tool result', ['10', '500,000', '$5.00', '$4.50', '$6.00']],
+      ['a &lt;new&gt; cause', ['1', '900', '$0.01', '$0.01', 'None']],
+      ['All', ['39', '2.5 million', '$25.01', '$22.51', '$6.00']],
+    ]
+  );
+  assert.match(table, /over reading the same tokens from cache: a compaction is \$18\.00 of \$22\.51\./);
+  // Parts the source doesn't say are left out, not drawn as zero.
+  const bare = enduranceHtml(withEndurance(enduranceOf({ time: null, peakContext: null, most: null, cacheCauses: null })));
+  assert.doesNotMatch(bare, /Agent time<\/dt>|A model at work|Largest context|Most in one session|id="cache-events"|One session was compacted/);
+  assert.match(bare, /<dt>Compactions<\/dt><dd><span class="sf-figure-value">30<\/span><span class="sf-figure-note">in 4 sessions<\/span>/);
 });
 
 // The account's runs, as overview.loopAccount.runs has them: a moonshot typed by hand before any record, two streams

@@ -1638,6 +1638,22 @@ body.software-factory .sf-section-lede {
   max-width: 48rem;
   font-size: 1.0625rem;
 }
+/* A second statement on a page: its own panel, a step below the page's first. */
+body.software-factory .sf-shell .sf-feature.sf-sessions h2 {
+  max-width: 48rem;
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+body.software-factory .sf-feature.sf-sessions {
+  margin-top: 1.5rem;
+}
+body.software-factory .sf-feature.sf-sessions .sf-scales {
+  margin-top: 1.25rem;
+}
 body.software-factory .sf-figures {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
@@ -2507,6 +2523,8 @@ body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-cache-writ
 body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-written { background: var(--sf-c-denied); }
 body.software-factory .sf-scale-bar > .sf-series-fresh { background: var(--sf-c-other); }
 body.software-factory .sf-scale-bar > .sf-series-estimate { background: var(--sf-mark); }
+body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-compacted { background: var(--sf-mark); }
+body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-uncompacted { background: var(--sf-neutral); }
 body.software-factory .sf-scale-bar > .sf-series-hypothetical {
   background: repeating-linear-gradient(135deg, var(--sf-neutral) 0 3px, var(--sf-surface) 3px 5px);
 }
@@ -2528,7 +2546,8 @@ body.software-factory .sf-loop-list .sf-table th .sf-muted {
 body.software-factory .sf-loop-list {
   margin-top: 0.75rem;
 }
-body.software-factory .sf-loop-list .sf-table th .sf-muted {
+body.software-factory .sf-loop-list .sf-table th .sf-muted,
+body.software-factory #cache-events .sf-table th .sf-muted {
   display: block;
   font-size: 0.8125rem;
 }

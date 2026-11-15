@@ -557,6 +557,35 @@ test('what the client counted itself is carried beside the estimate, with the se
   assert.equal(measure(out, 'usage_usd').value, 0.5);
 });
 
+test('how the sessions lasted: those compacted at least once against the rest, the largest context, and the one compacted most', () => {
+  assert.equal(run(norm({ calls: [call('2026-11-05T15:00:00Z')] })).overview.endurance, null);
+  const stat = (id, compactions, o = {}) => ({ id, compactions, peakContextTokens: 100_000, agentSeconds: 3600, elapsedSeconds: 7200, calls: 10, toolCalls: 20, usd: 1.2345678, ...o });
+  const time = { elapsedSeconds: 90_000, agentSeconds: 30_000, modelSeconds: 12_000, toolSeconds: 20_000, busySeconds: 29_000, compactionSeconds: 300, pausedSeconds: 60_000 };
+  const cacheCauses = [{ cause: 'compaction', events: 5, tokens: 50_000, writeUsd: 0.1234567, excessUsd: 0.1, rereadUsd: 0 }, { cause: 'unexplained', events: 1, tokens: 9, writeUsd: null, excessUsd: null, rereadUsd: null }];
+  const sessions = [
+    stat('s-long', 4, { peakContextTokens: 500_000, agentSeconds: 20_000, elapsedSeconds: 40_000, calls: 300, toolCalls: 400, usd: 90 }),
+    stat('s-tie-b', 4, { agentSeconds: 100, peakContextTokens: null }),
+    stat('s-once', 1, { peakContextTokens: 300_000 }),
+    stat('s-short', 0, { agentSeconds: null, toolCalls: null, peakContextTokens: 20_000 }),
+    stat('s-brief', 0, { peakContextTokens: 40_000 }),
+  ];
+  const en = run(norm({ calls: [call('2026-11-05T15:00:00Z')], sessionStats: { time, cacheCauses, sessions } })).overview.endurance;
+  assert.deepEqual(en.time, time);
+  assert.deepEqual([en.sessions, en.compactions], [5, 9]);
+  assert.deepEqual(en.compacted, { sessions: 3, compactions: 9, agentSeconds: 23_700, calls: 320, toolCalls: 440, usd: 92.469136 });
+  // A session that doesn't say a time or its tool calls adds none.
+  assert.deepEqual(en.rest, { sessions: 2, compactions: 0, agentSeconds: 3600, calls: 20, toolCalls: 20, usd: 2.469136 });
+  // Over the four that say: the most, and the middle of 20, 40, 300 and 500 thousand.
+  assert.deepEqual(en.peakContext, { max: 500_000, median: 170_000, sessions: 4 });
+  // The most compactions; of two with as many, the one that worked longer.
+  assert.deepEqual([en.most.session, en.most.compactions, en.most.agentSeconds, en.most.elapsedSeconds, en.most.peakContextTokens], ['s-long', 4, 20_000, 40_000, 500_000]);
+  assert.match(en.most.summaryUrl, /^https:\/\/github\.com\/[^/]+\/[^/]+\/blob\/[0-9a-f]{40}\/.*s-long/);
+  assert.deepEqual(en.cacheCauses, [{ cause: 'compaction', events: 5, tokens: 50_000, writeUsd: 0.123457, excessUsd: 0.1, rereadUsd: 0 }, { cause: 'unexplained', events: 1, tokens: 9, writeUsd: null, excessUsd: null, rereadUsd: null }]);
+  // No session compacted: nobody is the one compacted most. No session says its context: no largest.
+  const none = run(norm({ calls: [call('2026-11-05T15:00:00Z')], sessionStats: { time: null, cacheCauses: null, sessions: [stat('a', 0, { peakContextTokens: null })] } })).overview.endurance;
+  assert.deepEqual([none.most, none.peakContext, none.time, none.cacheCauses, none.compacted.sessions], [null, null, null, null, 0]);
+});
+
 test('the source’s account of its loops is carried whole, with typed prompts and the loop run by hand apart', () => {
   assert.equal(run(norm({ calls: [call('2026-11-05T15:00:00Z')] })).overview.loopAccount, null);
   const stat = (o) => ({ runs: 1, cycles: 1, cyclesCommitted: 1, commits: 1, calls: 5, toolCalls: 10, toolErrors: 0, outputTokens: 100, usd: 1.23456789, agentSeconds: 60, busySeconds: 50, modelSeconds: 30, toolSeconds: 25, compactions: 0, peakContextTokens: 900, jobs: 0, jobsPassed: 0, jobsFailed: 0, ...o });

@@ -445,6 +445,38 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### How the sessions lasted: a sixth finding (generator 10)
+
+The author allowed four kinds of source data the pages did not use: agent, model and tool time, compactions, what
+broke the cache, and peak context. They are one finding now, with a part of the usage page under it.
+
+- **The claim:** "Sessions compacted their context 392 times and kept working". 40 of the 113 sessions were
+  compacted at least once, and they hold 90% of the agent time, 93% of the tool calls and 96% of the estimated
+  usage. One session was compacted 50 times over 38.8 hours of work. 392 compactions and 168.6 hours of agent time
+  are the landing page's figures too.
+- **Read from the rollup** (`llm-dlc/traces/metrics.json`): each session's `compactions`, `peak_context_tokens`,
+  `agent_ms`, `elapsed_ms`, calls, tool calls and estimated usage; the `time` block; and `by_cache_cause`. The
+  importer checks that the sessions' compactions add up to the rollup's total. The source's `specification.md`
+  defines the times and the cache events, and the two new definitions on the methodology page follow it.
+- **In the snapshot** as `overview.endurance`: `time`, `sessions`, `compactions`, `compacted` and `rest` (the two
+  kinds of session, each with its sessions, agent time, calls, tool calls and usage), `peakContext`, `most` (the
+  session compacted most often, with a link to its summary) and `cacheCauses`. Null when the rollup says none of
+  it; a part it doesn't say is null and is left out of the page, not drawn as zero.
+- **The overview** has a sixth finding, between code and usage (`enduranceFinding` in `factory.js`): the claim,
+  three numbers, and a figure of four bars. Each bar is all of one quantity, split between the sessions compacted
+  at least once and the rest.
+- **The usage page** has a second panel under its head, `#sessions` (`enduranceHtml`): six numbers, the same four
+  bars, and a table of what made a call write to the cache anew, by the source's cause, with what each write cost
+  above a cache read. A large input and a compaction are $152.57 of the $215.59.
+- **What it does not say.** That compaction causes the work: a session that works for hours is the one whose
+  context grows. The definition says so. The source's logs leave out the compaction calls themselves, so
+  estimated usage doesn't include what compacting cost; the table's cost is of the cache write that follows one.
+- **The fixture snapshot** has no such figure, so the browser tests also show the part saying what is missing
+  when another snapshot is on screen.
+
+Metric definitions are version 10, with `session_endurance` and `cache_events`. Snapshot `sf1-dc701302bcf135a5`,
+the same revision.
+
 ### Every run of every loop on one clock (generator 9)
 
 The clock on the overview and on the loops page now starts on Oct 31 with the first loop, where it started on
