@@ -33,6 +33,8 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isCount = (v) => Number.isInteger(v) && v >= 0;
+/** Where every snapshot so far keeps its overview, relative to its manifest. */
+const OVERVIEW = 'overview.json';
 
 /** Problems with a latest.json; empty when it can be used. */
 export function checkPointer(p) {
@@ -146,12 +148,17 @@ export async function loadSnapshot(base, { fetch, signal, etag = null, current =
   // A snapshot id is derived from content: the same id is the same data, whichever base served it.
   if (current && current.pointer.snapshotId === pointer.snapshotId)
     return { status: 'same', pointer, etag: head.etag };
-  // Immutable files: the browser's cache may answer them.
+  // Immutable files: the browser's cache may answer them. The overview is asked
+  // for beside the manifest, at the path every snapshot uses, to save a round
+  // trip; it is used only if the manifest lists it there, and checked against it.
+  const snapshot = { base, pointer, manifest: null, overview: null };
+  const early = getJson(collectionUrl(snapshot, OVERVIEW), { fetch, signal });
+  early.catch(() => {}); // its failure counts only once the manifest says it is the overview
   const manifest = (await getJson(`${base}${pointer.manifest}`, { fetch, signal })).json;
   fail(checkManifest(manifest, pointer));
   const entry = manifest.collections.find((c) => c.name === 'overview');
-  const snapshot = { base, pointer, manifest, overview: null };
-  const file = await getJson(collectionUrl(snapshot, entry.path), { fetch, signal });
+  snapshot.manifest = manifest;
+  const file = entry.path === OVERVIEW ? await early : await getJson(collectionUrl(snapshot, entry.path), { fetch, signal });
   fail(await checkBytes(file.bytes, entry));
   fail(checkOverview(file.json, manifest));
   snapshot.overview = file.json;

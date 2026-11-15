@@ -661,10 +661,66 @@ Settled by the author on 2026-11-14:
     - one manual run to `preview` once the buckets and secrets exist;
     - then `SOFTWARE_FACTORY_SCHEDULE=on`.
     In a private repository, the schedule costs about 2,900 Actions minutes a month (docs/software-factory.md).
-- Next: M2.5, the client against the remote pointer. Check fallback on a missing binding, an error and an invalid
-  snapshot, on a first visit with filters set. Optionally fetch the overview beside the manifest in `snapshot.js`.
-  Then decide the importer finding above: a rollup change with `summary: null`, perhaps an unsummarized change that
-  is never housekeeping. Then M2.6, the runbook.
+- **M2.5 client against the remote pointer: done** (cycle 11). B's module already did what the brief asks:
+  `firstSnapshot` tries `/software-factory/data/latest.json` and, on any failure, loads the bundled snapshot whole.
+  The link's filters are fitted to whichever snapshot loads. Nothing needed fixing. What was missing was a test of
+  the page itself, `app.js`, rather than its pure modules.
+  - **`test/client-browser.test.mjs`**, 19 cases in headless Chromium (Playwright 1.64.1):
+    - **Setup.** A drafts build of a temporary copy, served the way Pages serves it: static files, and
+      `/software-factory/data/` through the real Pages Function on a fake bucket.
+    - **Each case** is a first visit to `?period=7d&model=claude-opus-5-5&measure=model_calls`. It checks:
+      - the snapshot shown;
+      - the four cards, equal to `computeMeasures` on that snapshot for those filters;
+      - the URL and controls kept;
+      - the status sentence;
+      - no script error;
+      - the overview from one base only;
+      - the sessions records from the same base.
+    - **Remote shown**: the Function with the committed snapshot, and with a different one (the fixture).
+    - **Bundled shown**, in 14 cases:
+      - no Function route (the static 404 page);
+      - no binding, and a failing bucket (both 503);
+      - an empty bucket, and the production gate while unpublished (both 404);
+      - a pointer whose snapshot is missing, one that isn't JSON, and one with another schema;
+      - a manifest naming another snapshot;
+      - overview bytes that differ from the manifest, and a missing overview;
+      - HTTP 500, a dropped connection, and a remote that never answers (after the 8 s timeout).
+    - **Polling**, on the page's faked clock:
+      - After a 503 fallback, a poll that gets 500 changes nothing.
+      - Then the remote comes back with other data. It is announced, and nothing moves until the reader clicks.
+        Then the new snapshot shows under the same filters, with records from the remote.
+      - Without a Function route, polls go to the bundled pointer only.
+    - **Running it.** Playwright isn't a site dependency, so the file skips unless `NODE_PATH` finds it. In the
+      normal run it is the one skipped test. The command is in docs/software-factory.md, Commands.
+    - **Mutations**: each of these fails it:
+      - no fallback;
+      - the link's filters ignored;
+      - no byte check;
+      - new data shown at once;
+      - polling always the bundled pointer;
+      - records always from the remote;
+      - the static numbers kept when another snapshot loads.
+  - **The overview beside the manifest** (M1.3's finding): `loadSnapshot` now asks for
+    `snapshots/<id>/overview.json` at the same time as the manifest. It uses that response only if the manifest
+    lists the overview at that path, and checks it as before. Otherwise it fetches the listed path. A failed early
+    request is swallowed until the manifest says it matters.
+    - Measured at 100 ms latency in headless Chromium, on the drafts preview with no Function: data ready at a
+      median of 753 ms instead of 861 ms (5 loads each). That is one round trip saved, on the first load and on each
+      poll that finds a new snapshot.
+    - Three new tests in `client-snapshot.test.mjs`: the overview asked before the manifest answers (fails on the
+      old code), an overview listed elsewhere, and no unhandled rejection when the manifest fails. Dropping the
+      `catch`, or always using the early response, fails them.
+  - **Left as a finding**: the client reads a remote 404 as a missing route and then polls the bundled pointer. That
+    is right for the production gate and a site without functions. An empty bucket is a 404 too, so a tab opened
+    before the first publish doesn't see it until reload.
+  - Checks:
+    - 257 of 258 tests pass, with the browser test skipped. With `NODE_PATH` set, its 19 cases pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+- Next: decide the importer finding above: a rollup change with `summary: null`, perhaps an unsummarized change that
+  is never housekeeping. Weigh a generator version bump, which changes every snapshot id, against keeping the
+  content of already valid inputs the same. Then M2.6, the runbook.
 - Status: working
 
 ## Loop settings

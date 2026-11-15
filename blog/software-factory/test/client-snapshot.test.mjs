@@ -208,6 +208,56 @@ test('polling is conditional, and an unchanged snapshot fetches nothing else', a
   assert.equal(calls.length, 1);
 });
 
+test('the overview is asked for beside the manifest, not after it', async () => {
+  const { fetch: serveFile, calls } = fakeFetch({ ...serve(REMOTE, EXAMPLE) });
+  let overviewAsked;
+  const asked = new Promise((resolve) => (overviewAsked = resolve));
+  // The manifest answers only once the overview has been asked for: one round trip, not two.
+  const fetch = async (url, init) => {
+    if (url.endsWith('/overview.json')) overviewAsked();
+    if (url.endsWith('/manifest.json'))
+      await Promise.race([asked, new Promise((_, reject) => setTimeout(() => reject(new Error('the overview waited for the manifest')), 1000))]);
+    return serveFile(url, init);
+  };
+  const r = await loadSnapshot(REMOTE, { fetch });
+  assert.equal(r.status, 'new');
+  expectWhole(r.snapshot);
+  assert.deepEqual(calls.map((c) => c.url).sort(), [`${REMOTE}${BASE}manifest.json`, `${REMOTE}${BASE}overview.json`, `${REMOTE}latest.json`].sort());
+});
+
+test('an overview the manifest lists elsewhere is fetched there; the early one is not used', async () => {
+  const manifest = JSON.parse(EXAMPLE[`${BASE}manifest.json`]);
+  for (const c of manifest.collections) if (c.name === 'overview') c.path = 'parts/overview.json';
+  const files = {
+    ...EXAMPLE,
+    [`${BASE}manifest.json`]: Buffer.from(JSON.stringify(manifest)),
+    [`${BASE}parts/overview.json`]: EXAMPLE[`${BASE}overview.json`],
+    [`${BASE}overview.json`]: Buffer.from('{"schema":"not this"}'),
+  };
+  const { fetch, calls } = fakeFetch(serve(REMOTE, files));
+  const r = await loadSnapshot(REMOTE, { fetch });
+  expectWhole(r.snapshot);
+  assert.deepEqual(r.snapshot.overview, JSON.parse(EXAMPLE[`${BASE}overview.json`]));
+  assert.ok(calls.some((c) => c.url === `${REMOTE}${BASE}parts/overview.json`));
+  // And with nothing at the usual path, the early request's 404 is no failure.
+  const { fetch: without } = fakeFetch(serve(REMOTE, Object.fromEntries(Object.entries(files).filter(([k]) => k !== `${BASE}overview.json`))));
+  expectWhole((await loadSnapshot(REMOTE, { fetch: without })).snapshot);
+});
+
+test('a manifest that fails leaves no unhandled failure from the early overview request', async () => {
+  const unhandled = [];
+  const onUnhandled = (err) => unhandled.push(err);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const { fetch } = fakeFetch({ [`${REMOTE}latest.json`]: { status: 200, body: EXAMPLE['latest.json'] } });
+    await assert.rejects(loadSnapshot(REMOTE, { fetch }), (err) => err.missing === true && /manifest/.test(err.message));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
+
 test('details load from the snapshot’s own base, checked', async () => {
   const { fetch, calls } = fakeFetch({ ...serve(REMOTE, EXAMPLE), ...serve(BUNDLED, EXAMPLE) });
   const { snapshot } = await loadSnapshot(REMOTE, { fetch });

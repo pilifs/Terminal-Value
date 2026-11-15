@@ -135,6 +135,9 @@ campaigns get recorded. Example subject tags (payments, consensus, …) are a se
 
 ```sh
 npm run test:software-factory        # every workstream's tests
+NODE_PATH=/tmp/pw/node_modules node --test blog/software-factory/test/client-browser.test.mjs
+                                     # the overview in headless Chromium against each remote failure; it skips
+                                     # without Playwright (npm i --prefix /tmp/pw playwright@1.64.1)
 npm run software-factory:refresh -- --sha <sha> [--checkout ../in-the-loop]
 npm run software-factory:validate    # the committed snapshot
 npm run build && npm run build:drafts
