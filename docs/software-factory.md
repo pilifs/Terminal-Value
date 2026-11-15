@@ -349,8 +349,8 @@ In this order. Each step is the author's, on a machine logged in to Cloudflare o
    - compare `wrangler.toml` with the project's settings;
    - confirm that the project's production branch is `production`;
    - make sure both buckets exist.
-5. **Push**, so the workflow reaches `main`. Optionally, pin `actions/checkout` and `actions/setup-node` to commit
-   SHAs first.
+5. **Push**, so the workflow reaches `main`. Its actions are pinned to commit SHAs (`actions/checkout` v5.1.0,
+   `actions/setup-node` v5.0.0), each with its release tag beside it.
 6. **First run, by hand, to preview**: Actions, Software Factory refresh, Run workflow, destination `preview`. A
    successful run's log ends with the JSON result, `new-snapshot` the first time. Then a preview deploy
    (`npm run deploy:dev`) serves it at `/software-factory/data/latest.json` on the dev site.

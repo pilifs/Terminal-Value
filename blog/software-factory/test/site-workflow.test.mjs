@@ -127,7 +127,8 @@ function parseYaml(text) {
 const WF = parseYaml(TEXT);
 const JOB = WF.jobs.publish;
 const STEP = JOB.steps.find((s) => s.name === 'Publish');
-const CHECKOUT = 'actions/checkout@v5';
+const CHECKOUT = 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09';
+const SETUP_NODE = 'actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444';
 
 test('the YAML reader handles the subset and refuses what it does not read', () => {
   assert.deepEqual(parseYaml("a:\n  b: 'x # y'\n  c: 3 # note\n  d:\n    - e: f\n      g: true\n    - h\n  s: |\n    one\n\n    two\n"), {
@@ -204,8 +205,11 @@ test('no expression is expanded inside a script: inputs reach it as environment'
 test('the steps: both checkouts without stored credentials, the pinned Node, no install', () => {
   assert.deepEqual(
     JOB.steps.map((s) => s.uses ?? 'run'),
-    [CHECKOUT, CHECKOUT, 'actions/setup-node@v5', 'run'],
+    [CHECKOUT, CHECKOUT, SETUP_NODE, 'run'],
   );
+  // Pinned to commits, as a tag can be moved; the release tag stays readable beside each.
+  for (const step of JOB.steps.filter((s) => s.uses)) assert.match(step.uses, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/);
+  assert.equal(TEXT.match(/uses: \S+ # v\d+\.\d+\.\d+\n/g)?.length, 3, 'each pin names its release');
   const [site, source, node] = JOB.steps;
   assert.deepEqual(site.with, { 'persist-credentials': false });
   assert.deepEqual(source.with, {

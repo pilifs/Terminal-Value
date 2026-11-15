@@ -13,6 +13,8 @@
 #   script runs beside the R2 credentials, which only the publish step gets.
 #   in-the-loop is checked out whole, so the publisher reads it and orders its
 #   commits with git alone: no GitHub API call, no token.
+# - Actions are pinned to full commit SHAs, the release tag beside each: a tag
+#   can be moved, a commit can't. Update both together.
 
 name: Software Factory refresh
 
@@ -48,12 +50,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out the site
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
       - name: Check out in-the-loop
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           repository: pilifs/in-the-loop
           path: software-factory-source
@@ -61,7 +63,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: '24.13.1'
 
