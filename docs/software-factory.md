@@ -373,6 +373,45 @@ and unescaped once, then the sentence about the page. The overview has its own s
 no headline or no data. The `<title>` and `og:title` are unchanged, and no page has a share image yet: that
 needs a picture made outside the build, which is the author's call.
 
+### One revision with the landing page (2026-11-15)
+
+`/prove-java-change/` reads in-the-loop at `e9908ab3`, and says "A more detailed stats page is coming soon",
+meaning this section. The two pages gave different totals, since the snapshot was pinned 30 commits earlier, at
+`fbd1fa86`. The author decided the snapshot follows the landing page's revision, and that where both pages state
+the same fact the Software Factory pages match the landing page's totals and wording. The landing page is read,
+never changed.
+
+The snapshot is now `sf1-9d69f4babf0c2699` at `e9908ab3`, read from a local checkout with no change to the
+importer. What agrees with the landing page: $2,312.83 of estimated usage ($2,313 there), $20,219.92 with nothing
+cached, 24,769 model calls, 25,842 tool calls of which 447 failed, 97.8% read from cache, 156 tokens read for each
+one written, 749 commits, 742 recorded changes, 183 examples with 100 violations of which the tests passed on 92,
+and each model's calls.
+
+What does not agree yet, and why:
+
+- **Loops.** The landing page says 34 loops, 109 runs, 350 cycles and 590 commits made inside a loop run. These
+  pages say 25 loops, 50 runs, 253 cycles and 323 commits. The source now publishes its own account,
+  `llm-dlc/traces/loops.json` (`llm-trace-loops/v1`), with moonshots, briefs and the verification loop, each run's
+  cycles, time and jobs. The importer still parses the markdown run records, which only loops since Nov 6 left.
+  Reading `loops.json` is the next step; it is also the answer to request 3 in
+  [software-factory-upstream.md](./software-factory-upstream.md).
+- **Examples with a verdict.** 163 there, 157 of 183 here. Here an example with several verdicts in its label
+  counts as having none.
+- **Lines of code.** 167,128 there is lines added less lines removed in five languages; 181,451 here is lines added
+  in seven. The parts agree: added less removed for Rust, Python, Java, shell and TLA+ come to 167,128.
+- **Verdict words.** Refuted, Established and Left open there; Violation found, Verified and Unverifiable here.
+  The author decided these pages take the landing page's words.
+- **Fable 5.2.** The data now has calls by `claude-fable-5-2`. `config/models.json` and a contract test say no id
+  maps to "Fable 5.2" until the author supplies a mapping, so the model is shown by its raw id, once
+  (`modelName` in `factory.js`). The landing page names it Fable 5.2.
+
+Two things the newer data showed up and that are fixed: a day's label on the run clock sat under the label of a
+stretch that starts near the right edge (`floorHtml` now drops a label within 10% before such a start), and a
+model with no display name had its id printed twice.
+
+The first-load budget is 300 KB, raised from 150 KB by the author on the same day, "to tune later": data and page
+structure come before performance for now. First load is 141.9 KB.
+
 ### What the section ships: its scripts and stylesheet without comments
 
 The fifth finding took the overview's first load to 154.1 KB gzip, over the plan's 150 KB

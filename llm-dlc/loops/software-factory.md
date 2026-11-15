@@ -894,6 +894,12 @@ Settled by the author on 2026-11-14:
   "What a link preview says". Each page's description starts with the result it leads with, read from its
   headline, so a shared link or a search result shows "12,681 tool calls and 311 commits without a prompt from a
   person" and not a sentence about the section. No share image yet.
+- **One revision with the landing page** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "One revision with the landing page". The author's decisions of that day: the snapshot
+  follows the revision `/prove-java-change/` reads, these pages match its totals and wording, the first-load
+  budget is 300 KB. Snapshot `sf1-9d69f4babf0c2699` at in-the-loop `e9908ab3`; usage, tool calls, commits and the
+  catalog now agree with the landing page. Loops do not yet: the source's new `llm-dlc/traces/loops.json` (34
+  loops, 109 runs) is not read. `claude-fable-5-2` is shown by its raw id until the author maps it.
 - Status: done
 
 ## Loop settings

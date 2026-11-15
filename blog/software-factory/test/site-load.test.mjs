@@ -1,8 +1,10 @@
 // What a first visit to the Software Factory overview loads, on a drafts build
 // of a temporary copy of the site: the client module runs only on the
 // overview, every module it imports is preloaded with it, and the first load
-// stays within the plan's budget of about 150 KB gzip (details load only when a
-// reader opens one, so they are not counted).
+// stays within its budget (details load only when a reader opens one, so they
+// are not counted). The plan's budget was about 150 KB gzip; on 2026-11-15 the
+// author raised it to 300 KB, to be tuned later: data and page structure come
+// before performance for now.
 // Coordinator-owned. Run: npm run test:software-factory
 
 import assert from 'node:assert/strict';
@@ -14,7 +16,7 @@ import zlib from 'node:zlib';
 import { moduleGraph } from '../index.mjs';
 import { buildCopy, read, skip } from './site-build.mjs';
 
-const BUDGET = 150 * 1024;
+const BUDGET = 300 * 1024;
 const head = (html) => html.slice(0, html.indexOf('</head>'));
 const scriptsOf = (html) => [...head(html).matchAll(/<script type="module" src="([^"]+)"/g)].map((m) => m[1]);
 const preloadsOf = (html) => [...head(html).matchAll(/<link rel="modulepreload" href="([^"]+)"/g)].map((m) => m[1]);

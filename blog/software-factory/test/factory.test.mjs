@@ -1109,6 +1109,34 @@ test('the usage finding says the estimate runs low where the client counted more
   assert.match(even, /<dt>of input tokens were read from cache<\/dt>/);
 });
 
+test('a label shortly before a stretch that starts near the right edge gives way to that stretch’s own', () => {
+  // 100 hours, a cut, then 4 hours: the last stretch starts past 90% of the width, so its label ends at its mark.
+  const html = floorHtml({
+    panels: [{ from: 0, to: 100 * H, pause: '' }, { from: 200 * H, to: 204 * H, pause: 'No loop ran for 4 days' }],
+    rows: 1,
+    runs: [{ from: 0, to: H, row: 0, ticks: [], tip: 'one', flag: false }],
+    names: [],
+    nights: [],
+    ticks: [
+      { at: 0, label: 'Nov 6', kind: 'start' },
+      { at: 50 * H, label: 'Nov 8', kind: 'day' },
+      { at: 80 * H, label: 'noon', kind: 'hour' }, // more than 10% before the last start: kept
+      { at: 96 * H, label: 'Nov 15', kind: 'day' }, // under 10% before it: would sit under its label
+      { at: 200 * H, label: 'Nov 15', kind: 'start' },
+    ],
+  });
+  const labels = [...html.matchAll(/<span class="sf-floor-tick sf-floor-tick-(\w+)( sf-floor-tick-end)?" style="left:[\d.]+%">([^<]+)<\/span>/g)].map((m) => [m[1], Boolean(m[2]), m[3]]);
+  assert.deepEqual(labels, [['start', false, 'Nov 6'], ['day', false, 'Nov 8'], ['hour', false, 'noon'], ['start', true, 'Nov 15']]);
+});
+
+test('a model the snapshot has no display name for is named by its id, once', () => {
+  const overview = usageOverview({ models: [{ id: 'm-a', label: 'A' }, { id: 'claude-new-9', label: 'claude-new-9' }] });
+  const html = usageHtml({ overview });
+  assert.match(html, /<th scope="row"><code class="sf-muted">claude-new-9<\/code><\/th>/);
+  assert.match(html, /<th scope="row">A <code class="sf-muted">m-a<\/code><\/th>/);
+  assert.equal(html.match(/claude-new-9/g).length, 1);
+});
+
 // --- What a verdict rests on -------------------------------------------------------
 
 const proof = (o = {}) => ({ tests: null, counterexample: null, trace: null, seconds: null, checker: null, ...o });

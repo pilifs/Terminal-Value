@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { formatValue } from '../../assets/software-factory/format.js';
 import { buildCopy, handWritten, PROJECT_DIST, read, REPO, skip, texts } from './site-build.mjs';
 
 const DRAFT = 'fable-5-1-vs-5-2';
@@ -116,7 +117,13 @@ test('empty analysis: real data, no post listed, the draft never', { skip }, () 
   const overview = page(dist, 'software-factory');
   assert.match(overview, /Analysis &amp; notes by Filip<\/h2>\s*<p class="sf-empty">No analysis published yet\./);
   assert.match(page(dist, 'software-factory/analysis'), /<p class="sf-empty">No analysis published yet\./);
-  assert.ok(overview.includes('$2,174.98') && overview.includes('23,455') && overview.includes('12,681 tool calls'), 'real numbers in the static HTML');
+  // The committed snapshot's own numbers, whatever revision it was made from.
+  const data = path.join(REPO, 'blog', 'software-factory', 'data');
+  const committed = JSON.parse(read(path.join(data, path.dirname(JSON.parse(read(path.join(data, 'latest.json'))).manifest), 'overview.json')));
+  const measure = (id) => committed.measures.find((m) => m.id === id).value;
+  const said = [formatValue(measure('usage_usd'), 'usd'), formatValue(measure('model_calls'), 'calls'), `${formatValue(committed.loops.totals.toolCalls, 'calls')} tool calls`];
+  assert.match(said.join(' '), /^\$[\d,]+\.\d\d [\d,]+ [\d,]+ tool calls$/);
+  for (const text of said) assert.ok(overview.includes(text), `real numbers in the static HTML: ${text}`);
   for (const route of ['software-factory', 'software-factory/methodology']) {
     assert.doesNotMatch(page(dist, route), /sf-banner|sf-unavailable/, route);
   }

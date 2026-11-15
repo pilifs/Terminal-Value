@@ -57,6 +57,10 @@ export const KINDS = [
 const unavailable = (title, why) =>
   `<p class="sf-eyebrow">${e(title)}</p><div class="sf-empty" role="status"><p>${e(why)}</p><p>No numbers are shown rather than numbers that weren't measured.</p></div>`;
 
+// A model by its display name with its raw id beside it. A model the snapshot
+// has no display name for is labelled by its id, which is then said once.
+const modelName = (m, attrs = '') => (m.id && m.label === m.id ? `<code${attrs}>${e(m.id)}</code>` : `${e(m.label)}${m.id ? ` <code${attrs}>${e(m.id)}</code>` : ''}`);
+
 const tile = (label, value, note) =>
   `<div class="sf-figure"><dt>${e(label)}</dt><dd><span class="sf-figure-value">${e(value)}</span>${note ? `<span class="sf-figure-note">${note}</span>` : ''}</dd></div>`;
 
@@ -753,7 +757,7 @@ export function toolsHtml(snapshot) {
             title: 'By model',
             caption: 'Raw model ids beside the names. The models did different work, so this is where failures happened, not which model is better.',
             head: 'Model',
-            rows: tools.byModel.map((m) => ({ ...m, label: `${e(m.label)} <code class="sf-muted">${e(m.id)}</code>` })),
+            rows: tools.byModel.map((m) => ({ ...m, label: modelName(m, ' class="sf-muted"') })),
           })}
           ${rateTable({
             id: 'tools-by-context',
@@ -1353,7 +1357,7 @@ export function usageHtml(snapshot) {
   const modelRows = u.byModel
     .map(
       (m) =>
-        `<tr><th scope="row">${e(m.label)}${m.id ? ` <code class="sf-muted">${e(m.id)}</code>` : ''}</th><td>${count(m.calls)}</td><td>${e(tokens(m.read))}</td><td>${e(tokens(m.written))}</td><td>${m.written ? count(m.read / m.written) : '<span class="sf-muted">No data</span>'}</td><td>${e(
+        `<tr><th scope="row">${modelName(m, ' class="sf-muted"')}</th><td>${count(m.calls)}</td><td>${e(tokens(m.read))}</td><td>${e(tokens(m.written))}</td><td>${m.written ? count(m.read / m.written) : '<span class="sf-muted">No data</span>'}</td><td>${e(
           pct(rate(m.cacheRead, m.read))
         )}</td><td>${m.priced ? e(usd(m.usd)) : '<span class="sf-muted">Not priced</span>'}</td>${u.uncached !== null ? `<td>${m.priced && m.uncached !== null ? e(usd(m.uncached)) : '<span class="sf-muted">No data</span>'}</td>` : ''}</tr>`
     )
@@ -1426,7 +1430,7 @@ function usageFinding(overview) {
       : 'It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof.';
   const uncached = facts?.uncached ?? null;
   const legend = `<ul class="sf-legend">${series
-    .map((s) => `<li><span class="sf-swatch sf-series-${s.key}" aria-hidden="true"></span>${e(s.label)}${s.id ? ` <code>${e(s.id)}</code>` : ''}</li>`)
+    .map((s) => `<li><span class="sf-swatch sf-series-${s.key}" aria-hidden="true"></span>${modelName(s)}</li>`)
     .join('')}</ul>`;
   return finding({
     id: 'usage',

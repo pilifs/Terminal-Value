@@ -262,10 +262,14 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
     .map((n) => `<li style="left:${x(n.at)}%;width:${Number(Math.max(0, x(n.until) - x(n.at) - 0.6).toFixed(2))}%"><a href="${e(n.href)}"><code>${e(n.label)}</code></a></li>`)
     .join('');
   // A label starts at its mark. One near a panel's start would run into the
-  // start's own label, and one near the right edge ends at its mark instead.
+  // start's own label, and one near the right edge ends at its mark instead:
+  // a panel that starts there has its label to the left of its mark, so a
+  // label shortly before it gives way too.
+  const END = 90;
+  const before = (t) => placed.some((q) => q.left > END && q.from > t.at && q.left - x(t.at) < 10);
   const marks = ticks
-    .filter((t) => t.kind === 'start' || x(t.at) - (placed.findLast((q) => t.at >= q.from) ?? placed[0]).left >= 8)
-    .map((t) => `<span class="sf-floor-tick sf-floor-tick-${e(t.kind)}${x(t.at) > 90 ? ' sf-floor-tick-end' : ''}" style="left:${x(t.at)}%">${e(t.label)}</span>`)
+    .filter((t) => t.kind === 'start' || (x(t.at) - (placed.findLast((q) => t.at >= q.from) ?? placed[0]).left >= 8 && !before(t)))
+    .map((t) => `<span class="sf-floor-tick sf-floor-tick-${e(t.kind)}${x(t.at) > END ? ' sf-floor-tick-end' : ''}" style="left:${x(t.at)}%">${e(t.label)}</span>`)
     .join('');
   return `<div class="sf-floor" style="--sf-rows:${rows}">
               <ul class="sf-floor-names">${labels}</ul>
