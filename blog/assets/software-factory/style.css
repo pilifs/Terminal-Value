@@ -1926,12 +1926,12 @@ body.software-factory .sf-live-preview .sf-example {
 
 /* The usage page's head: the filters sit with what they filter. */
 body.software-factory .sf-usage-head {
-  margin: 0 0 1rem;
+  margin: 2.25rem 0 1rem;
   scroll-margin-top: 1rem;
 }
-body.software-factory .sf-shell .sf-usage-head h1 {
+body.software-factory .sf-shell .sf-usage-head h2 {
   margin: 0 0 0.5rem;
-  font-size: clamp(1.5rem, 2.8vw, 2.125rem);
+  font-size: clamp(1.25rem, 2.2vw, 1.5rem);
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -2380,4 +2380,75 @@ body.software-factory .sf-proof-note {
 }
 body.software-factory .sf-shell .sf-example .sf-proof .sf-ledger-total {
   margin-top: 0.6rem;
+}
+
+/* Amounts on one scale: a row's name and value over its bar, so a bar too
+   short to see still says what it is. */
+body.software-factory .sf-scales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
+  gap: 1.5rem 2.5rem;
+  margin: 0.75rem 0 1rem;
+}
+body.software-factory .sf-scale .sf-legend {
+  margin-top: 0.75rem;
+}
+body.software-factory .sf-usage .sf-table th code {
+  white-space: nowrap;
+}
+body.software-factory .sf-usage .sf-note {
+  margin-top: 1.5rem;
+}
+body.software-factory .sf-scale {
+  min-width: 0;
+}
+body.software-factory .sf-shell .sf-scale-title {
+  margin: 0 0 0.5rem;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+body.software-factory .sf-scale-row + .sf-scale-row {
+  margin-top: 0.75rem;
+}
+body.software-factory .sf-shell .sf-scale-name {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 0.75rem;
+  margin: 0 0 0.25rem;
+  color: var(--sf-muted);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+body.software-factory .sf-scale-name strong {
+  color: var(--sf-text);
+  font-variant-numeric: tabular-nums;
+}
+body.software-factory .sf-scale-track {
+  display: block;
+  border-left: 1px solid var(--sf-rule-strong);
+}
+body.software-factory .sf-scale-bar {
+  display: flex;
+  gap: 2px;
+  min-width: 3px;
+  height: 1.25rem;
+  overflow: hidden;
+  border-radius: 0 4px 4px 0;
+}
+body.software-factory .sf-scale-bar > span {
+  min-width: 1px;
+  background: var(--sf-neutral);
+}
+body.software-factory .sf-scale-row:hover .sf-scale-bar {
+  filter: brightness(1.12);
+}
+body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-cache-read { background: var(--sf-c-exit); }
+body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-cache-write { background: var(--sf-c-rejected); }
+body.software-factory :is(.sf-scale-bar > span, .sf-swatch).sf-series-written { background: var(--sf-c-denied); }
+body.software-factory .sf-scale-bar > .sf-series-fresh { background: var(--sf-c-other); }
+body.software-factory .sf-scale-bar > .sf-series-estimate { background: var(--sf-mark); }
+body.software-factory .sf-scale-bar > .sf-series-hypothetical {
+  background: repeating-linear-gradient(135deg, var(--sf-neutral) 0 3px, var(--sf-surface) 3px 5px);
 }

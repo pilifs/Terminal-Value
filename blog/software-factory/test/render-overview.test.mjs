@@ -99,7 +99,8 @@ test('each page under the overview leads with its own statement, and the usage p
     inOrder(html, ['class="sf-nav"', 'data-sf-freshness', `id="${id}"`]);
   }
   assert.match(of('loops/index.html'), /id="sf-live-title">Loops running now <span class="sf-tag">Not connected yet<\/span>/);
-  inOrder(of('usage/index.html'), ['id="usage"', 'data-sf-filters', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="output"', 'id="explore"']);
+  // The usage page: its statement and figure for all time, then the filters with what they apply to.
+  inOrder(of('usage/index.html'), ['id="usage"', 'data-sf-section="usage"', 'class="sf-scales"', 'id="usage-tokens-by-model"', 'id="by-date"', 'data-sf-filters', 'class="sf-summary"', 'id="trend"', 'class="sf-panel sf-observations"', 'id="output"', 'id="explore"']);
 });
 
 test('the navigation lists every page and marks the one it is on', () => {

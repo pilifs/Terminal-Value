@@ -7,7 +7,7 @@
 // inside of its section. A snapshot made before these were measured has no
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
-import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, ratesHtml, scatterSvg } from './figures.js';
+import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, ratesHtml, scaleHtml, scatterSvg } from './figures.js';
 import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
 import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
@@ -1304,6 +1304,107 @@ export function usageDays(overview) {
   return { series, points };
 }
 
+// The kinds of token the figure draws, and the cost figures beside the estimate.
+const TOKEN_KINDS = [
+  { key: 'cache-read', label: 'Read from cache' },
+  { key: 'cache-write', label: 'Read, and written to cache' },
+  { key: 'written', label: 'Written: output tokens' },
+];
+
+/**
+ * The head of the usage page: what the model calls read against what they
+ * wrote, what caching did to the price, and what Claude Code counted itself.
+ * All time; the page's filters apply to what is under it.
+ */
+export function usageHtml(snapshot) {
+  const { overview } = snapshot;
+  const u = usageFacts(overview);
+  if (!u) return unavailable('Usage', 'This snapshot has no model calls: no session in it has a metrics file.');
+  const usd = (v) => formatValue(v, 'usd');
+  const each = u.written ? u.read / u.written : null;
+  const asOf = u.pricingAsOf ? ` as of ${formatDay(u.pricingAsOf)}` : '';
+  const priced = u.priced > 0;
+  const r = u.reported;
+  const low = r && r.usd > r.callsUsd;
+  const sessions = r ? `${count(r.coverage.included)} of ${count(r.coverage.total)} sessions` : '';
+  const definition = `<a href="${ROUTE}methodology/#def-usage_usd">Definition</a>`;
+
+  const tokenRows = [
+    {
+      label: 'Read',
+      value: `${tokens(u.read)} tokens`,
+      amount: u.read,
+      parts: [
+        { key: 'cache-read', amount: u.cacheRead },
+        { key: 'cache-write', amount: u.cacheWrite },
+        { key: 'fresh', amount: u.fresh },
+      ],
+      tip: `Read: ${count(u.read)} input tokens. ${count(u.cacheRead)} from cache, ${count(u.cacheWrite)} written to cache, ${count(u.fresh)} neither`,
+    },
+    { label: 'Written', value: `${tokens(u.written)} tokens`, amount: u.written, key: 'written', tip: `Written: ${count(u.written)} output tokens${u.thinking ? `, ${count(u.thinking)} of them counted as thinking` : ''}` },
+  ];
+  const priceRows = [
+    u.uncached !== null ? { label: 'With nothing cached: a hypothetical', value: usd(u.uncached), amount: u.uncached, key: 'hypothetical', tip: `The same calls priced as if nothing were read from cache: ${usd(u.uncached)}. No call was made that way` } : null,
+    { label: 'As recorded: estimated usage', value: usd(u.usd), amount: u.usd, key: 'estimate', tip: `Estimated usage, from the tokens of ${plural(u.priced, 'priced call')}: ${usd(u.usd)}` },
+    r ? { label: `Claude Code’s own count, ${sessions}`, value: usd(r.usd), amount: r.usd, key: 'client', tip: `What Claude Code counted itself for ${sessions}: ${usd(r.usd)}. The calls in those sessions’ logs come to ${usd(r.callsUsd)}` } : null,
+  ].filter(Boolean);
+  const groups = [{ title: 'Tokens', rows: tokenRows, legend: TOKEN_KINDS }, ...(priced && priceRows.length > 1 ? [{ title: `List price${asOf}`, rows: priceRows }] : [])];
+
+  const modelRows = u.byModel
+    .map(
+      (m) =>
+        `<tr><th scope="row">${e(m.label)}${m.id ? ` <code class="sf-muted">${e(m.id)}</code>` : ''}</th><td>${count(m.calls)}</td><td>${e(tokens(m.read))}</td><td>${e(tokens(m.written))}</td><td>${m.written ? count(m.read / m.written) : '<span class="sf-muted">No data</span>'}</td><td>${e(
+          pct(rate(m.cacheRead, m.read))
+        )}</td><td>${m.priced ? e(usd(m.usd)) : '<span class="sf-muted">Not priced</span>'}</td>${u.uncached !== null ? `<td>${m.priced && m.uncached !== null ? e(usd(m.uncached)) : '<span class="sf-muted">No data</span>'}</td>` : ''}</tr>`
+    )
+    .join('');
+
+  return `<p class="sf-eyebrow">Usage</p>
+        <h1 id="sf-usage-title">${e(each !== null && each >= 2 ? `${tokens(u.read)} tokens read to write ${tokens(u.written)}` : `${tokens(u.read)} tokens read, ${tokens(u.written)} written`)}</h1>
+        <p class="sf-section-lede">Every model call reads its whole context again, so ${plural(u.calls, 'call')} took in ${
+          each !== null ? `${count(each)} ${each >= 1.5 ? 'tokens' : 'token'} for each one written` : `${tokens(u.read)} tokens`
+        }. ${e(pct(rate(u.cacheRead, u.read)))} of what was read came from cache.${
+          priced
+            ? ` At list prices${e(asOf)} that is an estimated ${e(usd(u.usd))}${u.uncached !== null ? `; the same calls with nothing cached would be priced at ${e(usd(u.uncached))}` : ''}. It is an estimate, not a bill. ${definition}`
+            : ''
+        }</p>
+        <dl class="sf-figures">${[
+          tile('Read per call', count(u.read / u.calls), 'input tokens, on average'),
+          tile('Written per call', count(u.written / u.calls), u.thinking !== null && u.written ? `output tokens; ${e(pct(rate(u.thinking, u.written)))} of all output is counted as thinking` : 'output tokens, on average'),
+          tile('Read from cache', pct(rate(u.cacheRead, u.read)), `${e(tokens(u.cacheRead))} tokens`),
+          tile('Never cached', count(u.fresh), 'input tokens neither read from cache nor written to it'),
+        ].join('')}</dl>
+        <p class="sf-coverage">Coverage: ${count(u.priced)} of ${count(u.calls)} model calls priced · All time: the filters lower on the page don’t change this part</p>
+        <div class="sf-subhead"><h2>Read against written, and the price with and without the cache</h2></div>
+        ${scaleHtml(groups, {
+          label: `${tokens(u.read)} tokens read against ${tokens(u.written)} written${
+            priced && priceRows.length > 1 ? `, and list price: ${priceRows.map((p) => `${p.label} ${p.value}`).join('; ')}` : ''
+          }.`,
+        })}
+        <p class="sf-caption">A group’s bars share one scale. A cache read counts the same context again on every call, so tokens read is not unique text.${
+          u.fresh > 0 ? ` ${count(u.fresh)} input ${u.fresh === 1 ? 'token was' : 'tokens were'} never cached: too few to draw.` : ''
+        }</p>
+        ${
+          r
+            ? `<aside class="sf-note">
+          <h2>${low ? 'The estimate runs low' : 'The client’s own count'}</h2>
+          <p>Claude Code writes its own count when a session stops. For the ${sessions} that have one it is ${e(usd(r.usd))}; the calls in those sessions’ logs come to ${e(usd(r.callsUsd))}.${
+            low ? ' The source says why: its logs leave out compactions and side calls.' : ''
+          } Only the estimate can be split by day, model, change and loop, so these pages use it throughout. <a href="${ROUTE}methodology/#def-reported_usd">How the figures are kept apart</a></p>
+        </aside>`
+            : ''
+        }
+        <div class="sf-breakdowns sf-tool-tables">
+          <section class="sf-breakdown" id="usage-tokens-by-model" aria-labelledby="usage-tokens-by-model-title">
+            <h3 id="usage-tokens-by-model-title">By model</h3>
+            <p class="sf-caption">Raw model ids beside the names. The models did different work, so this says where the tokens went, not which model is better.</p>
+            <table class="sf-table"><thead><tr><th scope="col">Model</th><th scope="col">Calls</th><th scope="col">Read</th><th scope="col">Written</th><th scope="col">Read per one written</th><th scope="col">From cache</th><th scope="col">Estimated usage</th>${
+              u.uncached !== null ? '<th scope="col">With nothing cached</th>' : ''
+            }</tr></thead><tbody>${modelRows}</tbody></table>
+          </section>
+        </div>`;
+}
+
 function usageFinding(overview) {
   const { usage, loops, days } = overview;
   const measure = (id) => overview.measures?.find((m) => m.id === id) ?? null;
@@ -1315,6 +1416,15 @@ function usageFinding(overview) {
   const top = series[0];
   const spent = points.filter((p) => p.up !== null).length;
   const inLoops = loops?.totals.usd > 0 ? loops.totals.usd : null;
+  // The figures kept beside the estimate: what the client counted itself, said
+  // where it is the higher of the two, and the same calls with nothing cached.
+  const facts = usageFacts(overview);
+  const r = facts?.reported ?? null;
+  const caution =
+    r && r.usd > r.callsUsd
+      ? `It is an estimate, not a bill, and it runs low: Claude Code’s own count is ${formatValue(r.usd, 'usd')} for ${count(r.coverage.included)} of the ${count(r.coverage.total)} sessions. Neither counts a person’s time or a machine that ran a proof.`
+      : 'It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof.';
+  const uncached = facts?.uncached ?? null;
   const legend = `<ul class="sf-legend">${series
     .map((s) => `<li><span class="sf-swatch sf-series-${s.key}" aria-hidden="true"></span>${e(s.label)}${s.id ? ` <code>${e(s.id)}</code>` : ''}</li>`)
     .join('')}</ul>`;
@@ -1324,14 +1434,16 @@ function usageFinding(overview) {
     claim: `Every session on record, for an estimated ${formatValue(usd.value, 'usd')} of model usage`,
     lede: `That is ${calls ? `${plural(calls.value, 'model call')}, ` : ''}${e(formatDay(days[0], { year: false }))} to ${e(formatDay(days.at(-1)))}, priced from ${
       cache?.denominator ? `the ${tokens(cache.denominator)} input tokens they read and the output they wrote` : 'their token counts'
-    }, at list prices. It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof. <a href="${ROUTE}methodology/#def-usage_usd">Definition</a>`,
+    }, at list prices. ${caution} <a href="${ROUTE}methodology/#def-usage_usd">Definition</a>`,
     facts: [
-      cache && cache.value !== null ? [pct(cache.value), 'of input tokens were read from cache'] : null,
+      cache && cache.value !== null
+        ? [pct(cache.value), `of input tokens were read from cache${uncached !== null && uncached > usd.value ? `; without it the same calls come to ${formatValue(uncached, 'usd')}` : ''}`]
+        : null,
       top && usd.value ? [pct(top.usd / usd.value), `of it was ${top.label}${top.id ? ` (${top.id})` : ''}`] : null,
       inLoops ? [formatValue(inLoops, 'usd'), 'of it was inside feature loop runs'] : calls ? [count(calls.value), 'model calls'] : null,
     ],
     href: `${ROUTE}usage/`,
-    more: 'Usage by day, model and effort, and every record',
+    more: 'What was read against what was written, and usage by day, model and effort',
     legend,
     chart: columnsSvg(points, {
       id: 'sf-chart-usage',

@@ -153,6 +153,32 @@ export function ratesHtml(groups, { series, label }) {
 }
 
 /**
+ * Amounts on one scale, as horizontal bars: a group for each kind of amount,
+ * and in a group a row for each, its bar as long as its share of the group's
+ * largest. A row's name and value are written over its bar, so a bar too
+ * short to see still says what it is.
+ *   groups: [{ title, legend?, rows: [{ label, value, amount, tip, parts?, key? }] }]:
+ *     `parts` are [{ key, amount }] drawn in order within the bar; without
+ *     them the bar is one mark of `key`. `legend` is [{ key, label }] for a
+ *     group whose bars have parts.
+ *   label says the whole figure for a screen reader.
+ */
+export function scaleHtml(groups, { label }) {
+  const row = (r, most) => {
+    const parts = (r.parts ?? [{ key: r.key, amount: r.amount }]).filter((p) => p.amount > 0);
+    return `<div class="sf-scale-row"${r.tip ? ` data-tip="${e(r.tip)}"` : ''}><p class="sf-scale-name"><span>${e(r.label)}</span> <strong>${e(r.value)}</strong></p><span class="sf-scale-track"><span class="sf-scale-bar" style="width:${
+      most ? fixed((r.amount / most) * 100) : 0
+    }%">${parts.map((p) => `<span class="sf-series-${e(p.key)}" style="flex:${p.amount}"></span>`).join('')}</span></span></div>`;
+  };
+  return `<div class="sf-scales" role="img" aria-label="${e(label)}">${groups
+    .map((g) => {
+      const most = Math.max(0, ...g.rows.map((r) => r.amount));
+      return `<div class="sf-scale"><p class="sf-scale-title">${e(g.title)}</p>${g.rows.map((r) => row(r, most)).join('')}${g.legend ? legendHtml(g.legend) : ''}</div>`;
+    })
+    .join('')}</div>`;
+}
+
+/**
  * A campaign's runs as lanes, one per loop, on one clock from the campaign's
  * first start to its last end. A bar is a run; a notch in it is a cycle's
  * commit. lanes: [{ label, runs: [{ from, to, ticks: [ms], tip }] }], times in ms.

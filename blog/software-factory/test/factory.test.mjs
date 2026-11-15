@@ -5,8 +5,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
+import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
 import { aggregate } from '../metrics.mjs';
@@ -952,6 +953,160 @@ test('the usage finding says what every session took, as an estimate, and names 
   assert.match(findingsHtml({ ...snap, overview: rest }), /<dt>model calls<\/dt><dd>\d+<\/dd>/);
   const free = { ...snap, overview: { ...snap.overview, measures: snap.overview.measures.map((m) => (m.id === 'usage_usd' ? { ...m, value: 0 } : m)) } };
   assert.doesNotMatch(findingsHtml(free), /finding-usage/);
+});
+
+// --- The usage page's head: what was read against what was written ---------------
+
+const usageOverview = (o = {}) => ({
+  pricingAsOf: '2026-10-31',
+  days: ['2026-11-01', '2026-11-02'],
+  models: [{ id: 'm-a', label: 'A' }, { id: 'm-b', label: 'B <b>' }],
+  efforts: ['high'],
+  usage: {
+    columns: ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'],
+    // Model A on two days, model B on one: B has the larger usage.
+    rows: [[0, 0, 0, 3, 3, 2, 10, 900, 90, 20, 5, 12], [1, 0, 0, 1, 1, 1, 0, 400, 100, 5, 0, 3], [1, 1, 0, 1, 1, 6, 0, 480, 20, 25, 10, 25]],
+  },
+  reported: { coverage: { included: 2, total: 3, missing: 1, note: 'sessions that had stopped' }, usd: 12, callsUsd: 8, unattributedUsd: 4.5 },
+  ...o,
+});
+const withoutColumns = (overview, ...names) => {
+  const keep = overview.usage.columns.map((c, i) => (names.includes(c) ? -1 : i)).filter((i) => i !== -1);
+  return { ...overview, usage: { columns: keep.map((i) => overview.usage.columns[i]), rows: overview.usage.rows.map((r) => keep.map((i) => r[i])) } };
+};
+
+test('usage facts add up what was read and written, by model, and keep the other figures apart', () => {
+  const u = usageFacts(usageOverview());
+  assert.deepEqual(
+    [u.calls, u.priced, u.usd, u.fresh, u.cacheRead, u.cacheWrite, u.read, u.written, u.thinking, u.uncached],
+    [5, 5, 9, 10, 1780, 210, 2000, 50, 15, 40]
+  );
+  assert.deepEqual(u.byModel.map((m) => [m.label, m.id, m.usd, m.read, m.written, m.uncached]), [['B <b>', 'm-b', 6, 500, 25, 25], ['A', 'm-a', 3, 1500, 25, 15]], 'largest usage first');
+  assert.equal(u.reported.usd, 12);
+  assert.equal(u.usd, 9, 'neither figure is added to the estimate');
+  // A row with no value for a figure leaves the whole figure unknown: part of a sum is not the sum.
+  const holed = usageOverview();
+  holed.usage.rows[1][11] = null;
+  holed.usage.rows[2][10] = null;
+  const h = usageFacts(holed);
+  assert.deepEqual([h.uncached, h.thinking, h.byModel[0].uncached, h.byModel[1].uncached, h.byModel[0].thinking, h.byModel[1].thinking], [null, null, 25, null, null, 5]);
+  // A row with nothing priced has no price either way, and takes nothing from the sum.
+  const unpriced = usageOverview();
+  unpriced.usage.rows.push([1, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, null]);
+  assert.equal(usageFacts(unpriced).uncached, 40);
+  // A snapshot from before the columns, and one with no calls.
+  const older = usageFacts(withoutColumns(usageOverview({ reported: undefined }), 'thinkingTokens', 'uncachedUsd'));
+  assert.deepEqual([older.uncached, older.thinking, older.reported, older.read], [null, null, null, 2000]);
+  assert.equal(usageFacts(usageOverview({ usage: { columns: usageOverview().usage.columns, rows: [] } })), null);
+});
+
+test('the usage page leads with what was read to write what was written, each on one scale', () => {
+  const html = usageHtml({ overview: usageOverview() });
+  assert.match(html, /<h1 id="sf-usage-title">2,000 tokens read to write 50<\/h1>/);
+  assert.ok(
+    html.includes(
+      'Every model call reads its whole context again, so 5 calls took in 40 tokens for each one written. 89.0% of what was read came from cache. At list prices as of Oct 31, 2026 that is an estimated $9.00; the same calls with nothing cached would be priced at $40.00. It is an estimate, not a bill. <a href="/software-factory/methodology/#def-usage_usd">Definition</a>'
+    )
+  );
+  const tiles = [...html.matchAll(/<div class="sf-figure"><dt>([^<]+)<\/dt><dd><span class="sf-figure-value">([^<]+)<\/span><span class="sf-figure-note">([^<]+)<\/span>/g)].map((m) => m.slice(1));
+  assert.deepEqual(tiles, [
+    ['Read per call', '400', 'input tokens, on average'],
+    ['Written per call', '10', 'output tokens; 30.0% of all output is counted as thinking'],
+    ['Read from cache', '89.0%', '1,780 tokens'],
+    ['Never cached', '10', 'input tokens neither read from cache nor written to it'],
+  ]);
+  assert.match(html, /Coverage: 5 of 5 model calls priced/);
+
+  // Two groups, each on its own scale: a bar's width is its share of the group's largest.
+  const groups = [...html.matchAll(/<div class="sf-scale"><p class="sf-scale-title">([^<]+)<\/p>([\s\S]*?)<\/div>(?=<div class="sf-scale">|<\/div>)/g)].map((m) => [
+    m[1],
+    [...m[2].matchAll(/<span>([^<]+)<\/span> <strong>([^<]+)<\/strong><\/p><span class="sf-scale-track"><span class="sf-scale-bar" style="width:([\d.]+)%">(.*?)<\/span><\/span>/g)].map((r) => [
+      r[1],
+      r[2],
+      Number(r[3]),
+      [...r[4].matchAll(/class="sf-series-([a-z-]+)" style="flex:(\d+)"/g)].map((p) => [p[1], Number(p[2])]),
+    ]),
+  ]);
+  assert.deepEqual(groups, [
+    [
+      'Tokens',
+      [
+        ['Read', '2,000 tokens', 100, [['cache-read', 1780], ['cache-write', 210], ['fresh', 10]]],
+        ['Written', '50 tokens', 2.5, [['written', 50]]],
+      ],
+    ],
+    [
+      'List price as of Oct 31, 2026',
+      [
+        ['With nothing cached: a hypothetical', '$40.00', 100, [['hypothetical', 40]]],
+        ['As recorded: estimated usage', '$9.00', 22.5, [['estimate', 9]]],
+        ['Claude Code’s own count, 2 of 3 sessions', '$12.00', 30, [['client', 12]]],
+      ],
+    ],
+  ]);
+  assert.match(html, /<div class="sf-scales" role="img" aria-label="2,000 tokens read against 50 written, and list price: With nothing cached: a hypothetical \$40\.00; As recorded: estimated usage \$9\.00; Claude Code’s own count, 2 of 3 sessions \$12\.00\."/);
+  assert.match(html, /data-tip="Read: 2,000 input tokens\. 1,780 from cache, 210 written to cache, 10 neither"/);
+  assert.match(html, /10 input tokens were never cached: too few to draw\./);
+  // The legend names the parts of the tokens' bars; the price bars are named on their rows.
+  assert.match(html, /<li><span class="sf-swatch sf-series-cache-read" aria-hidden="true"><\/span>Read from cache<\/li>/);
+
+  // The client's own count, said as the higher figure only when it is.
+  assert.match(html, /<h2>The estimate runs low<\/h2>\s*<p>Claude Code writes its own count when a session stops\. For the 2 of 3 sessions that have one it is \$12\.00; the calls in those sessions’ logs come to \$8\.00\. The source says why: its logs leave out compactions and side calls\. Only the estimate can be split/);
+  const under = usageHtml({ overview: usageOverview({ reported: { coverage: { included: 3, total: 3, missing: 0 }, usd: 7, callsUsd: 9, unattributedUsd: null } }) });
+  assert.match(under, /<h2>The client’s own count<\/h2>\s*<p>Claude Code writes its own count when a session stops\. For the 3 of 3 sessions that have one it is \$7\.00; the calls in those sessions’ logs come to \$9\.00\. Only the estimate/);
+  assert.doesNotMatch(under, /runs low|The source says why/);
+
+  // By model, largest usage first, names and ids escaped.
+  const rows = [...html.matchAll(/<tr><th scope="row">(.*?)<\/th>(.*?)<\/tr>/g)].map((m) => [m[1], [...m[2].matchAll(/<td>(.*?)<\/td>/g)].map((c) => c[1])]);
+  assert.deepEqual(rows, [
+    ['B &lt;b&gt; <code class="sf-muted">m-b</code>', ['1', '500', '25', '20', '96.0%', '$6.00', '$25.00']],
+    ['A <code class="sf-muted">m-a</code>', ['4', '1,500', '25', '60', '86.7%', '$3.00', '$15.00']],
+  ]);
+});
+
+test('the usage page shows no figure the snapshot doesn’t have', () => {
+  // Before generator 6: the tokens, and the estimate alone, with no group of prices to compare.
+  const older = usageHtml({ overview: withoutColumns(usageOverview({ reported: undefined }), 'thinkingTokens', 'uncachedUsd') });
+  assert.match(older, /<h1 id="sf-usage-title">2,000 tokens read to write 50<\/h1>/);
+  assert.match(older, /that is an estimated \$9\.00\. It is an estimate, not a bill\./);
+  assert.doesNotMatch(older, /nothing cached|hypothetical|Claude Code|sf-note|List price|thinking/);
+  assert.equal(older.match(/class="sf-scale"/g).length, 1);
+  assert.match(older, /<span class="sf-figure-note">output tokens, on average<\/span>/);
+  // The client's count without the hypothetical is still a second bar beside the estimate.
+  const counted = usageHtml({ overview: withoutColumns(usageOverview(), 'uncachedUsd') });
+  assert.equal(counted.match(/class="sf-scale"/g).length, 2);
+  assert.doesNotMatch(counted, /nothing cached|hypothetical/);
+  // Large numbers are said in words, and no calls at all is said plainly.
+  const big = usageOverview();
+  big.usage.rows = [[0, 0, 0, 100, 100, 50, 1000, 3_500_000_000, 79_000_000, 23_300_000, 9_000_000, 400]];
+  assert.match(usageHtml({ overview: big }), /<h1 id="sf-usage-title">3\.58 billion tokens read to write 23\.3 million<\/h1>/);
+  const none = usageHtml({ overview: usageOverview({ usage: { columns: usageOverview().usage.columns, rows: [] } }) });
+  assert.match(none, /This snapshot has no model calls/);
+  assert.doesNotMatch(none, /<h1/);
+});
+
+test('the usage finding says the estimate runs low where the client counted more, and what the cache did to the price', () => {
+  const snap = snapshotOf(run());
+  const { usage, measures } = snap.overview;
+  const [iUsd, iUncached] = [usage.columns.indexOf('usd'), usage.columns.indexOf('uncachedUsd')];
+  const estimate = measures.find((m) => m.id === 'usage_usd').value;
+  const overview = {
+    ...snap.overview,
+    usage: { ...usage, rows: usage.rows.map((r) => r.map((v, i) => (i === iUncached ? r[iUsd] * 8 : v))) },
+    reported: { coverage: { included: 3, total: 4, missing: 1 }, usd: estimate + 10, callsUsd: estimate - 1, unattributedUsd: null },
+  };
+  const of = (o) => {
+    const html = findingsHtml({ ...snap, overview: o });
+    return html.slice(html.indexOf('id="finding-usage"'));
+  };
+  const finding = of(overview);
+  assert.ok(finding.includes(`It is an estimate, not a bill, and it runs low: Claude Code’s own count is ${formatValue(estimate + 10, 'usd')} for 3 of the 4 sessions. Neither counts a person’s time or a machine that ran a proof. <a href=`));
+  assert.ok(finding.includes(`<dt>of input tokens were read from cache; without it the same calls come to ${formatValue(estimate * 8, 'usd')}</dt>`));
+  assert.match(finding, /What was read against what was written, and usage by day, model and effort/);
+  // A client count that is not higher is not said to be, and a hypothetical that is not higher is not shown as a saving.
+  const even = of({ ...overview, reported: { ...overview.reported, usd: estimate - 2 }, usage: { ...usage, rows: usage.rows.map((r) => r.map((v, i) => (i === iUncached ? r[iUsd] : v))) } });
+  assert.match(even, /It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof\./);
+  assert.match(even, /<dt>of input tokens were read from cache<\/dt>/);
 });
 
 // --- What a verdict rests on -------------------------------------------------------

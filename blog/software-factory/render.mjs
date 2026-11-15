@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
-import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts } from '../assets/software-factory/factory.js';
+import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts, usageHtml } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -165,11 +165,10 @@ function feature(name, id, html, after = '') {
       </section>`;
 }
 
-/** The head of the usage page, with the filters that apply to what is under it. */
+/** The usage page's second head: the filters, with what they apply to under them. */
 function usageHead() {
-  return `      <header class="sf-usage-head" id="usage">
-        <p class="sf-eyebrow">Usage and verification</p>
-        <h1 id="sf-usage-title">What the factory used</h1>
+  return `      <header class="sf-usage-head" id="by-date">
+        <h2 id="sf-usage-filters-title">By date, model and effort</h2>
         <p class="sf-lede">Model usage, verification jobs, recorded changes and the example catalog, with every record under them.</p>
         <div class="sf-controls">
           <p class="sf-range-static" data-sf-static>Showing all time, all models and efforts.</p>
@@ -465,8 +464,8 @@ function dataPages(input) {
       'usage',
       {
         title: 'Usage',
-        description: 'Estimated model usage, verification jobs, recorded changes and the example catalog of in-the-loop, with the records under each.',
-        parts: [usageHead(), summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), output(snapshot, e), explore(snapshot, { e, paths })],
+        description: 'What the model calls in in-the-loop read and wrote, what caching did to the price, and estimated usage by date, model and effort, with every record under it.',
+        parts: [feature('usage', 'usage', usageHtml(snapshot)), usageHead(), summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), output(snapshot, e), explore(snapshot, { e, paths })],
       },
       input
     ),

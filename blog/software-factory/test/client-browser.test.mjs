@@ -21,6 +21,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { usageFacts, usageHtml } from '../../assets/software-factory/factory.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { fitState, parseState, queryOptions } from '../../assets/software-factory/state.js';
 import { computeMeasures } from '../measures.mjs';
@@ -59,6 +60,8 @@ const snapDir = (files) => pointerOf(files).manifest.replace(/manifest\.json$/, 
 const overviewOf = (files) => json(files, `${snapDir(files)}overview.json`);
 const ID = pointerOf(COMMITTED).snapshotId;
 const EXAMPLE_ID = pointerOf(EXAMPLE).snapshotId;
+// The usage page's statement for a snapshot, as the shared module words it.
+const usageTitle = (overview) => usageHtml({ overview }).match(/<h1 id="sf-usage-title">([^<]+)<\/h1>/)[1];
 assert.notEqual(ID, EXAMPLE_ID);
 
 /** The four cards as the page must show them for SEARCH on this snapshot. */
@@ -554,6 +557,48 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         assert.deepEqual(visit.errors, []);
       } finally {
         await visit.context.close();
+      }
+    });
+
+    await t.test('the usage page leads with what was read against what was written, from the snapshot on screen', async () => {
+      // As built: the bundled snapshot's head, its bars saying what they are under the pointer, and the filters ready under it.
+      const built = await open('/software-factory/usage/', REMOTES['no binding (503)']);
+      try {
+        const row = built.page.locator('.sf-scale-row').first();
+        await row.scrollIntoViewIfNeeded();
+        await row.hover();
+        const shown = await built.page.evaluate(() => ({
+          page: document.querySelector('[data-sf-page]').dataset.sfPage,
+          h1: [...document.querySelectorAll('h1')].map((el) => el.textContent),
+          rows: [...document.querySelectorAll('.sf-scale-row')].map((el) => el.querySelector('span').textContent),
+          widths: [...document.querySelectorAll('.sf-scale-bar')].map((el) => el.getBoundingClientRect().width > 0),
+          tip: document.querySelector('.sf-tip').hidden ? null : document.querySelector('.sf-tip').textContent,
+          said: document.querySelector('.sf-scale-row').dataset.tip,
+          filters: !document.querySelector('[data-sf-filters]').hidden,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        }));
+        const u = usageFacts(overviewOf(COMMITTED));
+        assert.equal(shown.page, 'usage');
+        assert.deepEqual(shown.h1, [usageTitle(overviewOf(COMMITTED))]);
+        assert.match(shown.h1[0], /^[\d.,]+ (billion |million )?tokens read to write [\d.,]+( billion| million)?$/);
+        assert.equal(shown.rows.length, 2 + (u.uncached !== null) + 1 + (u.reported ? 1 : 0));
+        assert.ok(shown.widths.every(Boolean), 'every bar can be seen, however short');
+        assert.equal(shown.tip, shown.said);
+        assert.ok(shown.filters);
+        assert.equal(shown.overflow, 0);
+        assert.deepEqual(built.errors, []);
+      } finally {
+        await built.context.close();
+      }
+      // On another snapshot the head is that snapshot's, as the numbers under it are.
+      const other = await open('/software-factory/usage/', REMOTES['the Function, with a different snapshot']);
+      try {
+        await until(() => other.page.evaluate((id) => document.querySelector('[data-sf-page]').dataset.snapshot === id, EXAMPLE_ID), 'the other snapshot');
+        assert.equal(await other.page.evaluate(() => document.querySelector('#sf-usage-title').textContent), usageTitle(overviewOf(EXAMPLE)));
+        assert.notEqual(usageTitle(overviewOf(EXAMPLE)), usageTitle(overviewOf(COMMITTED)));
+        assert.deepEqual(other.errors, []);
+      } finally {
+        await other.context.close();
       }
     });
 

@@ -329,6 +329,37 @@ definitions are version 6: the three separate figures' notes say what each is, a
 page only". The methodology page gives each its value, with the estimate it stands beside (`usageFacts` in
 `factory.js` is the one place that adds them up).
 
+### The usage page leads with a result
+
+The usage page was the last one that opened as a dashboard: a heading, "What the factory used", and tiles. It now
+opens as the others do, with a statement and a figure (`usageHtml` in `factory.js`), and the filters and
+everything they apply to sit under a second heading, "By date, model and effort" (`#by-date`).
+
+- **The claim** is "3.58 billion tokens read to write 23.3 million": input tokens of every kind against output
+  tokens, from `overview.usage`. The sentence under it gives the ratio (154 read for each one written), the share
+  read from cache, the estimate, and the same calls priced with nothing cached.
+- **Four numbers**, all tokens, so they don't repeat the filtered tiles below: read per call, written per call
+  with the share of output counted as thinking, the share read from cache, and the input tokens never cached.
+- **The figure** (`scaleHtml` in `figures.js`) is horizontal bars in two groups, each group on its own scale. A
+  row's name and value sit over its bar, so the bar for what was written, under 1% of the bar above it, still
+  says what it is. Tokens: read, split into read from cache, written to cache and neither, against written. List
+  price: the hypothetical with nothing cached (hatched), the estimate as recorded, and Claude Code's own count.
+  The three bars stand side by side and are never added. A group with one bar is not drawn.
+- **"The estimate runs low"**: a note with Claude Code's own count for the sessions that have one, the estimate
+  for the same sessions, and the source's reason. It carries that heading only when the client's count is the
+  higher one; otherwise it is "The client's own count" with the two numbers and no reason.
+- **By model**: calls, tokens read and written, read per one written, share from cache, estimate and the
+  hypothetical, with raw ids. It says where tokens went, not which model is better.
+
+The overview's usage finding says the same two things in passing: its sentence now reads "It is an estimate, not
+a bill, and it runs low: Claude Code's own count is $2,806.76 for 104 of the 107 sessions", and its first number,
+97.8% read from cache, adds "without it the same calls come to $18,406.98". Both are left out for a snapshot
+without the figures, or where they aren't the higher ones.
+
+The token colours are the first three of the failure kinds' palette: blue and orange are neighbours in the read
+bar, as they are in the failure stacks, and the purple bar stands alone under its own name. First load is
+139.9 KB of the 150 KB budget.
+
 ### What the section ships: its scripts and stylesheet without comments
 
 The fifth finding took the overview's first load to 154.1 KB gzip, over the plan's 150 KB

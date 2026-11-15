@@ -15,9 +15,9 @@ At one pinned commit of in-the-loop (`blog/software-factory/import.mjs`):
 
 | File | Read for |
 | --- | --- |
-| `llm-dlc/traces/metrics.json` | Sessions, changes and what each change took |
+| `llm-dlc/traces/metrics.json` | Sessions, changes and what each change took; each session's `reported_usd` and the totals' `unattributed_usd` |
 | `llm-dlc/index.json` | The session list |
-| `llm-dlc/traces/<session>/metrics.json` | `calls`, `prompts`, `tools` and `commits` rows |
+| `llm-dlc/traces/<session>/metrics.json` | `calls` (with `thinking_tokens` and `uncached_usd`), `prompts`, `tools` and `commits` rows |
 | `llm-dlc/traces/<session>/runs/<record>.md` | A feature loop's run: header, cycle lines, Ended line |
 | `llm-dlc/loops/*.md` | Brief names only, to group loops into campaigns |
 | `verification/results/index.json`, `verification/jobs/*.json` | Verification jobs |

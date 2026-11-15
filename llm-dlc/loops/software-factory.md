@@ -882,6 +882,14 @@ Settled by the author on 2026-11-14:
   the attempt's seconds (generator 5, snapshot `sf1-5959e891382708eb` from the same revision). A picked example
   shows them as a terminal panel, and the Output finding says 100 of 100 violations come with a counterexample.
   The result files are one input in the manifest, to keep the first load at 136.7 KB.
+- **What was read against what was written** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "The figures kept beside the estimate" and "The usage page leads with a result". The
+  importer reads each call's thinking tokens and its price with nothing cached, and Claude Code's own count per
+  session (generator 6, snapshot `sf1-7cf8461b4bb82b59` from the same revision). The usage page opens with
+  "3.58 billion tokens read to write 23.3 million", bars on one scale for tokens and for list price ($18,406.98
+  with nothing cached, $2,174.98 as recorded, $2,806.76 by the client's count), and a note that the estimate
+  runs low. The overview's usage finding says both in passing; the methodology page gives the separate figures
+  their values. First load 139.9 KB.
 - Status: done
 
 ## Loop settings

@@ -28,6 +28,7 @@ import {
   runRecordHtml,
   toolChartHtml,
   toolsHtml,
+  usageHtml,
 } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
@@ -252,6 +253,7 @@ async function start(shell) {
       examples: () => examplesHtml(snap, catalog),
       tools: () => toolsHtml(snap),
       code: () => codeHtml(snap),
+      usage: () => usageHtml(snap),
     };
     catalog = null;
     for (const [name, html] of Object.entries(sections)) {
