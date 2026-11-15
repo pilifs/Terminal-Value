@@ -116,7 +116,7 @@ test('empty analysis: real data, no post listed, the draft never', { skip }, () 
   const overview = page(dist, 'software-factory');
   assert.match(overview, /Analysis &amp; notes by Filip<\/h2>\s*<p class="sf-empty">No analysis published yet\./);
   assert.match(page(dist, 'software-factory/analysis'), /<p class="sf-empty">No analysis published yet\./);
-  assert.ok(overview.includes('$1,936.42') && overview.includes('19,963'), 'real numbers in the static HTML');
+  assert.ok(overview.includes('$2,174.98') && overview.includes('23,455') && overview.includes('12,681 tool calls'), 'real numbers in the static HTML');
   for (const route of ['software-factory', 'software-factory/methodology']) {
     assert.doesNotMatch(page(dist, route), /sf-banner|sf-unavailable/, route);
   }

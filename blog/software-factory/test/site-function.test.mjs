@@ -181,7 +181,7 @@ test('snapshot files: the bucket’s bytes, cached a year as immutable', async (
   const bucket = fakeBucket(COMMITTED);
   const env = { ...PREVIEW, SOFTWARE_FACTORY_DATA: bucket };
   const keys = Object.keys(COMMITTED).filter((k) => k.startsWith('snapshots/'));
-  assert.equal(keys.length, 6, 'manifest, overview and four details');
+  assert.equal(keys.length, 7, 'manifest, overview and five details');
   for (const key of keys) {
     const res = await serve(request(`${REMOTE}${key}`), env);
     assert.equal(res.status, 200, key);

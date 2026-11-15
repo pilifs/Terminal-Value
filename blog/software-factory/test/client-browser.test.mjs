@@ -110,6 +110,20 @@ const REMOTES = {
   'an overview missing': {
     env: { ...PREVIEW, SOFTWARE_FACTORY_DATA: fakeBucket(Object.fromEntries(Object.entries(EXAMPLE).filter(([k]) => !k.endsWith('/overview.json')))) },
   },
+  // The publisher hasn't caught up with the site: its snapshot lacks what the page draws.
+  'a snapshot from an older version of the page’s generator': {
+    env: {
+      ...PREVIEW,
+      SOFTWARE_FACTORY_DATA: fakeBucket(
+        tamper(EXAMPLE, `${snapDir(EXAMPLE)}manifest.json`, (s) => {
+          const manifest = JSON.parse(s);
+          const mine = json(COMMITTED, `${snapDir(COMMITTED)}manifest.json`).generator;
+          assert.ok(Number(mine.version) > 1, 'the committed snapshot’s generator has an older version');
+          return JSON.stringify({ ...manifest, generator: { name: mine.name, version: String(Number(mine.version) - 1) } });
+        })
+      ),
+    },
+  },
   'an HTTP 500 in front of the Function': { status: 500 },
   'a dropped connection': { drop: true },
 };
