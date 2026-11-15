@@ -533,8 +533,68 @@ Settled by the author on 2026-11-14:
     - Confirm that the project's production branch is `production`.
     - Run `setup-r2.sh` first, so both buckets exist. A deploy that binds a missing bucket is expected to fail.
       That expectation is untried.
-- Next: M2.3, the publisher `blog/software-factory/publish.mjs`, with SigV4 uploads, read-back checks, pointer
-  ordering, and tests against a fake store.
+- **M2.3 publisher: done** (cycle 9). `blog/software-factory/publish.mjs`, run as `npm run software-factory:publish
+  -- --destination preview|production [--ref REF | --sha SHA] [--checkout PATH]` (a new `publish` command in
+  `cli.mjs`).
+  - **Steps**, each named in the result when it fails:
+    1. **refresh**: A's `refresh` into an empty staging directory, then `validateSnapshotDir` again.
+    2. **remote**: read the destination's `latest.json`. When it names another snapshot, read that snapshot's
+       manifest for its source commit.
+    3. **order**: when the commits differ, ours must descend from theirs. Otherwise the outcome is `refused` and
+       nothing is written. A pointer is never replaced by one whose snapshot comes from an older or unrelated
+       source commit. A new snapshot of the same commit, from a generator or config change, replaces it.
+    4. **upload**: each file the bucket doesn't already hold byte for byte is put, read back and checked by
+       sha256. A run after a failed upload puts only what is missing.
+    5. **pointer**: only then `latest.json`, as a conditional put. It uses `If-Match` with the ETag read in step 2,
+       or `If-None-Match: *` when there was none, so a pointer another run wrote meanwhile stands. It is read back
+       too.
+  - **Pointer contents.** The same snapshot as the current pointer is `unchanged`: only `lastSourceCheck` moves,
+    and `publishedAt` stays. A new one is `new-snapshot`, with `publishedAt` now. A run whose clock is behind the
+    pointer's last check is refused. A failed run never touches the pointer, so `lastSourceCheck` stays the last
+    successful check.
+  - **Destinations**: `DESTINATIONS` maps `preview` and `production` to wrangler.toml's two buckets, and a test
+    holds them equal.
+  - **Uploads**: `s3Store`, path-style on `https://<account>.r2.cloudflarestorage.com/<bucket>/<key>`, signed with
+    SigV4 in `node:crypto` (`signRequest`), no new dependency. A missing key is null. A missing bucket is an error,
+    never an empty destination.
+  - **Credentials**: only the three `SOFTWARE_FACTORY_R2_*` variables. Missing ones are named, never a value. The
+    account id must be 32 hex digits before it goes into a URL.
+  - **Order**: `sourceOrder` uses `git merge-base --is-ancestor` in a local checkout, or GitHub's compare API.
+    `GITHUB_TOKEN` is optional, only for the API's rate limit.
+  - **Checks**:
+    - SigV4 equals AWS's published S3 "GET Object" example. It also equals `@smithy/signature-v4`, installed in
+      `/tmp`, not the repo, on 4 R2 requests: conditional puts with `If-Match` and with `If-None-Match`, a 5 KB
+      put, and a get. Both values are fixed in the test.
+    - `test/site-publish.test.mjs`, 24 tests, with no credentials and no network:
+      - A fake store: a first publish, unchanged, newer, older and diverged commits, the same commit with a new
+        id, and the clock guard.
+      - A failure at each step leaves the previous pointer byte for byte. The cases are: refresh (network),
+        validate, remote (a store error, an invalid pointer, a missing manifest), order, upload, read-back and
+        pointer.
+      - A newer pointer written mid-run is never overwritten, and a retry after a failed upload finishes it.
+      - A local fake of R2's S3 API checks every request's signature from what arrived. It covers path-style keys,
+        ETags, 412, `NoSuchBucket`, and a wrong secret (403, no credential in the result).
+      - The rest: the default endpoint, the compare API's URL and token, real git ancestry, the destinations
+        against wrangler.toml, the credential variables, and the CLI's usage and missing-credential exits.
+    - Each of 10 mutations fails a test. The mutations are: no read-back, no `If-Match`, `behind` accepted, the
+      pointer written first, `publishedAt` moved when unchanged, unsorted signed headers, no clock guard, no
+      re-validation, no order check, and a 404 always taken as missing.
+    - **End to end on the real source**: from the local in-the-loop checkout at `7384f8c2`, through `s3Store`, to
+      a local signed fake of R2 (30 requests, no signature rejected). It published `sf1-95bf08f3ebdea3fa`, the
+      committed snapshot, and its 6 files equal the committed files byte for byte. A second run was `unchanged`,
+      with 0 uploads. It took 1.3 s.
+    - 242 of 242 tests pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+  - **Untried** (no credentials here): real R2. The conditional pointer put relies on R2's S3 API honouring
+    `If-Match` and `If-None-Match` on PutObject. M2.4's concurrency group is the first guard either way.
+  - **Left as a finding**: older snapshots stay in the bucket. Nothing deletes them yet, and posts copy their own
+    evidence.
+  - **For the author**: the first real run, `--destination preview`, once the buckets and token exist.
+- Next: M2.4, the workflow `.github/workflows/software-factory-refresh.yml`: `workflow_dispatch`, a 15-minute
+  schedule gated on `SOFTWARE_FACTORY_SCHEDULE == 'on'`, a concurrency group, and the secrets named in
+  docs/software-factory.md. The runbook (M2.6) documents `software-factory:publish`.
 - Status: working
 
 ## Loop settings
