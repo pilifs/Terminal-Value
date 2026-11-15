@@ -56,8 +56,9 @@ async function start(shell) {
   let current = first.snapshot; // the snapshot on screen
   let pending = null; // a newer one, waiting for the reader
   let state = fitState(parseState(location.search), current.overview);
-  // Poll the remote pointer unless the route is missing; then the bundled one,
-  // which changes when the site is redeployed.
+  // Poll the remote pointer unless the route is missing (an empty bucket is not:
+  // its first publish is announced); then the bundled one, which changes when
+  // the site is redeployed.
   const pollBase = first.source === 'remote' || !first.remoteError?.missing ? remote : bundled;
   let etag = pollBase === (first.source === 'remote' ? remote : bundled) ? first.etag : null;
   const detailLoads = new Map();

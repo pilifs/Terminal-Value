@@ -10,7 +10,10 @@
 //   firstSnapshot({ remote, bundled, fetch, signal, timeout })
 //     -> { snapshot, source: 'remote' | 'bundled', etag, remoteError }
 //     The remote snapshot, or on any failure the bundled one, whole: never a
-//     pointer from one and files from the other.
+//     pointer from one and files from the other. remoteError.missing is true
+//     when the remote route itself is missing (a 404 or a page that isn't
+//     JSON), and false for a failure that may pass, the Function's "nothing
+//     published yet" 404 (Software-Factory-Data: none) included.
 //   loadCollection(snapshot, name, { fetch, signal }) -> a details file, checked
 //   newRecords(oldManifest, newManifest) -> [{ name, added }] for the announcement
 //
@@ -120,6 +123,9 @@ async function getJson(url, { fetch, signal, etag = null, conditional = false })
     throw new SnapshotError(`${url}: ${err?.message ?? 'network error'}`);
   }
   if (res.status === 304) return { status: 304, etag };
+  // The Function's empty bucket: the route is there, its first publish is still to come.
+  if (res.status === 404 && res.headers.get('Software-Factory-Data') === 'none')
+    throw new SnapshotError(`${url}: nothing published yet`);
   if (res.status === 404) throw new SnapshotError(`${url}: not found`, { missing: true });
   if (!res.ok) throw new SnapshotError(`${url}: HTTP ${res.status}`);
   const bytes = new Uint8Array(await res.arrayBuffer());

@@ -12,7 +12,9 @@
 // <name> is one of schema.json's detail collections: sessions, changes,
 // verification, examples. Any other path, an encoded one included, is 404.
 // Other methods get 405. A missing binding or a failing bucket is 503, so the
-// client falls back to the bundled snapshot.
+// client falls back to the bundled snapshot. A bucket with no pointer yet (no
+// publish so far) is 404 with `Software-Factory-Data: none`, so the client can
+// tell it from a site without this route and keeps polling for the first one.
 //
 // The ETag is R2's: strong, and new with every upload of the object. The edge
 // may weaken an ETag when it compresses a response, so If-None-Match is
@@ -35,6 +37,9 @@ import section from '../../../blog/software-factory/config/section.json' with { 
 export const ROUTE = '/software-factory/data/';
 export const POINTER = 'latest.json';
 const SNAPSHOT_FILE = /^snapshots\/sf1-[0-9a-f]{16}\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples))\.json$/;
+
+/** The header that marks a 404 as "nothing published yet", not "no route". */
+export const EMPTY_HEADER = 'Software-Factory-Data';
 
 export const POINTER_CACHE = 'no-cache';
 export const SNAPSHOT_CACHE = 'public, max-age=31536000, immutable';
@@ -83,7 +88,7 @@ export async function serve(request, env, { published = section.published } = {}
   } catch {
     return text(503, 'Software Factory data is unavailable\n');
   }
-  if (!object) return text(404, 'Not found\n');
+  if (!object) return key === POINTER ? text(404, 'No published data yet\n', { [EMPTY_HEADER]: 'none' }) : text(404, 'Not found\n');
 
   const headers = {
     ...base(key === POINTER ? POINTER_CACHE : SNAPSHOT_CACHE),

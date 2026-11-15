@@ -261,8 +261,12 @@ test('methods other than GET and HEAD: 405 with Allow, without touching the buck
 test('a missing object is 404, a missing binding or a failing bucket 503, never cached', async () => {
   const empty = await serve(request('/software-factory/data/latest.json'), { ...PREVIEW, SOFTWARE_FACTORY_DATA: fakeBucket({}) });
   assert.equal(empty.status, 404);
+  // No pointer yet: marked, so the client tells it from a missing route and waits for the first publish.
+  assert.equal(empty.headers.get('Software-Factory-Data'), 'none');
+  assert.equal(empty.headers.get('Cache-Control'), 'no-store');
   const missingFile = await serve(request(`/software-factory/data/snapshots/sf1-0123456789abcdef/manifest.json`), { ...PREVIEW, SOFTWARE_FACTORY_DATA: fakeBucket(COMMITTED) });
   assert.equal(missingFile.status, 404);
+  assert.equal(missingFile.headers.get('Software-Factory-Data'), null, 'only a missing pointer is marked');
   assert.equal(missingFile.headers.get('Cache-Control'), 'no-store', 'a file published later must not stay 404 in a cache');
   for (const env of [PREVIEW, { ...PREVIEW, SOFTWARE_FACTORY_DATA: {} }, { ...PREVIEW, SOFTWARE_FACTORY_DATA: fakeBucket(COMMITTED, { fail: true }) }]) {
     for (const method of ['GET', 'HEAD']) {
@@ -278,6 +282,7 @@ test('unpublished, only a preview deployment serves; production answers 404 as i
     const bucket = fakeBucket(COMMITTED);
     const res = await serve(request('/software-factory/data/latest.json'), { ...env, SOFTWARE_FACTORY_DATA: bucket }, { published: false });
     assert.equal(res.status, 404, JSON.stringify(env));
+    assert.equal(res.headers.get('Software-Factory-Data'), null, 'the gate looks like no route, not an empty bucket');
     assert.deepEqual(bucket.calls, []);
   }
   const preview = await serve(request('/software-factory/data/latest.json'), { ...PREVIEW, SOFTWARE_FACTORY_DATA: fakeBucket(COMMITTED) }, { published: false });

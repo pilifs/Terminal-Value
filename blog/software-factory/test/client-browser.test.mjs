@@ -284,6 +284,26 @@ test('the overview in headless Chromium: first visit with filters, against each 
       }
     });
 
+    await t.test('an empty bucket: polling stays on the remote and announces the first publish', async () => {
+      const { context, page, errors, requests } = await visit(REMOTES['an empty bucket (404)'], { clock: true });
+      try {
+        assert.equal((await readPage(page)).snapshot, ID);
+        const polls = () => requests.filter((p) => p === `${REMOTE}latest.json`).length;
+        const before = polls();
+        state.remote = REMOTES['the Function, with a different snapshot'];
+        await page.clock.runFor(46_000);
+        await until(() => polls() > before, 'a poll of the remote pointer');
+        await until(async () => (await readPage(page)).refreshShown, 'the announcement');
+        await page.click('[data-sf-refresh]');
+        const shown = await readPage(page);
+        assert.equal(shown.snapshot, EXAMPLE_ID);
+        assert.deepEqual(shown.cards, example);
+        assert.deepEqual(errors, []);
+      } finally {
+        await context.close();
+      }
+    });
+
     await t.test('without a Function route, polling goes to the bundled pointer', async () => {
       const { context, page, requests } = await visit(REMOTES['no Function: the static 404 page'], { clock: true });
       try {

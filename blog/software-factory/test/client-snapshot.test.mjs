@@ -58,7 +58,7 @@ function fakeFetch(routes) {
     if (r instanceof Error) throw r;
     const route = r ?? { status: 404, body: 'Not found' };
     if (route.etag && init.headers?.['If-None-Match'] === route.etag) return new Response(null, { status: 304, headers: { ETag: route.etag } });
-    const headers = route.etag ? { ETag: route.etag } : {};
+    const headers = { ...(route.etag ? { ETag: route.etag } : {}), ...route.headers };
     return new Response(route.status === 304 ? null : route.body, { status: route.status ?? 200, headers });
   };
   return { fetch, calls };
@@ -101,7 +101,8 @@ test('a missing remote route falls back to the bundled snapshot, whole', async (
 });
 
 test('a remote error or network failure falls back, marked as transient', async () => {
-  for (const failure of [{ status: 503, body: 'busy' }, new TypeError('Failed to fetch')]) {
+  const empty = { status: 404, body: 'No published data yet', headers: { 'Software-Factory-Data': 'none' } };
+  for (const failure of [{ status: 503, body: 'busy' }, new TypeError('Failed to fetch'), empty]) {
     const { fetch } = fakeFetch({ [`${REMOTE}latest.json`]: failure, ...serve(BUNDLED, EXAMPLE) });
     const r = await firstSnapshot({ remote: REMOTE, bundled: BUNDLED, fetch });
     assert.equal(r.source, 'bundled');

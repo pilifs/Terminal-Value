@@ -259,7 +259,10 @@ Everything here runs without an account, credentials or network, apart from the 
   without the section would. That matters because `wrangler pages deploy` uploads `functions/` with any deploy. Once
   the section is published, it serves in both environments.
 - **The function's failures**: a missing object is 404, and a missing binding or a failing bucket is 503. Errors are
-  `no-store`. The client falls back to the bundled snapshot on any of them.
+  `no-store`. The client falls back to the bundled snapshot on any of them. A bucket with no `latest.json` yet
+  answers 404 with `Software-Factory-Data: none`, so an open overview keeps polling the remote pointer and
+  announces the first publish. A plain 404, as from the gate or a site without the function, sends polling to the
+  bundled pointer instead.
 - **The workflow**, `.github/workflows/software-factory-refresh.yml`, as described above. GitHub schedules only the
   default branch's copy, so it does nothing until it is pushed to `main`.
 - **The publisher's destinations**: `preview` is `software-factory-data-preview` and `production` is
