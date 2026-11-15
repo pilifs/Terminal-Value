@@ -64,6 +64,98 @@ const modelName = (m, attrs = '') => (m.id && m.label === m.id ? `<code${attrs}>
 const tile = (label, value, note) =>
   `<div class="sf-figure"><dt>${e(label)}</dt><dd><span class="sf-figure-value">${e(value)}</span>${note ? `<span class="sf-figure-note">${note}</span>` : ''}</dd></div>`;
 
+// --- The source's own account of its loops ---------------------------------------
+
+// The kinds of loop the source tells apart, in its own words for each.
+const LOOP_KINDS = {
+  moonshot: { label: 'Moonshots', one: 'Moonshot', what: 'one open-ended instruction, given again every cycle' },
+  brief: { label: 'Briefs', one: 'Brief', what: 'a written file of work the loop goes through' },
+  verification: { label: 'Verification loop', one: 'Verification loop', what: 'a fresh session that runs the queued proofs' },
+};
+const KIND_WORDS = {
+  moonshot: 'Moonshot',
+  'templated moonshot': 'Moonshot over a list',
+  'moonshot by hand': 'Moonshot, typed by hand',
+  brief: 'Brief',
+  'brief stream': 'Brief, one of its streams',
+  'verification loop': 'Verification loop',
+};
+
+/**
+ * What the source's account says in a sentence each: how many commits were
+ * made inside a loop run, of how many recorded, and whether anyone typed into
+ * a run. Null when the snapshot has no account.
+ */
+export function loopAccountFacts(overview) {
+  const a = overview.loopAccount ?? null;
+  if (!a || !a.totals.runs) return null;
+  const t = a.totals;
+  const recorded = overview.measures?.find((m) => m.id === 'changes_recorded')?.value ?? null;
+  const counts = `${plural(t.loops, 'loop')}, ${plural(t.runs, 'run')} and ${plural(t.cycles, 'cycle')}`;
+  // Nobody typed into a run when no prompt in one is other than the loop's own.
+  // The loop a person ran by hand is told apart: its instructions were typed.
+  const hand = a.byHand.runs ? `${a.byHand.loops === 1 ? 'One early loop' : `${word(a.byHand.loops)} early loops`} of ${plural(a.byHand.cycles, 'cycle')} was typed by hand, before the script existed.` : '';
+  const typed = a.interjections ? `${plural(a.interjections, 'prompt')} in them ${a.interjections === 1 ? 'was' : 'were'} typed by a person.` : 'No run has a prompt that is not the loop’s own.';
+  return {
+    account: a,
+    totals: t,
+    recorded: recorded !== null && recorded >= t.commits ? recorded : null,
+    counts,
+    typed,
+    hand,
+    first: t.first,
+    last: t.last,
+  };
+}
+
+const accountRow = (name, r) =>
+  `<tr><th scope="row">${name}</th><td>${count(r.runs)}</td><td>${count(r.cycles)}</td><td>${count(r.commits)}</td><td>${r.jobs ? `${count(r.jobs)} <span class="sf-muted">(${count(r.jobsPassed)} passed)</span>` : '<span class="sf-muted">None</span>'}</td><td>${e(
+    hours(r.busySeconds)
+  )}</td><td>${e(formatValue(r.usd, 'usd'))}</td><td>${r.cyclesCommitted ? e(formatValue(r.usd / r.cyclesCommitted, 'usd')) : '<span class="sf-muted">No cycles</span>'}</td></tr>`;
+
+/** The account as tables: by kind of loop, then every loop, oldest first. */
+function loopAccountTables(overview) {
+  const f = loopAccountFacts(overview);
+  if (!f) return '';
+  const { account: a, totals: t } = f;
+  const head = (first) =>
+    `<thead><tr><th scope="col">${first}</th><th scope="col">Runs</th><th scope="col">Cycles</th><th scope="col">Commits</th><th scope="col">Verification jobs</th><th scope="col">Active</th><th scope="col">Estimated usage</th><th scope="col">Per committed cycle</th></tr></thead>`;
+  const kinds = a.categories
+    .map((c) => {
+      const k = LOOP_KINDS[c.category];
+      return accountRow(`${e(k?.label ?? c.category)} <span class="sf-muted">${plural(c.loops, 'loop')}${k ? `: ${e(k.what)}` : ''}</span>`, c);
+    })
+    .join('');
+  const names = new Map(overview.models.map((m) => [m.id, m]));
+  const each = [...a.loops]
+    .sort((x, y) => (x.first ?? '').localeCompare(y.first ?? '') || x.loop.localeCompare(y.loop))
+    .map((l) =>
+      accountRow(
+        `<code>${e(l.loop)}</code> <span class="sf-muted">${e(KIND_WORDS[l.kind] ?? l.kind)}${l.first ? `, ${e(dayOf(l.first))}` : ''}${l.models.length ? `, ${l.models.map((id) => e(names.get(id)?.label ?? id)).join(' and ')}` : ''}</span>`,
+        l
+      )
+    )
+    .join('');
+  const sources = [
+    t.runsFromRecords !== null ? `${count(t.runsFromRecords)} from run records` : null,
+    t.runsFromTranscripts ? `${count(t.runsFromTranscripts)} from the prompts of sessions that left no record` : null,
+    t.runsFromRecords !== null && t.runs - t.runsFromRecords - (t.runsFromTranscripts ?? 0) > 0 ? `${count(t.runs - t.runsFromRecords - (t.runsFromTranscripts ?? 0))} verification sessions` : null,
+  ].filter(Boolean);
+  return `<div class="sf-subhead" id="every-loop"><h2>By kind of loop</h2></div>
+        <p class="sf-caption">The project’s own count of its loops at this revision. Active is the time a model call or a tool call was under way. A verification job is a proof a cycle queued; a job that failed is a result, not a failed cycle. <a href="${ROUTE}methodology/#def-loop_account">Definition</a></p>
+        <div class="sf-breakdowns sf-tool-tables sf-loop-tables">
+          <section class="sf-breakdown" id="loops-by-kind" aria-labelledby="loops-by-kind-title">
+            <h3 class="sf-visually-hidden" id="loops-by-kind-title">By kind of loop</h3>
+            <table class="sf-table">${head('Kind')}<tbody>${kinds}</tbody><tfoot>${accountRow(`All <span class="sf-muted">${plural(t.loops, 'loop')}</span>`, t)}</tfoot></table>
+          </section>
+        </div>
+        <details class="sf-detail sf-loop-list">
+          <summary>All ${plural(t.loops, 'loop')}, oldest first</summary>
+          <div><table class="sf-table sf-numbers">${head('Loop')}<tbody>${each}</tbody></table></div>
+        </details>
+        ${sources.length ? `<p class="sf-coverage">Coverage: ${plural(t.runs, 'run')}: ${e(sources.join(', '))}</p>` : ''}`;
+}
+
 // --- Headline ---------------------------------------------------------------
 
 /** The overview's opening: what the loops did, beside the longest run's own record. */
@@ -78,6 +170,20 @@ export function heroHtml(snapshot, { title, lede }) {
   }`;
   const first = loops.runs[0].started;
   const last = loops.runs.map((r) => r.ended).filter(Boolean).sort().at(-1) ?? first;
+  // With the source's own account: every loop it ran, not only the runs that left a record.
+  const f = loopAccountFacts(snapshot.overview);
+  if (f)
+    return `<div class="sf-hero">
+        <div class="sf-hero-text">
+          <h1><span class="sf-eyebrow">${e(title)}</span> <span class="sf-headline">${
+            f.recorded ? `${count(f.totals.commits)} of ${count(f.recorded)} commits were made inside a loop run` : `${plural(f.totals.commits, 'commit')} made inside a loop run`
+          }</span></h1>
+          <p class="sf-lede">That is ${e(f.counts)} in <a href="${REPO}">in-the-loop</a>, a project that formally verifies Java code, ${e(
+            range(f.first ?? first, f.last ?? last)
+          )}. A loop gives an agent an instruction and lets it work: do the next piece, verify it, commit it, decide whether to go on. ${e(f.typed)}${f.hand ? ` ${e(f.hand)}` : ''}</p>
+        </div>
+        ${ledgerHtml(snapshot)}
+      </div>`;
   return `<div class="sf-hero">
         <div class="sf-hero-text">
           <h1><span class="sf-eyebrow">${e(title)}</span> <span class="sf-headline">${e(headline)}</span></h1>
@@ -339,7 +445,7 @@ function floorFigure(loops) {
     ids: new Set(runs.map((r) => r.id)),
     stretches: all,
     runs: runs.length,
-    caption: `${shown.length < all.length ? `${plural(runs.length, 'loop run')}` : `Every loop run`}, ${e(range(shown[0].from, shown.at(-1).to))}, on one clock. Rows are loops working at the same time on separate branches; the last row of a campaign is the loop that merges the others.${cut}${partial}`,
+    caption: `${shown.length < all.length ? `${plural(runs.length, 'loop run')}` : `Every run that left a record`}, ${e(range(shown[0].from, shown.at(-1).to))}, on one clock. Rows are loops working at the same time on separate branches; the last row of a campaign is the loop that merges the others.${cut}${partial}`,
   };
 }
 
@@ -484,10 +590,10 @@ export function runningHtml(preview = null) {
 }
 
 /** The floor on the feature loops page, under its own heading. */
-function floorSection(loops) {
+function floorSection(loops, { partial = false } = {}) {
   const floor = floorFigure(loops);
   if (!floor) return '';
-  return `<div class="sf-subhead"><h2>Every run on one clock</h2></div>
+  return `<div class="sf-subhead"><h2>${partial ? 'Those runs on one clock' : 'Every run on one clock'}</h2></div>
         <figure class="sf-floor-figure">
           ${floor.legend}
           ${floor.html}
@@ -514,6 +620,41 @@ export function loopsHtml(snapshot) {
     tile('Agent time', hours(t.agentSeconds), `${hours(t.runSeconds)} on the clock, runs added up`),
     tile('Estimated usage', formatValue(t.usd, 'usd'), t.commits ? `${e(formatValue(t.usd / t.commits, 'usd'))} per commit` : ''),
   ].join('');
+  const f = loopAccountFacts(snapshot.overview);
+  if (f) {
+    const a = f.totals;
+    const tiles = [
+      tile('Runs', count(a.runs), `of ${plural(a.loops, 'loop')}`),
+      tile('Cycles', count(a.cycles), `${count(a.cyclesCommitted)} ended in a commit`),
+      tile('Commits', count(a.commits), f.recorded ? `of ${count(f.recorded)} recorded changes` : 'made inside a loop run'),
+      tile('Verification jobs', count(a.jobs), a.jobs ? `${count(a.jobsPassed)} passed, ${count(a.jobsFailed)} failed` : 'queued by a cycle'),
+      tile('Active time', hours(a.busySeconds), `a model or a tool at work; ${count(a.compactions)} compactions`),
+      tile('Estimated usage', formatValue(a.usd, 'usd'), a.cyclesCommitted ? `${e(formatValue(a.usd / a.cyclesCommitted, 'usd'))} per committed cycle` : ''),
+    ].join('');
+    return `<p class="sf-eyebrow">Feature loops</p>
+        <h1 id="sf-loops-title">${e(`${plural(a.loops, 'loop')}, ${plural(a.runs, 'run')}, ${plural(a.cycles, 'cycle')}${f.account.interjections ? '' : ', no prompt typed into a run'}`)}</h1>
+        <p class="sf-section-lede">A loop starts an agent session and gives it the same instruction again after every commit: do the next piece of work, verify it, commit it, decide whether to go on. ${
+          f.recorded ? `${count(a.commits)} of the ${count(f.recorded)} recorded changes were committed inside a loop run. ` : ''
+        }${e(f.typed)}${f.hand ? ` ${e(f.hand)}` : ''}</p>
+        <dl class="sf-figures">${tiles}</dl>
+        ${loopAccountTables(snapshot.overview)}
+        <div class="sf-subhead"><h2>The runs that left a record</h2></div>
+        <p class="sf-caption">Since Nov 6 the loop’s script writes a record of each run, cycle by cycle. ${plural(t.runs, 'run')} of ${plural(t.loops, 'loop')} left one, in ${plural(campaigns.length, 'campaign')}: a campaign runs several loops side by side on separate branches, then one more to merge them. The clock, the prompts and the campaigns below are read from those records${
+          stopped ? `; ${word(stopped).toLowerCase()} of the ${count(t.runs)} runs ended blocked on a person or flagged for one’s attention` : ''
+        }.</p>
+        <dl class="sf-figures">${figures}</dl>
+        <p class="sf-coverage">Coverage: ${e(formatCoverage(loops.coverage))} · All time; no filter applies · <a href="${ROUTE}methodology/#def-loop_person_prompts">What counts as a prompt from a person</a></p>
+        ${floorSection(loops, { partial: true })}
+        ${driveFigure(snapshot.overview)}
+        <div class="sf-subhead"><h2>Campaign by campaign</h2></div>
+        <p class="sf-caption">In the order they ran. At once is the most loops under way together. Failed is the share of tool calls that failed, which is not a failed loop: see <a href="${ROUTE}tools/">model performance</a>.</p>
+        ${campaignTable(campaigns)}
+        <div class="sf-subhead" id="sf-campaigns"><h2>Each campaign</h2></div>
+        <p class="sf-caption">Newest first. A bar is one run on the campaign's own clock; a notch is a cycle's commit. Open a campaign for every run and cycle, with links to its record and its session.</p>
+        <div class="sf-campaigns">
+          ${[...campaigns].reverse().map((c) => campaignCard(c, loops.runs)).join('\n          ')}
+        </div>`;
+  }
   return `<p class="sf-eyebrow">Feature loops</p>
         <h1 id="sf-loops-title">${e(title)}</h1>
         <p class="sf-section-lede">A feature loop starts one agent session on a written brief. Each cycle it reads the brief again, does the next piece of work, verifies it and commits it, then decides whether to go on. A campaign runs several loops side by side on separate branches, then one more to merge them. ${
@@ -1077,6 +1218,7 @@ function loopsFinding(overview) {
   const peak = Date.parse(loops.peakParallel?.at ?? '');
   const peakHere = best && loops.peakParallel.runs > 1 && peak >= best.from && peak <= best.to;
   const drive = loops.drive ? driveFacts(driveDays(overview)) : null;
+  const f = loopAccountFacts(overview);
   const facts = [
     drive ? [pct(rate(drive.byLoop, drive.all), 0), 'of all tool calls were set off by a loop’s own prompt'] : [count(t.cycles), `cycles in ${plural(t.runs, 'loop run')}`],
     drive?.first && drive.peak && drive.peak !== drive.first
@@ -1084,7 +1226,11 @@ function loopsFinding(overview) {
       : loops.longest
         ? [span(loops.longest.seconds), 'the longest run nobody typed into']
         : null,
-    t.commits ? [formatValue(t.usd / t.commits, 'usd'), 'estimated usage for each commit'] : null,
+    f?.totals.commits
+      ? [formatValue(f.totals.usd / f.totals.commits, 'usd'), 'estimated usage for each commit made in a loop run']
+      : t.commits
+        ? [formatValue(t.usd / t.commits, 'usd'), 'estimated usage for each commit']
+        : null,
   ];
   return finding({
     id: 'loops',
@@ -1096,11 +1242,11 @@ function loopsFinding(overview) {
           best.campaigns === 1 ? 'one campaign' : `${word(best.campaigns).toLowerCase()} campaigns`
         }, with a loop running for ${count(best.busy / HOUR)} of the ${count(length / HOUR)} hours${peakHere ? ` and up to ${word(loops.peakParallel.runs).toLowerCase()} at once` : ''}.${
           best.typed ? '' : ' Nobody typed a prompt into any of them.'
-        }`
+        }${f ? ` In all: ${e(f.counts)}.` : ''}`
       : 'A feature loop gives an agent a written brief and lets it work, cycle after cycle.',
     facts,
     href: `${ROUTE}loops/`,
-    more: campaigns === 1 ? 'The campaign, run by run' : `All ${word(campaigns).toLowerCase()} campaigns, run by run`,
+    more: f ? `All ${plural(f.totals.loops, 'loop')}, and each campaign run by run` : campaigns === 1 ? 'The campaign, run by run' : `All ${word(campaigns).toLowerCase()} campaigns, run by run`,
     legend: floor?.legend ?? '',
     chart: floor?.html ?? '',
     caption: floor?.caption ?? '',

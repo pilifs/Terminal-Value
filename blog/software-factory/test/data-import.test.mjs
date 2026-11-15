@@ -456,3 +456,73 @@ test('what the client counted itself is summed over the sessions that have it, b
   write(dir, 'llm-dlc/traces/metrics.json', rollup);
   assert.equal((await load(dir)).reported, null);
 });
+
+// --- The source's own account of its loops ---------------------------------------
+
+// A small llm-trace-loops/v1 document that adds up: two loops, three runs.
+const loopsDoc = () => {
+  const usage = (o) => ({ cycles: 0, cycles_committed: 0, commits: 0, api_calls: 10, tool_calls: 20, tool_errors: 1, output_tokens: 1000, usd: 1.5, agent_ms: 60_000, busy_ms: 50_400, model_ms: 30_000, tool_ms: 25_000, compactions: 1, peak_context_tokens: 9000, jobs: 0, jobs_passed: 0, jobs_failed: 0, ...o });
+  const group = (o) => ({ runs: 1, sessions: 1, models: ['claude-opus-5-5'], first: '2026-11-01T10:00:00.000Z', last: '2026-11-01T12:00:00.000Z', median_cycle_usd: 0.75, median_cycle_busy_ms: 25_000, ...usage(o) });
+  return {
+    schema: 'llm-trace-loops/v1',
+    pricing_as_of: '2026-11-15',
+    totals: { loops: 2, ...group({ runs: 3, sessions: 3, cycles: 5, cycles_committed: 4, commits: 6, api_calls: 30, tool_calls: 60, tool_errors: 3, output_tokens: 3000, usd: 4.5, jobs: 2, jobs_passed: 1, jobs_failed: 1 }), runs_from_records: 1, runs_from_transcripts: 2 },
+    categories: [
+      { category: 'moonshot', loops: 1, ...group({ cycles: 3, cycles_committed: 3, commits: 3 }) },
+      { category: 'brief', loops: 1, ...group({ runs: 2, sessions: 2, cycles: 2, cycles_committed: 1, commits: 3, api_calls: 20, tool_calls: 40, tool_errors: 2, output_tokens: 2000, usd: 3, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
+    ],
+    loops: [
+      { loop: 'by-hand', category: 'moonshot', kind: 'moonshot by hand', stream_of: null, instruction: 'SECRET INSTRUCTION TEXT', ...group({ cycles: 3, cycles_committed: 3, commits: 3 }) },
+      { loop: 'core-values', category: 'brief', kind: 'brief stream', stream_of: 'core', instruction: 'SECRET INSTRUCTION TEXT', ...group({ runs: 2, sessions: 2, cycles: 2, cycles_committed: 1, commits: 3, api_calls: 20, tool_calls: 40, tool_errors: 2, output_tokens: 2000, usd: 3, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
+    ],
+    runs: [
+      { run: '2026-11-01-100000-by-hand', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T12:00:00.000Z', outcome: 'unrecorded', interjections: 0, ...usage({ cycles: 3, cycles_committed: 3, commits: 3 }) },
+      { run: '2026-11-02-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: '2026-11-02T11:00:00.000Z', outcome: 'ended', interjections: 2, ...usage({ cycles: 1, cycles_committed: 1, commits: 2, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
+      { run: '2026-11-03-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'transcript', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'stopped', interjections: 0, ...usage({ cycles: 1, commits: 1 }) },
+    ],
+    cycles: [],
+  };
+};
+const LOOPS_FILE = 'llm-dlc/traces/loops.json';
+
+test('the source’s account of its loops is read as it stands, checked to add up, and not required', async () => {
+  const { dir } = materialize('stale-source');
+  // The fixture has none: no account, and no input listed.
+  const without = await load(dir);
+  assert.equal(without.loopAccount, null);
+  assert.ok(!without.source.inputs.some((i) => i.path === LOOPS_FILE));
+
+  write(dir, LOOPS_FILE, loopsDoc());
+  const n = await load(dir);
+  const a = n.loopAccount;
+  assert.ok(n.source.inputs.some((i) => i.path === LOOPS_FILE && i.schema === 'llm-trace-loops/v1'));
+  assert.deepEqual(
+    [a.totals.loops, a.totals.runs, a.totals.cycles, a.totals.cyclesCommitted, a.totals.commits, a.totals.toolCalls, a.totals.usd, a.totals.jobs, a.totals.jobsPassed, a.totals.runsFromRecords, a.totals.runsFromTranscripts],
+    [2, 3, 5, 4, 6, 60, 4.5, 2, 1, 1, 2]
+  );
+  // Times are seconds, rounded; a median is carried where the source gives one.
+  assert.deepEqual([a.totals.agentSeconds, a.totals.busySeconds, a.totals.medianCycleBusySeconds, a.totals.medianCycleUsd], [60, 50, 25, 0.75]);
+  assert.deepEqual(a.categories.map((c) => [c.category, c.loops, c.runs, c.commits]), [['moonshot', 1, 1, 3], ['brief', 1, 2, 3]]);
+  assert.deepEqual(a.loops.map((l) => [l.loop, l.kind, l.streamOf, l.runs]), [['by-hand', 'moonshot by hand', null, 1], ['core-values', 'brief stream', 'core', 2]]);
+  assert.deepEqual(a.runs.map((r) => [r.loop, r.source, r.ended, r.outcome, r.interjections, r.commits]), [
+    ['by-hand', 'transcript', '2026-11-01T12:00:00.000Z', 'unrecorded', 0, 3],
+    ['core-values', 'record', '2026-11-02T11:00:00.000Z', 'ended', 2, 2],
+    ['core-values', 'transcript', null, 'stopped', 0, 1],
+  ]);
+  // A loop's instruction is prompt text: it goes no further.
+  assert.doesNotMatch(JSON.stringify(n), /SECRET INSTRUCTION TEXT/);
+
+  // An account that doesn't add up is refused, naming its file; so is another schema, or a row that isn't a count.
+  const off = loopsDoc();
+  off.runs[1].commits = 9;
+  write(dir, LOOPS_FILE, off);
+  const e = await failure(load(dir));
+  assert.equal(e.code, 'reconcile');
+  assert.equal(e.path, LOOPS_FILE);
+  write(dir, LOOPS_FILE, { ...loopsDoc(), schema: 'llm-trace-loops/v2' });
+  assert.equal((await failure(load(dir))).code, 'schema');
+  const odd = loopsDoc();
+  odd.loops[0].cycles = '3';
+  write(dir, LOOPS_FILE, odd);
+  assert.equal((await failure(load(dir))).code, 'schema');
+});

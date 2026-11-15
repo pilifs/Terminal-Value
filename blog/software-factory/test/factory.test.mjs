@@ -634,7 +634,7 @@ test('the loops finding claims a pace only from the data, and says who it asked'
   // 10 pm to 6 am is shaded: the first stretch starts at 11 pm, inside a night.
   assert.match(html, /<span class="sf-floor-night" style="left:0%;width:[\d.]+%">/);
   assert.match(html, /title="No loop ran for 30 hours"/);
-  assert.match(html, /Every loop run, Nov 6 to Nov 8, 2026, on one clock\./);
+  assert.match(html, /Every run that left a record, Nov 6 to Nov 8, 2026, on one clock\./);
   assert.match(html, /The clock skips the 30 hours when no loop ran\./);
   // A person's prompt in the stretch is never passed over.
   const typed = findingsHtml({ ...snap, overview: { ...snap.overview, loops: { ...loops, runs: runs.map((r, i) => (i ? r : { ...r, person: 1 })) } } });
@@ -1135,6 +1135,93 @@ test('a model the snapshot has no display name for is named by its id, once', ()
   assert.match(html, /<th scope="row"><code class="sf-muted">claude-new-9<\/code><\/th>/);
   assert.match(html, /<th scope="row">A <code class="sf-muted">m-a<\/code><\/th>/);
   assert.equal(html.match(/claude-new-9/g).length, 1);
+});
+
+// --- The source's own account of its loops ---------------------------------------
+
+const accountOf = (o = {}) => {
+  const stat = (x) => ({ runs: 1, cycles: 1, cyclesCommitted: 1, commits: 1, sessions: 1, calls: 5, toolCalls: 10, toolErrors: 0, outputTokens: 100, usd: 10, agentSeconds: 7200, busySeconds: 3600, modelSeconds: 1800, toolSeconds: 1800, compactions: 2, peakContextTokens: 900, jobs: 0, jobsPassed: 0, jobsFailed: 0, models: ['claude-opus-5-5'], first: '2026-11-01T15:00:00.000Z', last: '2026-11-02T15:00:00.000Z', medianCycleUsd: 2, medianCycleBusySeconds: 60, ...x });
+  return {
+    totals: { loops: 3, ...stat({ runs: 12, cycles: 30, cyclesCommitted: 25, commits: 40, usd: 100, busySeconds: 36000, compactions: 9, jobs: 8, jobsPassed: 6, jobsFailed: 2 }), runsFromRecords: 4, runsFromTranscripts: 3 },
+    interjections: 0,
+    byHand: { loops: 1, runs: 1, cycles: 3, commits: 3, toolCalls: 50 },
+    categories: [
+      { category: 'moonshot', loops: 1, ...stat({ cycles: 3, cyclesCommitted: 3, commits: 3, usd: 30 }) },
+      { category: 'brief', loops: 1, ...stat({ runs: 6, cycles: 27, cyclesCommitted: 22, commits: 30, usd: 60, jobs: 8, jobsPassed: 6, jobsFailed: 2 }) },
+      { category: 'verification', loops: 1, ...stat({ runs: 5, cycles: 0, cyclesCommitted: 0, commits: 7, usd: 10 }) },
+    ],
+    loops: [
+      { loop: 'core <b>', category: 'brief', kind: 'brief stream', streamOf: 'core', ...stat({ runs: 6, cycles: 27, cyclesCommitted: 22, commits: 30, usd: 60, jobs: 8, jobsPassed: 6, jobsFailed: 2, first: '2026-11-05T15:00:00.000Z' }) },
+      { loop: 'by-hand', category: 'moonshot', kind: 'moonshot by hand', streamOf: null, ...stat({ cycles: 3, cyclesCommitted: 3, commits: 3, usd: 30, models: ['claude-new-9'] }) },
+      { loop: 'verification', category: 'verification', kind: 'verification loop', streamOf: null, ...stat({ runs: 5, cycles: 0, cyclesCommitted: 0, commits: 7, usd: 10, first: '2026-11-03T15:00:00.000Z' }) },
+    ],
+    ...o,
+  };
+};
+
+test('with the source’s account, the headline is the commits made inside a loop run, of those recorded', () => {
+  const snap = snapshotOf(run());
+  const recorded = snap.overview.measures.find((m) => m.id === 'changes_recorded');
+  const withAccount = (account, changes = 50) => ({ ...snap, overview: { ...snap.overview, loopAccount: account, measures: snap.overview.measures.map((m) => (m === recorded ? { ...m, value: changes } : m)) } });
+  const hero = heroHtml(withAccount(accountOf()), { title: 'Software Factory', lede: 'x' });
+  assert.match(hero, /<span class="sf-headline">40 of 50 commits were made inside a loop run<\/span>/);
+  assert.match(hero, /That is 3 loops, 12 runs and 30 cycles in <a href="[^"]+">in-the-loop<\/a>, a project that formally verifies Java code, Nov 1 to Nov 2, 2026\./);
+  assert.match(hero, /No run has a prompt that is not the loop’s own\. One early loop of 3 cycles was typed by hand, before the script existed\.<\/p>/);
+  assert.match(hero, /class="sf-ledger"/, 'the longest run’s own record stays beside it');
+  // Prompts typed into a run are said, and no loop by hand means no sentence about one.
+  const typed = heroHtml(withAccount(accountOf({ interjections: 2, byHand: { loops: 0, runs: 0, cycles: 0, commits: 0, toolCalls: 0 } })), { title: 'T', lede: 'x' });
+  assert.match(typed, /2 prompts in them were typed by a person\.<\/p>/);
+  assert.doesNotMatch(typed, /typed by hand|not the loop’s own/);
+  // Fewer changes recorded than the account's commits: no "of", which would be a share over 1.
+  assert.match(heroHtml(withAccount(accountOf(), 30), { title: 'T', lede: 'x' }), /<span class="sf-headline">40 commits made inside a loop run<\/span>/);
+  // Without an account the headline is the run records' own, as before.
+  assert.match(heroHtml(snap, { title: 'T', lede: 'x' }), /tool calls and 1 commit without a prompt from a person/);
+
+  // The finding keeps its claim and gives the account's totals and cost per commit.
+  const finding = findingsHtml(withAccount(accountOf()));
+  const loops = finding.slice(finding.indexOf('id="finding-loops"'), finding.indexOf('id="finding-output"'));
+  assert.match(loops, /<dt>estimated usage for each commit made in a loop run<\/dt><dd>\$2\.50<\/dd>/);
+  assert.match(loops, /All 3 loops, and each campaign run by run/);
+});
+
+test('the loops page leads with the source’s account: by kind, then every loop, then the runs that left a record', () => {
+  const snap = snapshotOf(run());
+  const page = loopsHtml({ ...snap, overview: { ...snap.overview, loopAccount: accountOf(), models: [...snap.overview.models, { id: 'claude-new-9', label: 'claude-new-9' }] } });
+  assert.match(page, /<h1 id="sf-loops-title">3 loops, 12 runs, 30 cycles, no prompt typed into a run<\/h1>/);
+  const tiles = [...page.matchAll(/<div class="sf-figure"><dt>([^<]+)<\/dt><dd><span class="sf-figure-value">([^<]+)<\/span>(?:<span class="sf-figure-note">([^<]*)<\/span>)?/g)].map((m) => m.slice(1, 4));
+  assert.deepEqual(tiles.slice(0, 6), [
+    ['Runs', '12', 'of 3 loops'],
+    ['Cycles', '30', '25 ended in a commit'],
+    ['Commits', '40', 'made inside a loop run'],
+    ['Verification jobs', '8', '6 passed, 2 failed'],
+    ['Active time', '10.0 h', 'a model or a tool at work; 9 compactions'],
+    ['Estimated usage', '$100.00', '$4.00 per committed cycle'],
+  ]);
+  const cells = (row) => [...row.matchAll(/<td>(.*?)<\/td>/g)].map((c) => c[1].replace(/<[^>]+>/g, ''));
+  const kinds = page.slice(page.indexOf('id="loops-by-kind"'), page.indexOf('<details class="sf-detail sf-loop-list">'));
+  const rows = [...kinds.matchAll(/<tr><th scope="row">(.*?)<\/th>(.*?)<\/tr>/g)].map((m) => [m[1].replace(/<[^>]+>/g, ''), cells(m[2])]);
+  assert.deepEqual(rows, [
+    ['Moonshots 1 loop: one open-ended instruction, given again every cycle', ['1', '3', '3', 'None', '1.0 h', '$30.00', '$10.00']],
+    ['Briefs 1 loop: a written file of work the loop goes through', ['6', '27', '30', '8 (6 passed)', '1.0 h', '$60.00', '$2.73']],
+    ['Verification loop 1 loop: a fresh session that runs the queued proofs', ['5', '0', '7', 'None', '1.0 h', '$10.00', 'No cycles']],
+    ['All 3 loops', ['12', '30', '40', '8 (6 passed)', '10.0 h', '$100.00', '$4.00']],
+  ]);
+  // Every loop, oldest first, with its kind, the day it first ran and its model; names escaped, an unnamed model by its id.
+  const list = page.slice(page.indexOf('<details class="sf-detail sf-loop-list">'), page.indexOf('The runs that left a record'));
+  assert.match(list, /<summary>All 3 loops, oldest first<\/summary>/);
+  assert.deepEqual(
+    [...list.matchAll(/<tr><th scope="row"><code>(.*?)<\/code> <span class="sf-muted">(.*?)<\/span>/g)].map((m) => [m[1], m[2]]),
+    [['by-hand', 'Moonshot, typed by hand, Nov 1, claude-new-9'], ['verification', 'Verification loop, Nov 3, Opus 5.5'], ['core &lt;b&gt;', 'Brief, one of its streams, Nov 5, Opus 5.5']]
+  );
+  assert.match(page, /Coverage: 12 runs: 4 from run records, 3 from the prompts of sessions that left no record, 5 verification sessions/);
+  // Then what the run records give, said to be those runs only.
+  inOrderOf(page, ['id="every-loop"', 'The runs that left a record', 'Those runs on one clock', 'Campaign by campaign']);
+  assert.match(page, /1 run of 1 loop left one, in 1 campaign/);
+  assert.doesNotMatch(page, /Every run on one clock/);
+  // Without an account the page is the run records' own, as before.
+  const before = loopsHtml(snap);
+  assert.match(before, /Every run on one clock/);
+  assert.doesNotMatch(before, /id="every-loop"|The runs that left a record/);
 });
 
 // --- What a verdict rests on -------------------------------------------------------

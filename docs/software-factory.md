@@ -390,11 +390,9 @@ and each model's calls.
 What does not agree yet, and why:
 
 - **Loops.** The landing page says 34 loops, 109 runs, 350 cycles and 590 commits made inside a loop run. These
-  pages say 25 loops, 50 runs, 253 cycles and 323 commits. The source now publishes its own account,
-  `llm-dlc/traces/loops.json` (`llm-trace-loops/v1`), with moonshots, briefs and the verification loop, each run's
-  cycles, time and jobs. The importer still parses the markdown run records, which only loops since Nov 6 left.
-  Reading `loops.json` is the next step; it is also the answer to request 3 in
-  [software-factory-upstream.md](./software-factory-upstream.md).
+  pages said 25 loops, 50 runs, 253 cycles and 323 commits, from the markdown run records, which only loops since
+  Nov 6 left. They now read the source's own account as well and lead with it: see "The source's own account of
+  its loops" below.
 - **Examples with a verdict.** 163 there, 157 of 183 here. Here an example with several verdicts in its label
   counts as having none.
 - **Lines of code.** 167,128 there is lines added less lines removed in five languages; 181,451 here is lines added
@@ -411,6 +409,40 @@ model with no display name had its id printed twice.
 
 The first-load budget is 300 KB, raised from 150 KB by the author on the same day, "to tune later": data and page
 structure come before performance for now. First load is 141.9 KB.
+
+### The source's own account of its loops (generator 7)
+
+in-the-loop now publishes `llm-dlc/traces/loops.json` (`llm-trace-loops/v1`), written by its `loop_stats.py`:
+every loop, run and cycle added up, with moonshots, briefs and the verification loop, and the runs from before the
+script left records, read from their sessions' prompts. It is the answer to request 3 in
+[software-factory-upstream.md](./software-factory-upstream.md), and the source of the landing page's "590 of the
+742 traced commits were made inside a loop run: 34 loops, 109 runs and 350 cycles".
+
+- **Read as it stands.** The importer takes the totals, the three categories, each loop and each run: counts,
+  times in seconds, verification jobs and estimated usage. It checks that the categories, the loops and the runs
+  each add up to the totals, and fails to reconcile otherwise. A loop's instruction text is not carried. The
+  input is optional: a source without the file has no account.
+- **In the snapshot** as `overview.loopAccount`: `totals`, `categories`, `loops`, the prompts typed into any run
+  (`interjections`, 0 at this revision) and, apart, the loop a person ran by hand (`byHand`: one loop, three
+  cycles, three commits). The runs themselves are not in the overview yet.
+- **The overview's headline** is now "590 of 742 commits were made inside a loop run", the landing page's
+  sentence: the account's commits of the recorded changes. Under it: the loops, runs and cycles, that no run has a
+  prompt that is not the loop's own, and the loop typed by hand. The run record beside it is unchanged. Without an
+  account the headline is the run records' own, as before.
+- **The loops finding** keeps its claim, a commit every 13 minutes for 49 hours, which is read from the run
+  records. Its sentence ends with the account's totals, and its third number is the estimated usage for each
+  commit made in a loop run ($2.98).
+- **The loops page** opens with "34 loops, 109 runs, 350 cycles, no prompt typed into a run", six numbers from
+  the account, a table by kind of loop (moonshots, briefs, the verification loop, and all), and every loop in a
+  list that opens (`loopAccountTables` in `factory.js`). Then "The runs that left a record": the 50 runs the
+  records cover, with the clock, who set off the work and the campaigns, each said to be those runs only. The
+  clock's caption says "Every run that left a record".
+- **Still from the run records, and so still partial:** the clock, each run's cycle lines, the campaigns, and the
+  share of tool calls set off by a loop's prompt. Reading runs and cycles from `loops.json` would let the clock
+  start on Oct 31 with the moonshots; that is the next step.
+
+Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
+the same revision.
 
 ### What the section ships: its scripts and stylesheet without comments
 

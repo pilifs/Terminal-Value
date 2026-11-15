@@ -95,7 +95,7 @@ test('a page’s description starts with the result it leads with, in plain text
   const of = (file) => pages.find((p) => p.path === file);
   // The overview: its headline, then what is under it.
   const headline = of('index.html').body.match(/<span class="sf-headline">([^<]+)<\/span>/)[1];
-  assert.match(headline, /^[\d,]+ tool calls and [\d,]+ commits without a prompt from a person$/);
+  assert.match(headline, /^[\d,]+ of [\d,]+ commits were made inside a loop run$/);
   assert.equal(of('index.html').description, `${headline}. What the feature loops did in in-the-loop, a project that formally verifies Java code, with every run, example, tool call and line of code under the numbers.`);
   // Each page under it: its own statement, then what the page holds.
   for (const name of ['loops', 'examples', 'tools', 'code', 'usage']) {

@@ -528,3 +528,31 @@ test('what the client counted itself is carried beside the estimate, with the se
   });
   assert.equal(measure(out, 'usage_usd').value, 0.5);
 });
+
+test('the source’s account of its loops is carried whole, with typed prompts and the loop run by hand apart', () => {
+  assert.equal(run(norm({ calls: [call('2026-11-05T15:00:00Z')] })).overview.loopAccount, null);
+  const stat = (o) => ({ runs: 1, cycles: 1, cyclesCommitted: 1, commits: 1, calls: 5, toolCalls: 10, toolErrors: 0, outputTokens: 100, usd: 1.23456789, agentSeconds: 60, busySeconds: 50, modelSeconds: 30, toolSeconds: 25, compactions: 0, peakContextTokens: 900, jobs: 0, jobsPassed: 0, jobsFailed: 0, ...o });
+  const group = (o) => stat({ sessions: 1, models: ['claude-opus-5-5'], first: '2026-11-01T10:00:00.000Z', last: '2026-11-01T12:00:00.000Z', medianCycleUsd: 0.1234567, medianCycleBusySeconds: 25, ...o });
+  const account = {
+    pricingAsOf: '2026-11-15',
+    totals: { loops: 2, ...group({ runs: 3, cycles: 5, commits: 6, toolCalls: 60 }), runsFromRecords: 1, runsFromTranscripts: 2 },
+    categories: [{ category: 'moonshot', loops: 1, ...group({ cycles: 3, commits: 3 }) }, { category: 'brief', loops: 1, ...group({ runs: 2, cycles: 2, commits: 3 }) }],
+    loops: [
+      { loop: 'by-hand', category: 'moonshot', kind: 'moonshot by hand', streamOf: null, ...group({ cycles: 3, commits: 3 }) },
+      { loop: 'core-values', category: 'brief', kind: 'brief stream', streamOf: 'core', ...group({ runs: 2, cycles: 2, commits: 3 }) },
+    ],
+    runs: [
+      { run: 'a', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: null, outcome: 'unrecorded', interjections: 0, ...stat({ cycles: 3, commits: 3, toolCalls: 7 }) },
+      { run: 'b', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 2, ...stat({ commits: 2 }) },
+      { run: 'c', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 1, ...stat({}) },
+    ],
+  };
+  const a = run(norm({ calls: [call('2026-11-05T15:00:00Z')], loopAccount: account })).overview.loopAccount;
+  assert.deepEqual([a.totals.loops, a.totals.runs, a.totals.cycles, a.totals.commits, a.totals.usd, a.totals.medianCycleUsd], [2, 3, 5, 6, 1.234568, 0.123457]);
+  assert.equal(a.interjections, 3);
+  assert.deepEqual(a.byHand, { loops: 1, runs: 1, cycles: 3, commits: 3, toolCalls: 7 });
+  assert.deepEqual(a.categories.map((c) => c.category), ['moonshot', 'brief']);
+  assert.deepEqual(a.loops.map((l) => [l.loop, l.kind, l.streamOf]), [['by-hand', 'moonshot by hand', null], ['core-values', 'brief stream', 'core']]);
+  // The runs themselves are not in the overview: it carries the sums.
+  assert.equal('runs' in a && Array.isArray(a.runs), false);
+});

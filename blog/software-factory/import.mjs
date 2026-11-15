@@ -43,6 +43,9 @@
 //     the sessions that had stopped, { sessions, ofSessions, usd, callsUsd,
 //     unattributedUsd }, or null. Figures kept beside estimated usage and
 //     never added to it.
+//   - Normalized has `loopAccount`: the source's own account of its loops
+//     (llm-dlc/traces/loops.json), { pricingAsOf, totals, categories, loops,
+//     runs }, checked to add up, or null when the source has none.
 //   - refresh also takes `dir` and `fetchImpl` (passed to readSources),
 //     `postsDir` (default blog/posts) and `config`; `now` is a Date, an ISO
 //     instant or milliseconds (default the clock). It returns
@@ -107,6 +110,7 @@ const INDEX = 'llm-dlc/index.json';
 const RESULTS = 'verification/results/index.json';
 const EXAMPLES = 'examples/index.json';
 const TAGS = 'examples/tags.json';
+const LOOPS = 'llm-dlc/traces/loops.json';
 export const sessionMetricsPath = (id) => `llm-dlc/traces/${id}/metrics.json`;
 export const jobPath = (id) => `verification/jobs/${id}.json`;
 // An example's own result, beside its entry in the catalog. `folder` is the entry's path.
@@ -127,6 +131,7 @@ const FIELDS = {
   'verification/jobs/{job}.json': ['id'],
   [EXAMPLES]: ['examples'],
   [TAGS]: ['domain', 'defect', 'technique'],
+  [LOOPS]: ['totals', 'categories', 'loops', 'runs'],
 };
 
 // --- Reading ---------------------------------------------------------------
@@ -270,7 +275,7 @@ export async function readSources({ ref, sha, checkout, dir, fetchImpl = globalT
     const bytes = await reader.read(at, rel);
     if (bytes) files.set(rel, bytes);
   };
-  await mapLimit([ROLLUP, INDEX, RESULTS, EXAMPLES, TAGS], 5, put);
+  await mapLimit([ROLLUP, INDEX, RESULTS, EXAMPLES, TAGS, LOOPS], 6, put);
 
   // Per-session and per-job files, only for what the index and results name.
   const index = files.has(INDEX) ? tryJson(files.get(INDEX)) : null;
@@ -555,6 +560,100 @@ export function normalizeSources(raw, config = loadConfig()) {
   if (reported && totals.reported_usd != null && !near(totals.reported_usd, reported.usd))
     throw new SourceError('reconcile', `${ROLLUP}: totals say $${totals.reported_usd} reported, its sessions add up to $${reported.usd.toFixed(6)}`, { path: ROLLUP });
 
+  // The source's own account of its loops: every loop, run and cycle added up
+  // by loop_stats.py, moonshots and the verification loop included, and runs
+  // from before the scripts left records. Read as it stands and checked to add
+  // up; null when the source has none. The instruction text of a loop is not
+  // carried.
+  const loopsDoc = load(LOOPS);
+  let loopAccount = null;
+  if (loopsDoc) {
+    const seconds = (ms) => (isCount(ms) ? Math.round(ms / 1000) : 0);
+    const stat = (at, r) => {
+      if (!isObject(r)) bad(LOOPS, `${at} is not an object`);
+      for (const k of ['cycles', 'commits', 'api_calls', 'tool_calls', 'output_tokens']) if (!isCount(r[k])) bad(LOOPS, `${at}.${k} is not a count`);
+      if (typeof r.usd !== 'number' || !Number.isFinite(r.usd) || r.usd < 0) bad(LOOPS, `${at}.usd is not a price`);
+      return {
+        cycles: r.cycles,
+        cyclesCommitted: isCount(r.cycles_committed) ? r.cycles_committed : 0,
+        commits: r.commits,
+        calls: r.api_calls,
+        toolCalls: r.tool_calls,
+        toolErrors: isCount(r.tool_errors) ? r.tool_errors : 0,
+        outputTokens: r.output_tokens,
+        usd: r.usd,
+        agentSeconds: seconds(r.agent_ms),
+        busySeconds: seconds(r.busy_ms),
+        modelSeconds: seconds(r.model_ms),
+        toolSeconds: seconds(r.tool_ms),
+        compactions: isCount(r.compactions) ? r.compactions : 0,
+        peakContextTokens: isCount(r.peak_context_tokens) ? r.peak_context_tokens : null,
+        jobs: isCount(r.jobs) ? r.jobs : 0,
+        jobsPassed: isCount(r.jobs_passed) ? r.jobs_passed : 0,
+        jobsFailed: isCount(r.jobs_failed) ? r.jobs_failed : 0,
+      };
+    };
+    const group = (at, r) => {
+      const s = stat(at, r);
+      if (!isCount(r.runs)) bad(LOOPS, `${at}.runs is not a count`);
+      return {
+        ...s,
+        runs: r.runs,
+        sessions: isCount(r.sessions) ? r.sessions : 0,
+        models: Array.isArray(r.models) ? r.models.filter((m) => typeof m === 'string') : [],
+        first: isInstant(r.first) ? new Date(r.first).toISOString() : null,
+        last: isInstant(r.last) ? new Date(r.last).toISOString() : null,
+        medianCycleUsd: typeof r.median_cycle_usd === 'number' && Number.isFinite(r.median_cycle_usd) ? r.median_cycle_usd : null,
+        medianCycleBusySeconds: isCount(r.median_cycle_busy_ms) ? seconds(r.median_cycle_busy_ms) : null,
+      };
+    };
+    const LOOP_NAME = /^[a-z0-9][a-z0-9-]*$/;
+    const t = isObject(loopsDoc.totals) ? loopsDoc.totals : bad(LOOPS, 'totals is not an object');
+    if (!isCount(t.loops)) bad(LOOPS, 'totals.loops is not a count');
+    const categories = list(LOOPS, loopsDoc, 'categories').map((c, i) => {
+      if (!isObject(c) || typeof c.category !== 'string' || !isCount(c.loops)) bad(LOOPS, `categories[${i}] lacks a category or loops`);
+      return { category: c.category, loops: c.loops, ...group(`categories[${i}]`, c) };
+    });
+    const loops = list(LOOPS, loopsDoc, 'loops').map((l, i) => {
+      if (!isObject(l) || !LOOP_NAME.test(l.loop ?? '') || typeof l.category !== 'string' || typeof l.kind !== 'string') bad(LOOPS, `loops[${i}] lacks a loop, category or kind`);
+      return { loop: l.loop, category: l.category, kind: l.kind, streamOf: LOOP_NAME.test(l.stream_of ?? '') ? l.stream_of : null, ...group(`loops[${i}]`, l) };
+    });
+    const loopRuns = list(LOOPS, loopsDoc, 'runs').map((r, i) => {
+      const at = `runs[${i}]`;
+      if (!isObject(r) || typeof r.run !== 'string' || !LOOP_NAME.test(r.loop ?? '') || typeof r.kind !== 'string' || !isInstant(r.started)) bad(LOOPS, `${at} lacks a run, loop, kind or start`);
+      if (!isCount(r.interjections)) bad(LOOPS, `${at}.interjections is not a count`);
+      return {
+        run: r.run,
+        loop: r.loop,
+        kind: r.kind,
+        category: strOrNull(r.category),
+        source: strOrNull(r.source),
+        started: new Date(r.started).toISOString(),
+        ended: isInstant(r.ended) ? new Date(r.ended).toISOString() : null,
+        outcome: strOrNull(r.outcome),
+        interjections: r.interjections,
+        ...stat(at, r),
+      };
+    });
+    // The account adds up: its categories, its loops and its runs each give the totals.
+    const close = (a, b) => Math.abs(a - b) < 5e-4 + 1e-9 * Math.abs(b);
+    const total = group('totals', t);
+    for (const [name, rows] of [['categories', categories], ['loops', loops], ['runs', loopRuns]]) {
+      const sum = (k) => rows.reduce((n, r) => n + r[k], 0);
+      const runCount = name === 'runs' ? rows.length : sum('runs');
+      if (runCount !== total.runs || sum('cycles') !== total.cycles || sum('commits') !== total.commits || !close(sum('usd'), total.usd))
+        throw new SourceError('reconcile', `${LOOPS}: totals say ${total.runs} runs, ${total.cycles} cycles, ${total.commits} commits and $${total.usd}; its ${name} add up to ${runCount}, ${sum('cycles')}, ${sum('commits')} and $${sum('usd').toFixed(6)}`, { path: LOOPS });
+    }
+    if (loops.length !== t.loops || categories.reduce((n, c) => n + c.loops, 0) !== t.loops) bad(LOOPS, `totals.loops is ${t.loops}, with ${loops.length} loops listed`);
+    loopAccount = {
+      pricingAsOf: strOrNull(loopsDoc.pricing_as_of),
+      totals: { loops: t.loops, ...total, runsFromRecords: isCount(t.runs_from_records) ? t.runs_from_records : null, runsFromTranscripts: isCount(t.runs_from_transcripts) ? t.runs_from_transcripts : null },
+      categories,
+      loops,
+      runs: loopRuns,
+    };
+  }
+
   // Changes, once per change id; housekeeping kept identifiable. A summary of
   // null is in-the-loop's working copy before its first commit message
   // (sync.py's commit_summary): not a change yet, so it is left out, as its own
@@ -694,6 +793,7 @@ export function normalizeSources(raw, config = loadConfig()) {
     pricingAsOf: strOrNull(rollup.pricing_as_of),
     rollup: { calls: totals.api_calls, usd: totals.usd, sessions: rollupSessions.size },
     reported,
+    loopAccount,
     calls,
     sessions,
     changes,

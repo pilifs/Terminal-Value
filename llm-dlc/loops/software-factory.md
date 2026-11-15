@@ -900,6 +900,12 @@ Settled by the author on 2026-11-14:
   budget is 300 KB. Snapshot `sf1-9d69f4babf0c2699` at in-the-loop `e9908ab3`; usage, tool calls, commits and the
   catalog now agree with the landing page. Loops do not yet: the source's new `llm-dlc/traces/loops.json` (34
   loops, 109 runs) is not read. `claude-fable-5-2` is shown by its raw id until the author maps it.
+- **The source's own account of its loops** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "The source's own account of its loops". The importer reads
+  `llm-dlc/traces/loops.json` (generator 7, `overview.loopAccount`, snapshot `sf1-9860c93fb02006c6`). The overview
+  now opens with the landing page's sentence, "590 of 742 commits were made inside a loop run", and the loops page
+  with 34 loops, 109 runs and 350 cycles, a table by kind and every loop. The clock and the campaigns still come
+  from the 50 run records and say so.
 - Status: done
 
 ## Loop settings

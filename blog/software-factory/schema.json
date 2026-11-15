@@ -287,6 +287,31 @@
         "tools": { "$ref": "#/$defs/toolsOverview" },
         "code": { "$ref": "#/$defs/codeOverview" },
         "catalog": { "$ref": "#/$defs/catalogOverview" },
+        "loopAccount": {
+          "description": "The source's own account of its loops (llm-dlc/traces/loops.json), as it adds them up: moonshots, briefs and the verification loop, with runs from before the scripts left records. Apart from overview.loops, which is read from the run records and covers only the runs that left one. Null when the source has no such file. Since generator 7.",
+          "type": ["object", "null"],
+          "required": ["totals", "interjections", "byHand", "categories", "loops"],
+          "additionalProperties": false,
+          "properties": {
+            "totals": { "$ref": "#/$defs/loopStat" },
+            "interjections": { "type": "integer", "minimum": 0, "description": "Prompts in any run that are not the loop's own, added over the runs." },
+            "byHand": {
+              "type": "object",
+              "description": "The part of the totals that is the loop a person ran by hand, typing each instruction.",
+              "required": ["loops", "runs", "cycles", "commits", "toolCalls"],
+              "additionalProperties": false,
+              "properties": {
+                "loops": { "type": "integer", "minimum": 0 },
+                "runs": { "type": "integer", "minimum": 0 },
+                "cycles": { "type": "integer", "minimum": 0 },
+                "commits": { "type": "integer", "minimum": 0 },
+                "toolCalls": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "categories": { "type": "array", "items": { "$ref": "#/$defs/loopStat" } },
+            "loops": { "type": "array", "items": { "$ref": "#/$defs/loopStat" } }
+          }
+        },
         "reported": {
           "description": "What Claude Code counted itself, summed over the sessions that had stopped and so had its count, beside the price of the calls in those sessions' logs. The logs leave some calls out, so the two differ. Another figure, never added to estimated usage. Null when no session has one. Since generator 6.",
           "type": ["object", "null"],
@@ -845,6 +870,168 @@
         }
       }
     },
+    "loopStat": {
+      "description": "One row of the source's account of its loops: the totals, a category or a loop. Times are seconds; usd is estimated usage at list prices.",
+      "type": "object",
+      "required": [
+        "runs",
+        "cycles",
+        "cyclesCommitted",
+        "commits",
+        "calls",
+        "toolCalls",
+        "outputTokens",
+        "usd"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "loops": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "category": {
+          "type": "string"
+        },
+        "loop": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "streamOf": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cycles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cyclesCommitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "toolErrors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "agentSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "busySeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modelSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "toolSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "compactions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peakContextTokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "jobs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "jobsPassed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "jobsFailed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "first": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "medianCycleUsd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "medianCycleBusySeconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "runsFromRecords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "runsFromTranscripts": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+
     "catalogOverview": {
       "description": "The example catalog's own answers about each example, counted by verdict (none for an example with no single verdict), and what its violations come with. Since generator 4.",
       "type": "object",

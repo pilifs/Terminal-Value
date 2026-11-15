@@ -121,8 +121,8 @@ test('empty analysis: real data, no post listed, the draft never', { skip }, () 
   const data = path.join(REPO, 'blog', 'software-factory', 'data');
   const committed = JSON.parse(read(path.join(data, path.dirname(JSON.parse(read(path.join(data, 'latest.json'))).manifest), 'overview.json')));
   const measure = (id) => committed.measures.find((m) => m.id === id).value;
-  const said = [formatValue(measure('usage_usd'), 'usd'), formatValue(measure('model_calls'), 'calls'), `${formatValue(committed.loops.totals.toolCalls, 'calls')} tool calls`];
-  assert.match(said.join(' '), /^\$[\d,]+\.\d\d [\d,]+ [\d,]+ tool calls$/);
+  const said = [formatValue(measure('usage_usd'), 'usd'), formatValue(measure('model_calls'), 'calls'), `${formatValue(committed.loopAccount.totals.commits, 'calls')} of ${formatValue(measure('changes_recorded'), 'calls')} commits`];
+  assert.match(said.join(' '), /^\$[\d,]+\.\d\d [\d,]+ [\d,]+ of [\d,]+ commits$/);
   for (const text of said) assert.ok(overview.includes(text), `real numbers in the static HTML: ${text}`);
   for (const route of ['software-factory', 'software-factory/methodology']) {
     assert.doesNotMatch(page(dist, route), /sf-banner|sf-unavailable/, route);

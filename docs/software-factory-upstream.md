@@ -95,7 +95,8 @@ tell a person's `/compact` from the one `verification-loop.sh` sends, so it coun
 
 > As of in-the-loop `e9908ab3` the source publishes `llm-dlc/traces/loops.json` (`llm-trace-loops/v1`): every loop,
 > run and cycle, moonshots and the verification loop included, with time, jobs and cost. That answers this request.
-> The importer doesn't read it yet.
+> The importer reads its totals, categories, loops and runs (`overview.loopAccount`); the clock and each run's cycle
+> lines still come from the markdown records.
 
 **Today.** The importer parses the markdown record: the `Started` header, each `- cycle N, time, change: summary`
 line with its `decided to continue` or `decided to stop`, and the last `Ended` or `Stopped` line. A change to the

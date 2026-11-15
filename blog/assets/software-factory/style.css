@@ -2452,3 +2452,28 @@ body.software-factory .sf-scale-bar > .sf-series-estimate { background: var(--sf
 body.software-factory .sf-scale-bar > .sf-series-hypothetical {
   background: repeating-linear-gradient(135deg, var(--sf-neutral) 0 3px, var(--sf-surface) 3px 5px);
 }
+
+/* The source's account of its loops: a table by kind, then every loop. */
+body.software-factory .sf-loop-tables {
+  margin-top: 0.5rem;
+  padding-top: 0;
+  border-top: 0;
+}
+body.software-factory .sf-loop-tables tfoot :is(th, td) {
+  border-top: 1px solid var(--sf-rule-strong);
+  font-weight: 700;
+}
+body.software-factory .sf-loop-tables .sf-table th .sf-muted,
+body.software-factory .sf-loop-list .sf-table th .sf-muted {
+  font-weight: 400;
+}
+body.software-factory .sf-loop-list {
+  margin-top: 0.75rem;
+}
+body.software-factory .sf-loop-list .sf-table th .sf-muted {
+  display: block;
+  font-size: 0.8125rem;
+}
+body.software-factory :is(.sf-loop-tables, .sf-loop-list) .sf-table :is(tbody, tfoot) th {
+  min-width: 12rem;
+}

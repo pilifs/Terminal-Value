@@ -30,7 +30,11 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
-//   - Version 6 adds two columns to the usage table, thinkingTokens (part of
+//   - Version 7 adds overview.loopAccount: the source's own account of its
+//     loops (llm-dlc/traces/loops.json), with its totals, categories and
+//     loops, the prompts typed into a run, and the loop run by hand, apart.
+//     Null when the source has none.
+//   - Version 6 added two columns to the usage table, thinkingTokens (part of
 //     the output) and uncachedUsd (the same calls priced as if nothing were
 //     cached; null for a row where a call has none), and overview.reported:
 //     what Claude Code counted itself for the sessions that had stopped. Both
@@ -59,9 +63,11 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '6' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '7' };
 
 const STATUSES = ['passed', 'failed'];
+// The source's kind for the loop a person ran by hand, before the script existed.
+const BY_HAND = 'moonshot by hand';
 const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
 const SCOPE_TEXT = { 'all-time': 'all time', snapshot: 'at this revision' };
 const USAGE_COLUMNS = ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'];
@@ -225,6 +231,23 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
         usd: round6(r.usd),
         callsUsd: round6(r.callsUsd),
         unattributedUsd: r.unattributedUsd == null ? null : round6(r.unattributedUsd),
+      }
+    : null;
+
+  // The source's own account of its loops, as it adds them up: every loop,
+  // run and cycle, with the loop a person ran by hand and the prompts typed
+  // into a run counted apart, so a page can say what ran unattended.
+  const la = normalized.loopAccount ?? null;
+  const tidyLoop = ({ usd, medianCycleUsd, ...rest }) => ({ ...rest, usd: round6(usd), medianCycleUsd: medianCycleUsd == null ? null : round6(medianCycleUsd) });
+  const sumRuns = (rows, k) => rows.reduce((n, x) => n + x[k], 0);
+  const byHand = la ? la.runs.filter((x) => x.kind === BY_HAND) : [];
+  const loopAccount = la
+    ? {
+        totals: tidyLoop(la.totals),
+        interjections: sumRuns(la.runs, 'interjections'),
+        byHand: { loops: la.loops.filter((l) => l.kind === BY_HAND).length, runs: byHand.length, cycles: sumRuns(byHand, 'cycles'), commits: sumRuns(byHand, 'commits'), toolCalls: sumRuns(byHand, 'toolCalls') },
+        categories: la.categories.map(tidyLoop),
+        loops: la.loops.map(tidyLoop),
       }
     : null;
 
@@ -450,6 +473,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       code: factory.code,
       catalog,
       reported,
+      loopAccount,
     },
     sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },
