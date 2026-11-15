@@ -364,12 +364,44 @@ Settled by the author on 2026-11-14:
     - 195 of 195 tests pass.
     - The production build is byte for byte `d4d33a0`'s (85 files).
     - `?period=7d` in headless Chromium still recomputes ($224.22, 3,498 calls), with no script error.
-- Next: M1.4, the end-to-end checks:
-  - the production build against Phase 0;
-  - no draft leak on any surface;
-  - noindex throughout the drafts build;
-  - the empty, populated (temporary published copy), unavailable and fixture states;
-  - existing posts and the project demo unchanged.
+- **M1.4 end-to-end checks: done** (cycle 5).
+  - **Production against Phase 0.** Phase 0 (`c13b1f23`) built from `git archive` in `/tmp`, beside today's
+    production build: the same 85 files, every sha256 equal. No published post changed since Phase 0; the only new
+    post is the draft.
+  - **`test/site-e2e.test.mjs`**, 7 tests on whole builds of temporary copies (`buildCopy` gained an `edit(root)`
+    hook):
+    - No draft leak, unpublished and published: no file named for the draft, no file with the content of one of
+      its own files, no text naming its slug or title, in any page, the home page, `feed.xml`, `sitemap.xml`,
+      `llms.txt` or `_headers`. The post folders are exactly the published posts. The drafts build has the draft,
+      so the markers are real, and its section pages never list it.
+    - Noindex: every page of the drafts build has the robots meta. Production has none, and no `X-Robots-Tag`.
+    - Empty analysis: real numbers in the static HTML, "No analysis published yet" on the overview and the analysis
+      page, no banner, no unavailable notice.
+    - Populated, on a published copy that adds one Software Factory post and marks `reading-the-trace` related:
+      the overview's featured slot and the analysis list carry it with its byline. The related post sits apart
+      under "Related background". The posts keep their canonical `/posts/` pages, with the byline, the "Latest
+      Software Factory data" link and the related post's link back.
+    - Unavailable: a snapshot whose `overview.json` no longer matches its manifest gives "Data unavailable" and
+      the validation problem on the overview and methodology. No numbers, no client, no `static-data`.
+    - Fixture: the banner on the overview and methodology, from `snapshot-example`. Real data has none.
+    - Existing posts and the demo: each published post's files are byte for byte production's in the drafts and
+      published builds, apart from the noindex meta, the header link and the related post's link back. The project
+      demo is its own build plus `blog/assets/`'s comparison page, the same in every build.
+    - Mutations: dropping the new header fails the noindex test; loading drafts into production fails the leak
+      and posts tests.
+  - **Fixed: the drafts build was not noindex throughout.** Pages had the meta and `robots.txt` disallowed
+    everything, but the project demo's pages, the JSON data and the Markdown sources had no noindex. Disallow is
+    not noindex. A drafts build's `_headers` now starts with `/*` and `X-Robots-Tag: noindex`. Production's
+    `_headers` is unchanged. docs/software-factory.md says so.
+  - Found: the draft's `cover.png` is the templates' placeholder, the same file as `terminal-value-pipeline`'s
+    cover. That is not a leak, and replacing it is already on the author's list.
+  - Checks: 202 of 202 tests pass. The production build is byte for byte Phase 0's (85 files). The drafts build has
+    3 posts. `software-factory:validate`: valid.
+  - For M2: the author has already copied in `blog/software-factory/ops/terminal-value.pages-config.toml` (commit
+    `d4d33a0`), so `wrangler.toml` builds on it.
+- Next: M1.5, the visual review. Desktop and mobile, light and dark, for the four states: empty (real data),
+  populated (a published copy served from `/tmp`), unavailable and fixture. Use `screenshot.sh` on `PORT=8790`,
+  with the shots in `/tmp`.
 - Status: working
 
 ## Loop settings

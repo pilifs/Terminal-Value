@@ -16,8 +16,9 @@ folder already qualifies them.
 
 - **Unpublished.** `blog/software-factory/config/section.json` says `published: false`. A production build leaves
   out every page, asset and data file of the section, and stays byte for byte what it was before Phase 0: all 85
-  files had the same sha256. A drafts build (`npm run dev`, `build:drafts`) includes the section, noindex. Only
-  the author sets `published: true`.
+  files had the same sha256. A drafts build (`npm run dev`, `build:drafts`) includes the section, noindex: a
+  robots meta on every page, and `X-Robots-Tag: noindex` on every response through `_headers`. Only the author sets
+  `published: true`.
 - **`/verify-bytecode/`.** The source lives in another copy of the repo, and its draft must not be seen. This repo
   doesn't have it, and building and deploying from here would remove that page. Nobody deploys from here, to dev
   or production, until the author has brought that source in.

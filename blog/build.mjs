@@ -425,10 +425,12 @@ async function build() {
       body: '      <h1>Not found</h1>\n      <p><a href="/">Back to all posts</a></p>',
     })
   );
-  // Show raw JSONL data files in the browser instead of downloading them.
+  // Show raw JSONL data files in the browser instead of downloading them. A
+  // drafts build is noindex on every response, data files and projects too.
   write(
     path.join(OUT_DIR, '_headers'),
-    '/posts/*.jsonl\n  Content-Type: text/plain; charset=utf-8\n' +
+    (includeDrafts ? '/*\n  X-Robots-Tag: noindex\n' : '') +
+      '/posts/*.jsonl\n  Content-Type: text/plain; charset=utf-8\n' +
       section.headers
   );
   write(path.join(OUT_DIR, 'sitemap.xml'), renderSitemap(posts, section.sitemap));

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, '../../..');
-const PROJECT_DIST = path.join(REPO, 'projects', 'terminal-value-pipeline', 'dist');
+export const PROJECT_DIST = path.join(REPO, 'projects', 'terminal-value-pipeline', 'dist');
 export const read = (file) => fs.readFileSync(file, 'utf8');
 
 /** False when a build can run, else why the build tests are skipped. */
@@ -20,8 +20,11 @@ export const skip = fs.existsSync(path.join(PROJECT_DIST, 'index.html')) ? false
 const copies = [];
 test.after(() => copies.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
-/** Builds a copy of blog/ with section.json's published set, and returns its dist/. */
-export function buildCopy({ published, drafts = false, dataDir }) {
+/**
+ * Builds a copy of blog/ with section.json's published set, and returns its
+ * dist/. edit(root) may change the copy first, such as adding a post.
+ */
+export function buildCopy({ published, drafts = false, dataDir, edit }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sf-site-'));
   copies.push(root);
   fs.cpSync(path.join(REPO, 'blog'), path.join(root, 'blog'), { recursive: true });
@@ -29,6 +32,7 @@ export function buildCopy({ published, drafts = false, dataDir }) {
   fs.cpSync(PROJECT_DIST, path.join(root, 'projects', 'terminal-value-pipeline', 'dist'), { recursive: true });
   const config = path.join(root, 'blog', 'software-factory', 'config', 'section.json');
   fs.writeFileSync(config, `${JSON.stringify({ ...JSON.parse(read(config)), published }, null, 2)}\n`);
+  edit?.(root);
   const env = { ...process.env };
   delete env.SOFTWARE_FACTORY_DATA_DIR;
   if (dataDir) env.SOFTWARE_FACTORY_DATA_DIR = dataDir;
