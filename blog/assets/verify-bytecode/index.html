@@ -3,33 +3,33 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>/verify-bytecode · Formal verification for Java pull requests and projects</title>
-    <meta name="description" content="Two Claude Code skills: /verify-bytecode formally verifies a Java pull request from its compiled bytecode with JBMC and jvmcontract; /add-tla-model adds a TLA+ model to a Java project and checks your invariants with TLC.">
+    <title>/prove-java-change · Formally prove any Java change in one command</title>
+    <meta name="description" content="A Claude Code plugin that formally proves a change to Java code from its compiled bytecode: it states the claims, proves them in an unattended loop, and reports what was established, refuted or left open.">
     <meta name="author" content="Filip Stankovic">
     <link rel="canonical" href="https://terminalvalue.net/verify-bytecode/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Terminal Value">
     <meta property="og:url" content="https://terminalvalue.net/verify-bytecode/">
-    <meta property="og:title" content="/verify-bytecode: formal verification for Java pull requests">
-    <meta property="og:description" content="Two Claude Code skills: /verify-bytecode proves a Java pull request from its compiled bytecode; /add-tla-model adds a TLA+ model to a project and checks your invariants with TLC.">
+    <meta property="og:title" content="/prove-java-change: formally prove any Java change in one command">
+    <meta property="og:description" content="A Claude Code plugin that proves a Java change from its bytecode in an unattended loop, and extends its own verifier where it falls short. 183 examples and every session that built it are public.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/verify-bytecode/style.css">
   </head>
   <body>
     <header class="nav">
       <div class="wrap">
-        <a class="brand" href="#top"><span>/</span>verify-bytecode</a>
+        <a class="brand" href="#top"><span>/</span>prove-java-change</a>
         <nav class="nav-links" aria-label="Sections">
-          <a href="#quick-start">Quick start</a>
-          <a href="#model-specifications">Custom models</a>
+          <a href="#under-the-hood">Under the hood</a>
           <a href="#how-it-works">How it works</a>
-          <a href="#what-it-proves">What it proves</a>
-          <a href="#art-of-the-possible">Examples</a>
-          <a href="#faq">FAQ</a>
+          <a href="#how-it-was-built">How it was built</a>
+          <a href="#examples">Examples</a>
+          <a href="#stats">Fun stats</a>
+          <a href="#contribute">Contribute</a>
         </nav>
         <div class="nav-end">
-          <a class="btn small" href="https://github.com/pilifs/in-the-loop/tree/main/plugins/jvmcontract">GitHub</a>
-          <a class="btn small primary" href="#quick-start">Get started</a>
+          <a class="btn small" href="https://github.com/pilifs/in-the-loop">GitHub</a>
+          <a class="btn small primary" href="#install">Try it</a>
         </div>
       </div>
     </header>
@@ -38,42 +38,40 @@
       <div class="hero">
         <div class="wrap">
           <div>
-            <h1>Formal verification for Java pull requests</h1>
-            <p class="lede">Point it at a pull request. It compiles both sides, proves what changed from the bytecode, and shows an input wherever the behaviour differs. No tests or specifications to write.</p>
-            <p class="lede-optional"><b>Optional:</b> use the included <code>/add-tla-model</code> skill to add <a href="#model-specifications">custom invariant models</a> that extend formal verification to your most critical business logic.</p>
+            <h1>Formally prove any Java change in one command</h1>
+            <p class="lede">Point Claude Code at a pull request or a commit. It states what the change must do and must keep, proves each claim from the compiled bytecode in an unattended loop, and shows you an input wherever a claim fails. You write no specification.</p>
 
-            <div class="tabs" role="tablist" aria-label="Install method">
-              <button type="button" role="tab" id="tab-script" aria-controls="panel-script" aria-selected="true">Install script</button>
-              <button type="button" role="tab" id="tab-plugin" aria-controls="panel-plugin" aria-selected="false" tabindex="-1">Claude Code plugin</button>
+            <div class="install" id="install">
+              <p class="install-label">Install the plugin</p>
+              <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
+              <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
+              <p class="install-label">Then, in Claude Code</p>
+              <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
             </div>
-            <div role="tabpanel" id="panel-script" aria-labelledby="tab-script">
-              <div class="cmd"><code>curl -fsSL https://terminalvalue.net/verify-bytecode/install.sh | bash</code><button type="button" class="copy">Copy</button></div>
-            </div>
-            <div role="tabpanel" id="panel-plugin" aria-labelledby="tab-plugin" hidden>
-              <div class="cmd"><code>claude plugin install jvmcontract --marketplace pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
-            </div>
-            <p class="fine">Installs both skills, the verifier and TLC. <a href="#requirements">JBMC, a JDK, gh and jq</a> are checked, not installed. <a href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/install.sh">Read the script.</a></p>
+            <p class="fine">Runs on Fable 5.2 at high effort, on <a href="#requirements">Linux with 8 GB of memory or more</a>. Nothing leaves your machine unless you agree to send a contribution back.</p>
 
             <div class="actions">
-              <a class="btn primary" href="#quick-start">Get started</a>
-              <a class="btn" href="#real-pull-requests">See a real run</a>
+              <a class="btn primary" href="#how-it-works">See how it works</a>
+              <a class="btn" href="#examples">Browse the examples</a>
             </div>
           </div>
 
-          <figure class="term" style="margin: 0" aria-label="Terminal output of the skill on Apache Commons Numbers pull request 223">
-            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>claude</span></div>
-<pre><span class="p">&gt;</span> /verify-bytecode apache/commons-numbers#223
+          <figure class="term" aria-label="The verdicts recorded for example 285, a Spring Boot security fix">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>CVE-2023-34055 · Spring Boot 2.7.17 → 2.7.18</span></div>
+<pre><span class="p">Claim: the "method" metric tag is one of GET, HEAD,
+POST, PUT, PATCH, DELETE, OPTIONS, TRACE, UNKNOWN</span>
 
-<span class="no">✗ ArithmeticUtils#pow(int, int) changed</span>
-  pow(k=-2, e=31)
-    before: throws ArithmeticException
-            ("integer overflow")
-    after:  -2147483648
+<span class="no">✗ refuted on 2.7.17</span>                     <span class="p">0.0 s</span>
+  method(request=HttpServletRequest{
+           getMethod()=""})
+    returns ImmutableTag{key="method", value=""}
+    <span class="p">run on a JVM (JDK 25.0.5): fails there too</span>
 
-<span class="ok">✓ pow(-2, 31) == -2147483648</span>     <span class="p">new, 1.0 s</span>
-<span class="no">✗ pow(-2, 31) == -2147483648</span>     <span class="p">old, 0.7 s</span>
-<span class="ok">✓ Javadoc claims</span>                 <span class="p">new, 1.4 s</span>
-<span class="ok">✓ unchanged on every other input</span> <span class="p">18 min</span></pre>
+<span class="ok">✓ established on 2.7.18</span>
+  <span class="p">every method token up to 8 characters, and null</span>
+<span class="ok">✓ known labels preserved, 2.7.17 → 2.7.18</span>
+<span class="no">✗ refuted on a constructed mutant</span>   <span class="p">the control</span></pre>
+            <figcaption>The verdicts of <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">example 285</a>, condensed from its receipts. The proof loop ran unattended for 2 h 59 min.</figcaption>
           </figure>
         </div>
       </div>
@@ -82,140 +80,81 @@
         <div class="wrap">
           <ul>
             <li><b>0</b><span>specifications to write</span></li>
-            <li><b>2<sup>64</sup></b><span>inputs covered by one proof</span></li>
-            <li><b>3</b><span>verdicts, none of them a guess</span></li>
-            <li><b>56</b><span>code changes in the examples</span></li>
+            <li><b>183</b><span>worked examples the loop learns from</span></li>
+            <li><b>92<small> of 100</small></b><span>refuted changes had passed their unit tests</span></li>
+            <li><b>394</b><span>proof jobs, each with its recorded result</span></li>
           </ul>
         </div>
       </div>
 
-      <section id="why">
+      <section id="under-the-hood">
         <div class="wrap">
           <div class="head">
-            <h2>The code is already the specification</h2>
-            <p>Nobody writes a spec. Each proof takes its specification from something the project already has.</p>
+            <p class="kicker">Under the hood</p>
+            <h2>Your code is the spec</h2>
+            <p>Nobody writes a specification. Each proof takes its statement from something your project already has, and checks it against the bytecode your build produced.</p>
           </div>
           <div class="grid g4">
-            <div class="card"><p class="from"><b>Previous version</b> →</p><h3>Regression proof</h3><p>The new bytecode behaves as the old one on every input, or here is the input where it doesn't.</p></div>
-            <div class="card"><p class="from"><b>Javadoc</b> →</p><h3>Property proof</h3><p>A <code>@throws</code>, <code>@return</code> or <code>@param</code> claim holds on every input.</p></div>
-            <div class="card"><p class="from"><b>Types</b> →</p><h3>Behavioural contract</h3><p>Every input of a finite method is executed, before and after, and the results diffed.</p></div>
-            <div class="card"><p class="from"><b>Bytecode</b> →</p><h3>Capability contract</h3><p>What the module can reach: clock, network, file system, reflection, threads and more.</p></div>
+            <div class="card"><p class="from"><b>Previous version</b> →</p><h3>Regression proof</h3><p>The new method behaves as the old one on every input, outside the change you meant to make. Or here is the input where it doesn't.</p></div>
+            <div class="card"><p class="from"><b>Types</b> →</p><h3>Behavioural contract</h3><p>Every input of a finite method (enums, booleans, records, sealed types) is executed, before and after, and the outcomes are diffed.</p></div>
+            <div class="card"><p class="from"><b>Bytecode</b> →</p><h3>Capability and boundary contracts</h3><p>What the module can reach (clock, network, reflection) and where Spring enters it: routes, listeners, advice, and what each one reads, writes and sends.</p></div>
+            <div class="card"><p class="from"><b>The change's intent</b> →</p><h3>Property proof</h3><p>One line stated beside the code and proved on every input. The plugin drafts these from the change and its history. You confirm them in plain words.</p></div>
           </div>
-        </div>
-      </section>
 
-      <section id="quick-start" class="alt">
-        <div class="wrap">
-          <div class="head">
-            <h2>Your first proof in three steps</h2>
+          <div class="grid g2 engines">
+            <div class="card engine">
+              <p class="engine-n"><b>91,049</b> lines of Rust</p>
+              <h3><code>jvmcontract</code>, the verifier</h3>
+              <p>A class-file reader, a bytecode interpreter, and its own bounded model checker over a bundled SAT solver (CaDiCaL), with 17 JDK classes modelled. It derives contracts without a JVM and builds its proofs without <code>javac</code>. JBMC stays available as a second engine.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md">Read how each verdict is proved →</a>
+            </div>
+            <div class="card engine">
+              <p class="engine-n"><b>45,879</b> lines of Python</p>
+              <h3>The orchestration around it</h3>
+              <p>It prepares a change as an example with pinned sources, runs each proof as a queued job under a memory and CPU cap, keeps a receipt per attempt, and drives the unattended loops.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/verification/README.md">Read how a proof job runs →</a>
+            </div>
           </div>
-          <ol class="quick">
-            <li>
-              <h3>Install</h3>
-              <p>One command, no sudo.</p>
-              <div class="cmd"><code>curl -fsSL https://terminalvalue.net/verify-bytecode/install.sh | bash</code><button type="button" class="copy">Copy</button></div>
-            </li>
-            <li>
-              <h3>Add what it reports as missing</h3>
-              <p>The installer checks each tool and prints how to get it.</p>
-            </li>
-            <li>
-              <h3>Run it in Claude Code</h3>
-              <p>Point it at any Java pull request.</p>
-              <div class="cmd"><code class="slash">/verify-bytecode https://github.com/apache/commons-numbers/pull/223</code><button type="button" class="copy">Copy</button></div>
-            </li>
-          </ol>
-          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#use">All options →</a>
-        </div>
-      </section>
 
-      <section id="model-specifications">
-        <div class="wrap">
-          <div class="head">
-            <h2>Supercharge with custom models</h2>
-            <p>Name the rules your business can't afford to break. A model checker tries every ordering of events, within the bounds you set, to break them.</p>
-          </div>
-          <ul class="rules">
-            <li><span>Orders and payments</span><b>NoDoubleSale</b><b>NoMoneyStranded</b></li>
-            <li><span>Commit protocols</span><b>Atomicity</b><b>CommitFollowsTheCoordinator</b></li>
-            <li><span>Retries and idempotency</span><b>AtMostOnce</b><b>OneExecutionAtATime</b></li>
-            <li><span>Runtime procedures</span><b>OneInitializer</b><b>InitializedAtMostOnce</b></li>
+          <ul class="facts">
+            <li><b>A proof where JBMC ran out of memory.</b> An encoder fast path that JBMC could not finish in 2.8 GB is proved equal to its previous version in 7 s and 76 MB. The buggy variant is refuted in 1.1 s.<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/142-an-ascii-fast-path-for-the-constant-pool-encoder-proved-equal-to-the-previous-version-at-bound-eight/README.md">Example 142</a></li>
+            <li><b>Two engines, one answer.</b> On the 35 recorded obligations both engines decide, none is decided differently.<a href="https://github.com/pilifs/in-the-loop/blob/main/examples/coverage.md">Engine coverage</a></li>
+            <li><b>Witnesses you can run.</b> A counterexample is shrunk to a small input, replayed in the interpreter, then run on a real JVM.</li>
+            <li><b>Proofs are cached.</b> The key is a SHA-256 over the method's code, the tool, the JDK and the models. A rerun with nothing changed takes 66 ms.</li>
           </ul>
-          <div class="demo-tabs" role="tablist" aria-label="Example models">
-            <button type="button" role="tab" id="tab-breaker" aria-controls="panel-breaker" aria-selected="true">Circuit breaker</button>
-            <button type="button" role="tab" id="tab-payment" aria-controls="panel-payment" aria-selected="false" tabindex="-1">Stranded payment</button>
-            <button type="button" role="tab" id="tab-deadlock" aria-controls="panel-deadlock" aria-selected="false" tabindex="-1">Deadlock</button>
-          </div>
-          <div class="rule-demo" role="tabpanel" id="panel-breaker" aria-labelledby="tab-breaker">
+
+          <div class="split">
             <div>
-              <h3>One good probe closes a circuit breaker</h3>
-              <p>The rule holds in all 102 reachable states. Swap in a buggy kernel, and the checker shows the 10 steps that break it.</p>
-              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/026-half-open-breaker-that-closes-on-the-first-good-probe/README.md">Read the example →</a>
+              <p class="kicker">JAR → JAR</p>
+              <h3 class="split-title">Compare two builds, with nothing written by hand</h3>
+              <p><code>jvmcontract compare</code> takes the compiled classes of two builds. It works out which old method became which new one, checks every HTTP route and message listener by the calls it makes, in order, and proves each changed method against its predecessor.</p>
+              <p>It ends with what a person decided, what it asks of one, and what it assumed. In this run a refactor adds a cent per item, and the proof finds it at the route and in the kernel.</p>
+              <p>A release works the same way. Example 285 ran on the published Spring Boot 2.7.17 and 2.7.18 JARs, each on its own dependencies.</p>
+              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/191-a-cent-too-much-per-item-refuted-at-the-route-and-in-the-kernel-no-inferred-mapping-absorbing-it/README.md">Read example 191 →</a>
             </div>
-            <figure class="term" aria-label="Circuit breaker: a TLA+ model that passes, then fails with the steps that break it">
-              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>CircuitBreaker.tla</span></div>
-<pre><span class="p">\* Your rule, in your system's terms.</span>
-ClosedOnlyAfterEveryProbe == ~closedEarly
+            <figure class="term" aria-label="Abridged output of jvmcontract compare on example 191">
+              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>example 191, abridged</span></div>
+<pre><span class="p">$</span> jvmcontract compare old/classes new/classes
 
-<span class="p">$</span> jvmcontract tlc spec/CircuitBreaker.tla
-<span class="ok">✓ every invariant holds in 102 distinct states</span>
+<span class="no">POST /quotes: refuted</span>
+  witness: cents=0, quantity=1
+    old build returns 0, attempts no modeled call
+    new build returns 1, attempts
+      KafkaTemplate.send(topic="quotes", data.total=1)
+  <span class="p">found in 0.1 s, replayed on a JVM (JDK 25.0.5)</span>
 
-<span class="p">$</span> bash spec/check.sh  <span class="p"># kernel of example 026</span>
-<span class="no">✗ ClosedOnlyAfterEveryProbe violated after 10 steps</span>
-  5. Complete: state = "OPEN", window = &lt;&lt;TRUE, TRUE&gt;&gt;
-  8. Request: state = "HALF_OPEN", current = 1
-  9. DependencyFlips: dependency = "UP"
- 10. Complete: state = "CLOSED", closedEarly = TRUE</pre>
+<span class="ok">shop.Pricing#discount: verified</span>
+<span class="no">shop.Pricing#total: refuted</span>
+  correspondence (inferred):
+    old.q.cents == new.q.amount.cents
+  witness: total(q=new Quote(new Money(0), 1))
+    before, 0; after, 1
+
+kernel: 2 verified, 1 refuted, 0 unresolved,
+        2 unsupported
+decisions a person made: 0
+questions for a person: none</pre>
             </figure>
-          </div>
-          <div class="rule-demo" role="tabpanel" id="panel-payment" aria-labelledby="tab-payment" hidden>
-            <div>
-              <h3>One dropped query strands a payment</h3>
-              <p>The rule holds in all 4,732 reachable states. Drop one seat check, and a customer is charged with no seat and no refund.</p>
-              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/011-skipped-seat-check-strands-the-money/README.md">Read the example →</a>
-            </div>
-            <figure class="term" aria-label="Stranded payment: a TLA+ model that passes, then fails with the steps that break it">
-              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>BoxOffice.tla</span></div>
-<pre><span class="p">\* Your rule, in your system's terms.</span>
-NoMoneyStranded == \A c \in Customers :
-  payment[c] = "CAPTURED" =&gt; order[c] \in {"CONFIRMED", "REFUND_PENDING"}
-    \/ CaptureInFlight(c)
-
-<span class="p">$</span> jvmcontract tlc spec/BoxOffice.tla
-<span class="ok">✓ every invariant holds in 4732 distinct states</span>
-
-<span class="p">$</span> jvmcontract tlc spec/BoxOffice.tla  <span class="p"># with example 011</span>
-<span class="no">✗ NoMoneyStranded violated after 9 steps</span>
-  5. HandleCommand: payment[alice] = "CAPTURED"
-  7. Tick: time = 1
-  8. Hold: s1 held by bob
-  9. HandleEvent: dlt = {[alice, "PaymentCaptured"]}</pre>
-            </figure>
-          </div>
-          <div class="rule-demo" role="tabpanel" id="panel-deadlock" aria-labelledby="tab-deadlock" hidden>
-            <div>
-              <h3>One shared rule deadlocks a JVM</h3>
-              <p>Every invariant still holds. Make all class-init requests wait, and a thread waits on itself with the others queued behind it.</p>
-              <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/examples/043-class-init-that-waits-on-its-own-thread-deadlocks/README.md">Read the example →</a>
-            </div>
-            <figure class="term" aria-label="Deadlock: a TLA+ model that passes, then fails with the steps that break it">
-              <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>ClassInit.tla</span></div>
-<pre><span class="p">\* No rule to write: the check finds states where nothing can move.</span>
-Spec == Init /\ [][Next]_vars
-
-<span class="p">$</span> jvmcontract tlc spec/ClassInit.tla --deadlock
-<span class="ok">✓ every invariant holds in 37 distinct states</span>
-
-<span class="p">$</span> jvmcontract tlc spec/ClassInit.tla --deadlock  <span class="p"># with example 043</span>
-<span class="no">✗ deadlock after 5 steps</span>
-  2. Request: state = "IN_PROGRESS", initializer = t1
-  3. Recurse: pc[t1] = "waiting"
-  4. Request: pc[t2] = "waiting"
-  5. Request: pc[t3] = "waiting"</pre>
-            </figure>
-          </div>
-          <div class="actions">
-            <a class="btn primary" href="#custom-invariants">More on custom models</a>
           </div>
         </div>
       </section>
@@ -224,138 +163,278 @@ Spec == Init /\ [][Next]_vars
         <div class="wrap">
           <div class="head">
             <p class="kicker">How it works</p>
-            <h2>From pull request to report in six steps</h2>
+            <h2>Not "just another skill"</h2>
+            <p>The skill itself is 97 lines. It installs a hash-checked copy of the whole verification repository on your machine, then runs a proof loop on it that can extend the verifier.</p>
           </div>
-          <ol class="steps">
-            <li><h3>Fetch</h3><p>Reads the pull request and checks out both sides.</p></li>
-            <li><h3>Scope</h3><p>The changed files, their module, and every changed method.</p></li>
-            <li><h3>Build</h3><p>Both versions, with the project's Maven or Gradle build. Claude Code asks first.</p></li>
-            <li><h3>Prove</h3><p>Each method with the proof its shape allows, under a time and memory budget.</p></li>
-            <li><h3>Diff</h3><p>The module's capabilities and public API, before and after.</p></li>
-            <li><h3>Report</h3><p>Verdicts, the inputs behind them, and every command.</p></li>
+
+          <h3 class="sub">A closed loop that improves itself</h3>
+          <ol class="loop">
+            <li><b>Your change</b><span>becomes an example, with its claims frozen before any proof runs.</span></li>
+            <li><b>The proof loop</b><span>runs it against your local copy of the library.</span></li>
+            <li><b>A gap is closed</b><span>when the verifier can't model your code yet: the loop extends it and commits.</span></li>
+            <li><b>The library is larger</b><span>so your next run starts with what this one needed.</span></li>
           </ol>
+          <p class="loop-back"><span>each run extends your local copy, and the next one is cheaper</span></p>
+          <p class="note"><b>This happened on the first target.</b> On 2026-11-14 every proof task of example 285 stopped at something the verifier could not model: a parameter of an interface type, and two releases with different dependencies. The next day the proof loop extended <code>jvmcontract</code> for both in three commits, reran the unchanged claims on the same JARs, and all four came out as expected. <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md#closed-gaps">Read the closed gaps →</a></p>
+
+          <h3 class="sub">The four steps</h3>
+          <ol class="steps four">
+            <li><h3>Set up and measure</h3><p>A subagent installs a released copy of the repository, checked against a SHA-256 the skill carries, and measures your machine for a memory budget.</p><p class="you">You confirm.</p></li>
+            <li><h3>State the claims</h3><p>It pins the change to two exact commits, sizes it against the closest past examples, writes each claim in full, and runs the change once on a JVM.</p><p class="you">You confirm the claims and the estimate.</p></li>
+            <li class="star"><p class="badge">The moonshot</p><h3>Prove it</h3><p>A fork of the session runs unattended on one line: <q>Formally prove example NNN as elegantly and efficiently as possible.</q> Fable 5.2 works out what stands between the library and your code, closes it, and proves the claims. It may not change a claim to fit a result.</p></li>
+            <li><h3>Report</h3><p>Each claim comes back established, refuted with an input replayed on a JVM, or left open with the reason, under stated bounds. Then it offers to send what it added upstream.</p><p class="you">You decide.</p></li>
+          </ol>
+          <p class="aside">Step 3 has no acceptance criteria to meet, so the session that started it stays outside as its conductor. When the loop fills 600k tokens of context without a commit, the conductor reads the transcript, the commits and the jobs, and decides whether it is working or stuck.</p>
+          <div class="actions">
+            <a class="btn primary" href="#examples">Browse 183 examples</a>
+            <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md">What each step stands on</a>
+          </div>
         </div>
       </section>
 
-      <section id="what-it-proves">
+      <section id="how-it-was-built">
         <div class="wrap">
           <div class="head">
-            <p class="kicker">What it proves</p>
-            <h2>Three verdicts, and no silent passes</h2>
-            <p>If the tool could not check something, the report says so and says why.</p>
+            <p class="kicker">How it was built</p>
+            <h2>The development process</h2>
+            <p>The repository went from empty to 167,128 lines of code in 14 working days. Almost all of it was written by models working alone, and every session is public.</p>
           </div>
           <div class="grid g3">
-            <div class="card verdict verified"><span class="pill verified">Verified</span><p>The proof covered every input within the stated bounds.</p></div>
-            <div class="card verdict violation"><span class="pill violation">Violation</span><p>A concrete input, replayed. For a regression proof, that is a behaviour change, intended or not.</p></div>
-            <div class="card verdict unverifiable"><span class="pill unverifiable">Unverifiable</span><p>The tool gave no verdict and says why. It is never reported as a pass.</p></div>
+            <div class="card">
+              <h3>From scratch, on one subscription</h3>
+              <p>The first commit is dated 2026-10-24. By 2026-11-15 there were 749. One Claude Ultra plan paid for all of it.</p>
+              <p>It is vanilla Claude Code. The repository configures no MCP server and no outside plugin, and all 25,842 recorded tool calls went to built-in tools. 22,655 of them were Bash.</p>
+            </div>
+            <div class="card">
+              <h3>Every turn is on the record</h3>
+              <p>A hook captures each turn. It goes to a local Langfuse for browsing, and a redacted transcript is published with the commit it produced.</p>
+              <p>Each commit message links its session and carries the SHA-256 of the log, so anyone can download a log and check it. 742 commits have a trace.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/README.md">The index of all 113 sessions →</a>
+            </div>
+            <div class="card">
+              <h3>Mostly unattended, in one VM</h3>
+              <p>590 of the 742 traced commits were made inside a loop run: 34 loops, 109 runs and 350 cycles. A loop commits locally and never pushes.</p>
+              <p>They ran in a VM with 30 vCPUs and 105 GiB of memory, with no swap. Each loop and each proof gets a hard memory cap, so one that runs away is killed alone.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/loops.md">Every loop, run and cycle →</a>
+            </div>
           </div>
-          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#what-it-proves">What each kind of method gets →</a>
+
+          <figure class="term trailer" aria-label="The trace lines of a real commit message">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>the end of a commit message, abridged</span></div>
+<pre><span class="p">LLM-Trace-Summary:</span> github.com/pilifs/in-the-loop/…/a4ac2b6c-…/summary.md
+<span class="p">LLM-Trace-Log:</span>     terminalvalue.net/raw-traces/a4ac2b6c-…/d8928155….jsonl.gz
+<span class="p">LLM-Trace:</span>         a4ac2b6c-… <span class="ok">sha256:d8928155153d5141eadaa739…</span></pre>
+          </figure>
+
+          <h3 class="sub">Layers of agents and scripts</h3>
+          <ol class="layers">
+            <li><b><code>/prove-java-change</code></b><span class="who">Fable 5.2, with an Opus subagent for setup</span><p>Orchestrates the four steps and conducts the proof loop from outside.</p></li>
+            <li><b><code>feature-loop.sh</code></b><span class="who">Fable for moonshots, Opus 5.5 for briefs</span><p>Instruction, commit, compact, repeat. A moonshot repeats one open-ended line. A brief is a file of items with acceptance criteria. A cycle with no commit stops the loop.</p></li>
+            <li><b><code>run-streams.sh</code></b><span class="who">several loops at once</span><p>Runs a brief's streams side by side, each in its own workspace, checks the merged tree every hour, and merges them at the end.</p></li>
+            <li><b>The verification loop</b><span class="who">Sonnet 5.5</span><p>Proofs never run inside a development session. A session queues them as jobs, and a fresh session runs the queue under memory and CPU limits and brings the results back.</p></li>
+            <li><b><code>sync.py</code> and the tools beside it</b><span class="who">Python, no model</span><p>Hooks that capture and redact each turn, stamp each commit with its trace, publish the logs, and add up the metrics on this page.</p></li>
+          </ol>
+          <a class="link" href="#stats">See the numbers ↓</a>
         </div>
       </section>
 
-      <section id="art-of-the-possible" class="alt">
+      <section id="examples" class="alt">
         <div class="wrap">
           <div class="head">
-            <p class="kicker">Generated examples</p>
-            <h2>Art of the Possible</h2>
-            <p>How far bytecode proofs can reach. Of the 40 changes flagged in the examples, the unit tests beside them caught 3.</p>
+            <p class="kicker">Examples</p>
+            <h2>183 changes, each with its verdict</h2>
+            <p>Every example is a code change run through the verifier, with the input or the trace behind its verdict. They are also the plugin's memory: it sizes your change against the closest ones.</p>
           </div>
+          <ul class="cats">
+            <li><b>66</b><h3>Service plumbing</h3><p>Payments, retries, circuit breakers, rate limits, idempotency keys, Kafka, and Spring advice that doesn't do what it says.</p></li>
+            <li><b>56</b><h3>Distributed protocols</h3><p>Raft elections and replication, two-phase commit, and breakers, model-checked in TLA+ over every interleaving within bounds.</p></li>
+            <li><b>27</b><h3>JVM internals</h3><p>The kernels of a small JVM written in Java: class files, the type checker, <code>idiv</code>, <code>lookupswitch</code>, modified UTF-8.</p></li>
+            <li><b>10</b><h3>Whole-build comparisons</h3><p>Two builds of an application compared at each route and in each changed method, with nothing written by hand.</p></li>
+            <li><b>24</b><h3>Published libraries</h3><p>16 Spring security fixes, 5 pull requests to Apache Commons and jackson-core, and 3 Spring changes expected to prove unchanged.</p></li>
+          </ul>
+
           <div class="grid g3">
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Property proof</span></p>
-              <h3><code>(n + 1) / 2</code> is not a majority</h3>
-              <p>A tidy-up lets two disjoint pairs elect two leaders.</p>
-              <pre class="witness">majority(n=2) = 1</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/015-rounded-half-is-not-a-majority/README.md">Read the example →</a>
+              <p class="ex-tags"><span class="pill violation">Refuted</span> <span class="pill verified">Established</span> <span class="tag">Spring Boot</span></p>
+              <h3>CVE-2023-34055, proved on both releases</h3>
+              <p>The fix bounds a metric label for every method token within the bound. The release before it fails on the empty string.</p>
+              <pre class="witness">getMethod()=""  →  value=""</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md">Read example 285 →</a>
             </article>
             <article class="card ex">
               <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Regression proof</span></p>
-              <h3>A vote rule that loses committed entries</h3>
-              <p>A Raft rewrite elects a stale server. The old version is the specification.</p>
-              <pre class="witness">before: false   after: true</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/013-longest-log-wins-breaks-election-safety/README.md">Read the example →</a>
-            </article>
-            <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Capability contract</span></p>
-              <h3>A codec that loads any class a message names</h3>
-              <p>No dependency is vulnerable, so a scanner finds nothing.</p>
-              <pre class="witness">1 capability change: reflection</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/009-codec-loads-classes-named-by-payload/README.md">Read the example →</a>
+              <h3>A fast path that writes a class file the JVM rejects</h3>
+              <p>The encoder's own properties allow it. Only the previous version disagrees, found in 1.1 s where JBMC ran out of memory.</p>
+              <pre class="witness">encodeInto(chars=['\u0080'], out=[0])</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/143-an-ascii-fast-path-that-admits-u0080-writes-it-in-one-byte-which-the-properties-allow/README.md">Read example 143 →</a>
             </article>
             <article class="card ex">
               <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag model">TLA+ model</span></p>
-              <h3>One dropped query strands a payment</h3>
-              <p>A customer is charged, with no seat and no refund.</p>
-              <pre class="witness">NoMoneyStranded, 9-step trace</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/011-skipped-seat-check-strands-the-money/README.md">Read the example →</a>
+              <h3>A Raft leader that loses a committed entry</h3>
+              <p>Counting replicas looks right, and holds in all 25,666 states of the usual configuration. Figure 8 of the Raft paper breaks it.</p>
+              <pre class="witness">LeaderCompleteness, 16-step trace</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/097-leader-that-commits-an-earlier-terms-entry-by-counting-replicas-loses-it-to-a-rival/README.md">Read example 097 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag model">TLA+ model</span></p>
-              <h3>A deadlock that breaks no invariant</h3>
-              <p>One rule for class initialization leaves a thread waiting on itself.</p>
-              <pre class="witness">deadlock, 5-step trace</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/043-class-init-that-waits-on-its-own-thread-deadlocks/README.md">Read the example →</a>
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Build comparison</span></p>
+              <h3>A refactor that drops a Kafka event</h3>
+              <p>The route still returns the right total. For bulk orders it no longer sends the event, and the unit tests pass.</p>
+              <pre class="witness">POST /quotes: cents=1, quantity=100
+before: returns 90; KafkaTemplate.send(…)
+after:  returns 90; no modeled call</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/193-a-bulk-order-s-quote-event-dropped-in-the-refactor-refuted-on-the-route-s-trace-of-sends/README.md">Read example 193 →</a>
             </article>
             <article class="card ex">
-              <p class="ex-tags"><span class="pill verified">Verified</span> <span class="tag">Property proof</span></p>
-              <h3>A binary search rewrite, proved</h3>
-              <p>It finds every key, so the refactor rests on a proof, not on reading the loop.</p>
-              <pre class="witness">tables ≤ 8 entries, 4.3 s</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/046-lookupswitch-bisection-rewritten-half-open-proved-to-find-every-key/README.md">Read the example →</a>
+              <p class="ex-tags"><span class="pill violation">Change found</span> <span class="pill verified">Confined</span> <span class="tag">Apache Commons</span></p>
+              <h3>A pull request found and confined from bytecode</h3>
+              <p><code>pow</code> now accepts <code>(-2)^31</code>. The proof finds that input from the classes alone, then shows nothing else changed.</p>
+              <pre class="witness">pow(k=-2, e=31)
+before: throws ArithmeticException
+after:  -2147483648</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/105-commons-numbers-223-pow-of-minus-two-to-the-31/README.md">Read example 105 →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill unverifiable">Unverifiable</span> <span class="tag">jackson-core</span></p>
+              <h3>A division trick where nothing was proved</h3>
+              <p>A multiply-and-shift replaces a division by 1000. The solver ran out of time and memory, and the report says exactly that.</p>
+              <pre class="witness">out of memory (3 GiB) in 11 s</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/108-jackson-core-1203-division-by-1000-as-multiply-and-shift/README.md">Read example 108 →</a>
             </article>
           </div>
-          <p class="note">Authored changes to small systems built to be provable, not bugs found in the wild. Test results come from those systems' own suites.</p>
+          <p class="note"><b>What these are.</b> 159 are changes written for small systems built to be provable, not bugs found in the wild. Of the 100 the verifier refuted, the systems' own unit tests passed on 92. The 24 from published libraries are real commits. Of the 16 Spring security fixes, one is proved so far, two replay on a JVM and wait on gaps in the verifier, and 13 are catalogued and not run yet.</p>
           <div class="actions">
-            <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">Browse all 56 examples</a>
+            <a class="btn primary" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">Browse all 183 examples</a>
+            <a class="btn" href="https://github.com/pilifs/in-the-loop/tree/main/verification/results">394 proof jobs and their results</a>
           </div>
         </div>
       </section>
 
-      <section id="custom-invariants">
+      <section id="stats">
         <div class="wrap">
           <div class="head">
-            <p class="kicker">TLA+ models</p>
-            <h2>Check your own invariants</h2>
-            <p>Run <code>/add-tla-model</code> in your project and say the rules in plain words. It builds a model around the code that decides what happens next, and checks them.</p>
+            <p class="kicker">Fun stats</p>
+            <h2>For every token written, 156 were read</h2>
+            <p>What it took to build, added up from the published session records between 2026-10-24 and 2026-11-15. A more detailed stats page is coming soon.</p>
           </div>
-          <div class="cmd"><code class="slash">/add-tla-model "no two confirmed orders share a seat"</code><button type="button" class="copy">Copy</button></div>
-          <ol class="steps four">
-            <li><h3>Find the logic</h3><p>The code that decides what happens next. If it's spread out, the skill proposes an extraction and asks first.</p></li>
-            <li><h3>Derive it</h3><p>Its behaviour comes from the bytecode, so the model runs what the code does.</p></li>
-            <li><h3>Model the system</h3><p>One action per transaction, message or timer, plus your rules.</p></li>
-            <li><h3>Check every build</h3><p>TLC shows the steps that break a rule. The build fails when the logic changes, until the diff is reviewed.</p></li>
-          </ol>
-          <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/plugins/jvmcontract/README.md#add-tla-model-check-your-own-invariants-with-a-tla-model">How the skill works, with a real run →</a>
-        </div>
-      </section>
+          <ul class="tiles">
+            <li><b>3.86 B</b><span>tokens through the models, read and written</span></li>
+            <li><b>97.8%</b><span>of the tokens read came from the prompt cache</span></li>
+            <li><b>24,769</b><span>model calls in 113 sessions</span></li>
+            <li><b>25,842</b><span>tool calls, of which 447 failed</span></li>
+            <li><b>392</b><span>times a session compacted its context and went on</span></li>
+            <li><b>168.6 h</b><span>of agent working time</span></li>
+            <li><b>2.2 GB</b><span>of gzipped transcripts, in 958 snapshots</span></li>
+            <li><b>$2,313</b><span>at API list prices. Without the cache, $20,220</span></li>
+          </ul>
 
-      <section id="real-pull-requests" class="alt">
-        <div class="wrap">
-          <div class="head">
-            <p class="kicker">Open-source pull requests</p>
-            <h2>Results from real projects</h2>
-            <h3 class="sub-title">Apache Commons Numbers #223</h3>
-            <p>The pull request fixes <code>ArithmeticUtils.pow</code> so that <code>(-2)^31</code> returns <code>Integer.MIN_VALUE</code> instead of reporting overflow. The skill found that input from the compiled classes alone.</p>
-          </div>
-          <div class="grid g2">
-            <div class="table">
-              <table class="stack">
-                <thead><tr><th>Check</th><th>Verdict</th><th class="num">Time</th></tr></thead>
-                <tbody>
-                  <tr><td data-label="Check">Old and new <code>pow(int, int)</code> agree</td><td data-label="Verdict"><span class="pill violation">Violation</span></td><td class="num" data-label="Time">184.7 s</td></tr>
-                  <tr><td data-label="Check">The fix, on the new version</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">1.0 s</td></tr>
-                  <tr><td data-label="Check">The fix, on the old version</td><td data-label="Verdict"><span class="pill violation">Violation</span></td><td class="num" data-label="Time">0.7 s</td></tr>
-                  <tr><td data-label="Check">The Javadoc, on the new version</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">1.4 s</td></tr>
-                  <tr><td data-label="Check">Unchanged on every other input</td><td data-label="Verdict"><span class="pill verified">Verified</span></td><td class="num" data-label="Time">18 min</td></tr>
-                </tbody>
-              </table>
+          <div class="grid g2 stats-detail">
+            <div>
+              <h3 class="sub">Which model did the work</h3>
+              <div class="table">
+                <table class="stack">
+                  <thead><tr><th>Model</th><th class="num">Calls</th><th class="num">Written</th><th class="num">Read from cache</th><th class="num">Share</th></tr></thead>
+                  <tbody>
+                    <tr><td data-label="Model">Opus 5.5 <code>claude-opus-5-5</code><small>every brief loop</small></td><td class="num" data-label="Calls">19,972</td><td class="num" data-label="Written">17.1 M</td><td class="num" data-label="Read from cache">2.96 B</td><td class="num" data-label="Share">78.8%</td></tr>
+                    <tr><td data-label="Model">Fable 5.1 <code>claude-fable-5-1</code><small>the first library, the early moonshots</small></td><td class="num" data-label="Calls">3,287</td><td class="num" data-label="Written">6.5 M</td><td class="num" data-label="Read from cache">569.6 M</td><td class="num" data-label="Share">15.3%</td></tr>
+                    <tr><td data-label="Model">Fable 5.2 <code>claude-fable-5-2</code><small>the proof loop</small></td><td class="num" data-label="Calls">679</td><td class="num" data-label="Written">0.8 M</td><td class="num" data-label="Read from cache">185.8 M</td><td class="num" data-label="Share">4.9%</td></tr>
+                    <tr><td data-label="Model">Sonnet 5.5 <code>claude-sonnet-5-5</code><small>the verification loop</small></td><td class="num" data-label="Calls">815</td><td class="num" data-label="Written">0.2 M</td><td class="num" data-label="Read from cache">35.7 M</td><td class="num" data-label="Share">1.0%</td></tr>
+                    <tr><td data-label="Model">Haiku 5.5 <code>claude-haiku-5-5</code></td><td class="num" data-label="Calls">16</td><td class="num" data-label="Written">0.03 M</td><td class="num" data-label="Read from cache">0.7 M</td><td class="num" data-label="Share">&lt;0.1%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="fine">Share is of all tokens, read and written. Dollar figures price the recorded tokens at API list prices. They are not what was billed. Source: <a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/metrics.json"><code>metrics.json</code></a>.</p>
             </div>
-            <div class="ph tall">Terminal recording of this run, or the full report it produced, with every command.</div>
+            <div>
+              <h3 class="sub">Code in the repository, by day</h3>
+              <figure class="chart" id="growth">
+                <div class="chart-scroll">
+                  <svg viewBox="0 0 560 270" role="img" aria-label="Lines of code in the repository from 24 October to 15 November 2026. It rises from 5,297 to 167,128, fastest between 6 and 8 November, and is flat on the nine days with no commits.">
+                    <g class="grid-lines">
+                      <line x1="44" x2="486.0" y1="240.0" y2="240.0"/>
+                      <line x1="44" x2="486.0" y1="180.0" y2="180.0"/>
+                      <line x1="44" x2="486.0" y1="120.0" y2="120.0"/>
+                      <line x1="44" x2="486.0" y1="60.0" y2="60.0"/>
+                    </g>
+                    <g class="axis" text-anchor="end">
+                      <text x="36" y="244.0">0</text>
+                      <text x="36" y="184.0">50K</text>
+                      <text x="36" y="124.0">100K</text>
+                      <text x="36" y="64.0">150K</text>
+                    </g>
+                    <g class="axis" text-anchor="middle">
+                      <text x="44.0" y="260.0">Oct 24</text>
+                      <text x="184.6" y="260.0">Oct 31</text>
+                      <text x="325.3" y="260.0">Nov 7</text>
+                      <text x="465.9" y="260.0">Nov 14</text>
+                    </g>
+                    <path class="area" d="M44.0,233.6 L64.1,233.6 L84.2,233.6 L104.3,233.6 L124.4,233.6 L144.5,233.6 L164.5,230.7 L184.6,204.8 L204.7,201.6 L224.8,183.3 L244.9,171.0 L265.0,163.7 L285.1,150.3 L305.2,131.8 L325.3,97.8 L345.4,71.8 L365.5,69.2 L385.5,69.2 L405.6,69.2 L425.7,69.2 L445.8,69.2 L465.9,52.0 L486.0,39.4 L486.0,240.0 L44.0,240.0 Z"/>
+                    <path class="line" d="M44.0,233.6 L64.1,233.6 L84.2,233.6 L104.3,233.6 L124.4,233.6 L144.5,233.6 L164.5,230.7 L184.6,204.8 L204.7,201.6 L224.8,183.3 L244.9,171.0 L265.0,163.7 L285.1,150.3 L305.2,131.8 L325.3,97.8 L345.4,71.8 L365.5,69.2 L385.5,69.2 L405.6,69.2 L425.7,69.2 L445.8,69.2 L465.9,52.0 L486.0,39.4"/>
+                    <line class="cross" x1="0" x2="0" y1="24" y2="240.0" hidden/>
+                    <circle class="dot" cx="486.0" cy="39.4" r="5"/>
+                    <text class="end" x="496.0" y="37.4">167,128</text>
+                    <text class="end-sub" x="496.0" y="52.4">lines</text>
+                    <rect class="hit" x="44" y="24" width="442.0" height="216.0" tabindex="0" aria-label="Lines of code by day. Use the left and right arrow keys to move between days."/>
+                  </svg>
+                  <div class="tip" role="status" hidden></div>
+                </div>
+                <figcaption>65,379 lines, 39% of the total, landed in three days: 6 to 8 November. The flat stretches are days with no commits.</figcaption>
+                <details>
+                  <summary>The same data as a table</summary>
+                  <div class="table">
+                    <table>
+                      <thead><tr><th>Day</th><th class="num">Commits</th><th class="num">Lines of code</th></tr></thead>
+                      <tbody>
+                        <tr><td>Oct 24</td><td class="num">9</td><td class="num">5,297</td></tr>
+                        <tr><td>Oct 30</td><td class="num">4</td><td class="num">7,772</td></tr>
+                        <tr><td>Oct 31</td><td class="num">31</td><td class="num">29,322</td></tr>
+                        <tr><td>Nov 1</td><td class="num">29</td><td class="num">31,992</td></tr>
+                        <tr><td>Nov 2</td><td class="num">32</td><td class="num">47,223</td></tr>
+                        <tr><td>Nov 3</td><td class="num">34</td><td class="num">57,502</td></tr>
+                        <tr><td>Nov 4</td><td class="num">26</td><td class="num">63,547</td></tr>
+                        <tr><td>Nov 5</td><td class="num">32</td><td class="num">74,748</td></tr>
+                        <tr><td>Nov 6</td><td class="num">105</td><td class="num">90,175</td></tr>
+                        <tr><td>Nov 7</td><td class="num">168</td><td class="num">118,504</td></tr>
+                        <tr><td>Nov 8</td><td class="num">125</td><td class="num">140,127</td></tr>
+                        <tr><td>Nov 9</td><td class="num">7</td><td class="num">142,334</td></tr>
+                        <tr><td>Nov 14</td><td class="num">80</td><td class="num">156,662</td></tr>
+                        <tr><td>Nov 15</td><td class="num">67</td><td class="num">167,128</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </figure>
+              <p class="fine">Lines added less lines removed in Rust, Python, Java, shell and TLA+ files, from <code>git log --numstat</code> at commit <code>e9908ab3</code>. Today that is 91,049 of Rust, 45,879 of Python, 22,763 of Java, 4,209 of shell and 3,228 of TLA+.</p>
+            </div>
           </div>
-          <p class="try"><b>Good first projects:</b> <a href="https://github.com/apache/commons-numbers">Apache Commons Numbers</a> <a href="https://github.com/JodaOrg/joda-time">Joda-Time</a> <a href="https://github.com/apache/commons-codec">Apache Commons Codec</a> <a href="https://github.com/FasterXML/jackson-core">jackson-core</a> <a href="https://github.com/apache/commons-lang">Apache Commons Lang</a></p>
-          <div class="grid g2 community">
-            <div class="ph">Projects using it. Logos or names, once there are any.<div class="logos" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div>
-            <div class="ph">A quote from a maintainer or reviewer, or a bug it found in the wild, with a link.</div>
+        </div>
+      </section>
+
+      <section id="contribute" class="alt">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">Contribute back</p>
+            <h2>Your run can make the next one easier</h2>
+            <p>When a proof needed something new of the verifier, that part helps the next person more than it helps you. The plugin offers to send it upstream, and sends nothing until you agree.</p>
+          </div>
+          <div class="grid g3">
+            <div class="card">
+              <h3>Send an example</h3>
+              <p>Every example is welcome. The ones that extend <code>jvmcontract</code> are worth the most: a new JDK model, a checker extension, a new way to prepare a change.</p>
+              <p>Step 4 prepares the pull request. Your machine's records stay behind, and a check looks for anything that names your user or host before it is pushed.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md#contributing-back">How a contribution travels →</a>
+            </div>
+            <div class="card">
+              <h3>Send a failure</h3>
+              <p>A run that failed is the most useful report there is: a claim left open, a setup that blocked, a verdict you think is wrong.</p>
+              <p>Say what the change was and what the report said. If the change is public, a link is enough.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/issues/new">Post the details as a GitHub issue →</a>
+            </div>
+            <div class="card">
+              <h3>Pick one from the queue</h3>
+              <p>15 Spring security fixes are in the examples and not proved yet, Spring4Shell among them.</p>
+              <p>Two already replay on a JVM and wait on gaps in the verifier. The other 13 are catalogued and not run.</p>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md#tag-open-source-libraries">See examples 286 to 300 →</a>
+            </div>
           </div>
         </div>
       </section>
@@ -363,42 +442,41 @@ Spec == Init /\ [][Next]_vars
       <section id="faq">
         <div class="wrap">
           <div class="head">
-            <p class="kicker">FAQ</p>
+            <p class="kicker">Before you run it</p>
             <h2>Questions</h2>
           </div>
-          <details id="limits" open><summary>What can't it do?</summary>
+          <details id="requirements" open><summary>What does it need?</summary>
             <ul class="limits">
-              <li>Arrays and loops are checked up to a stated bound.</li>
-              <li>Methods over strings, collections and objects get no per-method proof.</li>
-              <li>Some 64-bit arithmetic can exhaust the solver.</li>
-              <li>A TLA+ model is partly hand-written, and is checked within small bounds.</li>
+              <li><a href="https://code.claude.com">Claude Code</a>, on Fable 5.2 at high effort</li>
+              <li>Linux on x86_64 or aarch64. It has run on Ubuntu 24.04 and 26.04: on a machine, in a VM and under WSL2</li>
+              <li>At least 8 GiB of memory, 2 CPUs and 10 GiB of free disk. 16 GiB, 4 CPUs and 25 GiB are comfortable</li>
+              <li>Python 3.11, git, <a href="https://github.com/jj-vcs/jj">jj</a>, JDK 25 and Rust 1.82. Step 1 installs what it can without sudo and tells you the rest</li>
             </ul>
-            <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md#limits">All limits and measured costs →</a>
+            <p class="fine"><a href="https://github.com/diffblue/cbmc">JBMC</a> is optional: without it, only the verifier's own checker decides.</p>
           </details>
-          <details id="requirements"><summary>What does it need?</summary>
+          <details id="limits"><summary>What can't it do yet?</summary>
             <ul class="limits">
-              <li><a href="https://code.claude.com">Claude Code</a></li>
-              <li>A JDK, with Maven or Gradle unless the project has a wrapper</li>
-              <li><a href="https://cli.github.com"><code>gh</code></a>, logged in, plus <code>git</code> and <code>jq</code></li>
-              <li><a href="https://github.com/diffblue/cbmc">JBMC</a>, for regression and property proofs</li>
+              <li>The change must be public: a commit on github.com or a published JAR. A private repository or uncommitted work has no route of its own yet. A small change can be copied in as a fixture.</li>
+              <li>Proofs are bounded. Arrays and loops are checked up to a stated bound, 8 elements by default, and the report names it.</li>
+              <li>The verifier's own checker has no floating point, and models part of the JDK. What it can't model is left open with the reason. It is never reported as a pass.</li>
+              <li>It is new. One of the 16 Spring security fixes in the examples is proved so far.</li>
             </ul>
-            <p class="fine">The installer sets up Rust and TLC.</p>
+            <a class="link" href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md#limits">All limits of the verifier →</a>
           </details>
-          <details><summary>What does a passing TLA+ model prove?</summary><p>That within its bounds, no ordering of the modelled actions breaks your invariants. It does not prove the Java correct: the decision logic comes from the bytecode, but the rest of the model is hand-written.</p></details>
-          <details><summary>Does it write to my pull request?</summary><p>Only with <code>--post</code>. Otherwise nothing is written anywhere but a working directory you can rerun from.</p></details>
-          <details><summary>How much does a run cost?</summary><div class="ph">Typical tokens and dollars for a run, from measured sessions.</div></details>
-          <details><summary>Can I run it in CI?</summary><div class="ph">Whether this is supported, and how.</div></details>
-          <details><summary>Does it work on private repositories?</summary><div class="ph">What runs locally, and what is sent to the model.</div></details>
-          <details><summary>How is this different from tests or static analysis?</summary><div class="ph">A short comparison, with one example from the 56.</div></details>
+          <details><summary>How long does a run take, and what does it use?</summary><p>One measured run, example 285: the proof loop took 2 h 59 min, made 481 model calls, wrote 467,660 tokens, and used 7,956 CPU seconds of proof. At API list prices that is $65.63. Your change will differ, so step 2 gives you an estimate in hours and tokens and waits for your answer.</p></details>
+          <details><summary>Does anything leave my machine?</summary><p>No. The copy the plugin installs has tracing and publishing switched off, and it never pushes. The one exception is a contribution upstream, as a pull request you agree to first.</p></details>
+          <details><summary>What does "established" mean?</summary><p>The claim holds for every input within the bounds and assumptions the report states, not for a sample of them. A refuted claim comes with an input, run on a real JVM. A claim the tool could not decide is left open and says why.</p></details>
         </div>
       </section>
 
       <div class="cta">
         <div class="wrap">
-          <h2>Prove your next pull request, then your system's rules</h2>
-          <p>One command to install, one to run.</p>
+          <h2>Prove your next Java change</h2>
+          <p>Two commands to install, one to run. Tell me how it went, especially if it failed.</p>
+          <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
+          <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
           <div class="actions">
-            <a class="btn primary" href="#quick-start">Get started</a>
+            <a class="btn primary" href="#install">Get started</a>
             <a class="btn" href="https://github.com/pilifs/in-the-loop">View on GitHub</a>
           </div>
         </div>
@@ -409,27 +487,27 @@ Spec == Init /\ [][Next]_vars
       <div class="wrap">
         <div class="foot-cols">
           <div>
-            <a class="brand" href="#top"><span>/</span>verify-bytecode</a>
-            <p>Formal verification of Java pull requests from compiled bytecode, and TLA+ models of Java projects. Built with <a href="https://github.com/diffblue/cbmc">JBMC</a>, <a href="https://github.com/tlaplus/tlaplus">TLC</a> and jvmcontract.</p>
+            <a class="brand" href="#top"><span>/</span>prove-java-change</a>
+            <p>A Claude Code plugin that formally proves changes to Java code from compiled bytecode. Built on jvmcontract, with <a href="https://github.com/diffblue/cbmc">JBMC</a> and <a href="https://github.com/tlaplus/tlaplus">TLC</a> as further engines.</p>
           </div>
           <div>
-            <h3>Product</h3>
+            <h3>This page</h3>
             <ul>
-              <li><a href="#quick-start">Quick start</a></li>
-              <li><a href="#model-specifications">Custom models</a></li>
+              <li><a href="#under-the-hood">Under the hood</a></li>
               <li><a href="#how-it-works">How it works</a></li>
-              <li><a href="#what-it-proves">What it proves</a></li>
-              <li><a href="#art-of-the-possible">Examples</a></li>
-              <li><a href="#faq">FAQ</a></li>
+              <li><a href="#how-it-was-built">How it was built</a></li>
+              <li><a href="#examples">Examples</a></li>
+              <li><a href="#stats">Fun stats</a></li>
+              <li><a href="#contribute">Contribute</a></li>
             </ul>
           </div>
           <div>
             <h3>Documentation</h3>
             <ul>
-              <li><a href="https://github.com/pilifs/in-the-loop/tree/main/plugins/jvmcontract">Skill README</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md">The skill and its loop</a></li>
               <li><a href="https://github.com/pilifs/in-the-loop/blob/main/lib/README.md">jvmcontract</a></li>
-              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">56 examples</a></li>
-              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/README.md">Session traces</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">183 examples</a></li>
+              <li><a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/README.md">Session traces</a></li>
             </ul>
           </div>
           <div>
@@ -466,25 +544,58 @@ Spec == Init /\ [][Next]_vars
       addEventListener('hashchange', openTarget);
       openTarget();
 
-      for (const list of document.querySelectorAll('[role="tablist"]')) {
-        const tabs = [...list.querySelectorAll('[role="tab"]')];
-        const select = (tab) => {
-          for (const other of tabs) {
-            const selected = other === tab;
-            other.setAttribute('aria-selected', selected);
-            other.tabIndex = selected ? 0 : -1;
-            document.getElementById(other.getAttribute('aria-controls')).hidden = !selected;
-          }
+      // The growth chart's hover layer: [day, commits that day, lines of code, x, y] per calendar day.
+      const DAYS = [["Oct 24",9,5297,44.0,233.6],["Oct 25",0,5297,64.1,233.6],["Oct 26",0,5297,84.2,233.6],["Oct 27",0,5297,104.3,233.6],["Oct 28",0,5297,124.4,233.6],["Oct 29",0,5297,144.5,233.6],["Oct 30",4,7772,164.5,230.7],["Oct 31",31,29322,184.6,204.8],["Nov 1",29,31992,204.7,201.6],["Nov 2",32,47223,224.8,183.3],["Nov 3",34,57502,244.9,171.0],["Nov 4",26,63547,265.0,163.7],["Nov 5",32,74748,285.1,150.3],["Nov 6",105,90175,305.2,131.8],["Nov 7",168,118504,325.3,97.8],["Nov 8",125,140127,345.4,71.8],["Nov 9",7,142334,365.5,69.2],["Nov 10",0,142334,385.5,69.2],["Nov 11",0,142334,405.6,69.2],["Nov 12",0,142334,425.7,69.2],["Nov 13",0,142334,445.8,69.2],["Nov 14",80,156662,465.9,52.0],["Nov 15",67,167128,486.0,39.4]];
+      const chart = document.getElementById('growth');
+      if (chart) {
+        const svg = chart.querySelector('svg');
+        const hit = chart.querySelector('.hit');
+        const cross = chart.querySelector('.cross');
+        const dot = chart.querySelector('.dot');
+        const tip = chart.querySelector('.tip');
+        const last = DAYS.length - 1;
+        let current = last;
+        const show = (index) => {
+          current = Math.max(0, Math.min(last, index));
+          const [day, commits, lines, x, y] = DAYS[current];
+          cross.setAttribute('x1', x);
+          cross.setAttribute('x2', x);
+          cross.removeAttribute('hidden');
+          dot.setAttribute('cx', x);
+          dot.setAttribute('cy', y);
+          tip.replaceChildren();
+          const value = document.createElement('b');
+          value.textContent = `${lines.toLocaleString('en-US')} lines`;
+          const label = document.createElement('span');
+          label.textContent = `${day} · ${commits === 1 ? '1 commit' : `${commits} commits`}`;
+          tip.append(value, label);
+          tip.hidden = false;
+          tip.style.left = `${(x / 560) * svg.getBoundingClientRect().width}px`;
+          tip.classList.toggle('flip', x > 336);
         };
-        tabs.forEach((tab, index) => {
-          tab.addEventListener('click', () => select(tab));
-          tab.addEventListener('keydown', (event) => {
-            const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-            if (!step) return;
-            const next = tabs[(index + step + tabs.length) % tabs.length];
-            select(next);
-            next.focus();
+        const hide = () => {
+          cross.setAttribute('hidden', '');
+          tip.hidden = true;
+          dot.setAttribute('cx', DAYS[last][3]);
+          dot.setAttribute('cy', DAYS[last][4]);
+        };
+        hit.addEventListener('pointermove', (event) => {
+          const box = svg.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * 560;
+          let nearest = 0;
+          DAYS.forEach((day, index) => {
+            if (Math.abs(day[3] - x) < Math.abs(DAYS[nearest][3] - x)) nearest = index;
           });
+          show(nearest);
+        });
+        hit.addEventListener('pointerleave', hide);
+        hit.addEventListener('focus', () => show(current));
+        hit.addEventListener('blur', hide);
+        hit.addEventListener('keydown', (event) => {
+          const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+          if (!step) return;
+          event.preventDefault();
+          show(current + step);
         });
       }
     </script>
