@@ -1,0 +1,35 @@
+# The Cloudflare Pages project terminal-value. Once this file exists, a deploy takes
+# the project's bindings and variables from it, not from the dashboard, so it carries
+# the project's existing settings: name and compatibility date from
+# blog/software-factory/ops/terminal-value.pages-config.toml, which setup-r2.sh saved
+# with `wrangler pages download config` on 2026-11-14 (no bindings, no variables).
+# Compare it with the project's settings before the first deploy that uses it.
+#
+# The Software Factory's published data (docs/software-factory.md, Milestone 2):
+#   SOFTWARE_FACTORY_DATA          the R2 bucket that functions/software-factory/data/ serves
+#   SOFTWARE_FACTORY_ENVIRONMENT   "preview" or "production"; while config/section.json
+#                                  says published: false, the function serves only preview
+#
+# Pages environments: the top level is preview (every branch but production, such as
+# `npm run deploy:dev`'s dev) and local `wrangler pages dev`. [env.production] is the
+# production branch (`npm run deploy`). Bindings and vars are not inherited, so the
+# production block names each again.
+# Coordinator-owned.
+
+name = "terminal-value"
+compatibility_date = "2026-02-14"
+pages_build_output_dir = "dist"
+
+[vars]
+SOFTWARE_FACTORY_ENVIRONMENT = "preview"
+
+[[r2_buckets]]
+binding = "SOFTWARE_FACTORY_DATA"
+bucket_name = "software-factory-data-preview"
+
+[env.production.vars]
+SOFTWARE_FACTORY_ENVIRONMENT = "production"
+
+[[env.production.r2_buckets]]
+binding = "SOFTWARE_FACTORY_DATA"
+bucket_name = "software-factory-data"

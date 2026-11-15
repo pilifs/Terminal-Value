@@ -495,8 +495,46 @@ Settled by the author on 2026-11-14:
     - The production build is byte for byte Phase 0's (85 files). `functions/` is outside `dist/`.
     - The drafts build has 3 posts.
     - `software-factory:validate`: valid.
-- Next: M2.2, `wrangler.toml` from `ops/terminal-value.pages-config.toml`, with the binding and
-  `SOFTWARE_FACTORY_ENVIRONMENT` per environment.
+- **M2.2 configuration: done** (cycle 8). The repo-root `wrangler.toml` builds on the author's
+  `ops/terminal-value.pages-config.toml`, saved on 2026-11-14. That file has name `terminal-value`,
+  `compatibility_date = "2026-02-14"`, an empty `[env.production]`, and no bindings or variables.
+  - The new file adds `pages_build_output_dir = "dist"`.
+  - **Top level** (preview, which is every branch but production, and local `wrangler pages dev`):
+    `SOFTWARE_FACTORY_DATA` is `software-factory-data-preview`, and `SOFTWARE_FACTORY_ENVIRONMENT` is `preview`.
+  - **`[env.production]`**: `software-factory-data` and `production`. Bindings and vars aren't inherited in
+    Pages, so this block names both again.
+  - **Deploy scripts**: `deploy` and `deploy:dev` are unchanged and keep working. They are read from wrangler
+    4.65.0's `pages deploy` source, not run. The `dist` argument and `--project-name` take precedence over the
+    file, and both match it. Wrangler picks `[env.production]` when `--branch` is the project's production
+    branch, so `deploy` (`--branch=production`) gets production and `deploy:dev` (`--branch=dev`) gets preview.
+  - **Checks**:
+    - Wrangler's own Pages validator (`readPagesConfig`, the one `pages deploy` runs, called from a copy of
+      wrangler's bundle in `/tmp`) accepts the file for the top level, `preview` and `production`, and resolves the
+      bindings and vars above. It rejects a copy with an `[env.staging]`.
+    - `wrangler pages dev` from a copy in `/tmp/sf-m22/site`, with no `--r2` or `--binding` flags, listed
+      `env.SOFTWARE_FACTORY_DATA (software-factory-data-preview)` and `SOFTWARE_FACTORY_ENVIRONMENT ("preview")`. It
+      took the directory from `pages_build_output_dir`. `latest.json` came back 200 with the function's headers and
+      the committed bytes. The manifest was 200 and a rejected path 404.
+    - `test/site-config.test.mjs`, 4 tests, reads the file with wrangler's exported `unstable_readConfig`:
+      - each environment's bucket, var and output directory, with no other bindings;
+      - the function's gate under each environment's vars (unpublished: preview 200, production 404; published:
+        both 200);
+      - name, date and flags equal to the saved settings;
+      - the deploy scripts naming the same project and directory, with branches `production` and `dev`.
+    - Mutations fail those tests: production's var set to `preview`, production bound to the preview bucket,
+      production's vars dropped, and a renamed project.
+    - 218 of 218 tests pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+    - No `.wrangler/` was left in the repo.
+  - **For the author, before the next deploy of either kind** (from now on, every deploy carries these bindings):
+    - Compare `wrangler.toml` with the Pages project's settings. The saved copy is from 2026-11-14.
+    - Confirm that the project's production branch is `production`.
+    - Run `setup-r2.sh` first, so both buckets exist. A deploy that binds a missing bucket is expected to fail.
+      That expectation is untried.
+- Next: M2.3, the publisher `blog/software-factory/publish.mjs`, with SigV4 uploads, read-back checks, pointer
+  ordering, and tests against a fake store.
 - Status: working
 
 ## Loop settings
