@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { escapeHtml, formatDay } from '../../assets/software-factory/format.js';
+import { escapeHtml, formatDay, formatValue } from '../../assets/software-factory/format.js';
 import { loadSnapshot } from '../index.mjs';
 import { renderPages } from '../render.mjs';
 
@@ -95,11 +95,19 @@ test('methodology: every metric definition, note and filter scope from config', 
     assert.ok(body.includes(`id="def-${m.id}"`), m.id);
     for (const text of [m.label, m.definition, m.notes, m.coverage]) assert.ok(body.includes(escapeHtml(text)), `${m.id}: ${text}`);
   }
-  // The separate figures: their notes, without pointing at this page for figures no snapshot carries.
-  for (const s of metrics.separate) assert.ok(body.includes(`<strong>${escapeHtml(s.label)}.</strong>`), s.id);
-  assert.ok(body.includes(`${escapeHtml("Claude Code's own figure, where the session recorded one.")}</li>`), 'reported_usd note');
-  assert.doesNotMatch(body, /[Mm]ethodology page only/);
-  assert.match(body, /no published snapshot includes them yet/);
+  // The separate figures: their notes, and their values where the snapshot has them, each beside the estimate.
+  for (const s of metrics.separate) assert.ok(body.includes(`<li id="def-${s.id}"><strong>${escapeHtml(s.label)}.</strong> ${escapeHtml(s.note)}`), s.id);
+  assert.doesNotMatch(body, /[Mm]ethodology page only|no published snapshot includes them yet/);
+  const { reported } = snapshot.overview;
+  assert.ok(
+    body.includes(`At this revision: ${formatValue(reported.usd, 'usd')} over the 3 of 4 sessions that have one; the calls in those sessions’ logs come to ${formatValue(reported.callsUsd, 'usd')} of estimated usage.`),
+    'reported_usd value'
+  );
+  // The fixture's rollup has no unattributed total, so that figure has no value; the hypothetical is the usage table's sum.
+  assert.match(body, /id="def-unattributed_usd">(?:(?!<\/li>)[\s\S])*session by session\.<\/li>/);
+  const u = snapshot.overview.usage;
+  const uncached = u.rows.reduce((t, r) => t + r[u.columns.indexOf('uncachedUsd')], 0);
+  assert.ok(body.includes(`At this revision: ${formatValue(uncached, 'usd')}, for the same calls that come to ${formatValue(snapshot.overview.measures[0].value, 'usd')} of estimated usage.`), 'uncached_usd value');
   // A ratio says what it is a share of.
   assert.match(body, /id="def-cache_reuse"[\s\S]*?<dt>Unit<\/dt><dd>share of input tokens<\/dd>/);
   assert.match(body, /id="def-usage_share_by_model"[\s\S]*?<dt>Unit<\/dt><dd>share of estimated usage<\/dd>/);

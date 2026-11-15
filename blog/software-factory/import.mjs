@@ -37,6 +37,12 @@
 //   - loadConfig(dir) reads { source, areas, models } for normalizeSources.
 //   - Normalized records carry a `campaign` (sessions, changes, verification)
 //     for metrics.mjs's area rule, and the rollup's totals as `rollup`.
+//   - A call also carries thinkingTokens (part of its output) and uncachedUsd
+//     (the same call priced as if nothing were cached), null where the source
+//     has none. Normalized has `reported`: what Claude Code counted itself for
+//     the sessions that had stopped, { sessions, ofSessions, usd, callsUsd,
+//     unattributedUsd }, or null. Figures kept beside estimated usage and
+//     never added to it.
 //   - refresh also takes `dir` and `fetchImpl` (passed to readSources),
 //     `postsDir` (default blog/posts) and `config`; `now` is a Date, an ISO
 //     instant or milliseconds (default the clock). It returns
@@ -435,6 +441,8 @@ export function normalizeSources(raw, config = loadConfig()) {
         for (const k of ['input_tokens', 'cache_read_tokens', 'cache_write_tokens', 'output_tokens'])
           if (!isCount(c[k])) bad(rel, `${at}.${k} is not a count`);
         if (c.usd != null && (typeof c.usd !== 'number' || !Number.isFinite(c.usd) || c.usd < 0)) bad(rel, `${at}.usd is not a price`);
+        if (c.uncached_usd != null && (typeof c.uncached_usd !== 'number' || !Number.isFinite(c.uncached_usd) || c.uncached_usd < 0)) bad(rel, `${at}.uncached_usd is not a price`);
+        if (c.thinking_tokens != null && !isCount(c.thinking_tokens)) bad(rel, `${at}.thinking_tokens is not a count`);
         calls.push({
           session: s.session_id,
           subagent: c.agent != null,
@@ -446,6 +454,11 @@ export function normalizeSources(raw, config = loadConfig()) {
           cacheWriteTokens: c.cache_write_tokens,
           outputTokens: c.output_tokens,
           usd: typeof c.usd === 'number' ? c.usd : null,
+          // The part of the output that was thinking, and the same call priced
+          // as if nothing were cached: a hypothetical, kept beside usd and never
+          // added to it. Null where the source doesn't say.
+          thinkingTokens: isCount(c.thinking_tokens) ? c.thinking_tokens : null,
+          uncachedUsd: typeof c.usd === 'number' && typeof c.uncached_usd === 'number' ? c.uncached_usd : null,
         });
       }
       // Prompts: who sent each and what it set off. The text is read to tell
@@ -521,6 +534,26 @@ export function normalizeSources(raw, config = loadConfig()) {
   }
   for (const id of rollupSessions.keys())
     if (!sessions.some((s) => s.id === id)) bad(ROLLUP, `session ${id} is not in ${INDEX}`);
+
+  // What the client counted itself: Claude Code writes its own cost when a
+  // session stops, and the rollup keeps it beside the price of the calls in
+  // that session's log. Another figure, never added to the calls' usd: the
+  // logs leave some calls out, so the two differ. Null when no session has one.
+  const stopped = covered.filter((s) => s.reported_usd != null);
+  for (const s of stopped)
+    if (typeof s.reported_usd !== 'number' || !Number.isFinite(s.reported_usd) || s.reported_usd < 0) bad(ROLLUP, `session ${s.session_id}: reported_usd is not a price`);
+  const price = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null);
+  const reported = stopped.length
+    ? {
+        sessions: stopped.length,
+        ofSessions: covered.length,
+        usd: stopped.reduce((t, s) => t + s.reported_usd, 0),
+        callsUsd: stopped.reduce((t, s) => t + s.usd, 0),
+        unattributedUsd: price(totals.unattributed_usd),
+      }
+    : null;
+  if (reported && totals.reported_usd != null && !near(totals.reported_usd, reported.usd))
+    throw new SourceError('reconcile', `${ROLLUP}: totals say $${totals.reported_usd} reported, its sessions add up to $${reported.usd.toFixed(6)}`, { path: ROLLUP });
 
   // Changes, once per change id; housekeeping kept identifiable. A summary of
   // null is in-the-loop's working copy before its first commit message
@@ -660,6 +693,7 @@ export function normalizeSources(raw, config = loadConfig()) {
     source: { repository: raw.source.repository, sha: raw.source.sha, inputs: [...inputs.values()].sort((a, b) => a.path.localeCompare(b.path)) },
     pricingAsOf: strOrNull(rollup.pricing_as_of),
     rollup: { calls: totals.api_calls, usd: totals.usd, sessions: rollupSessions.size },
+    reported,
     calls,
     sessions,
     changes,

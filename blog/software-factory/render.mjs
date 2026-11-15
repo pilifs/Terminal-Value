@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
-import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml } from '../assets/software-factory/factory.js';
+import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -597,11 +597,21 @@ function datasetCoverage(snapshot, { e, formatDate }) {
 // tokens, the model share a share of estimated usage.
 const unitWords = (m) => (m.id === 'usage_share_by_model' ? 'share of estimated usage' : UNIT_WORDS[m.unit] ?? m.unit);
 
-// The separate figures' notes say where each would be shown. No snapshot carries
-// them yet, so the page says that instead of pointing at itself.
-const separateNote = (note) => note.replace(/\s*(?:Shown on the methodology page only|Methodology page only)\.$/, '');
+// The value of a figure kept separate, in a sentence, where the snapshot has
+// it. Each is said with the estimate it stands beside, never as a sum.
+function separateValue(id, facts) {
+  if (!facts) return '';
+  const usd = (v) => formatValue(v, 'usd');
+  const r = facts.reported;
+  if (id === 'reported_usd' && r)
+    return `${usd(r.usd)} over the ${formatValue(r.coverage.included, 'calls')} of ${formatValue(r.coverage.total, 'calls')} sessions that have one; the calls in those sessions’ logs come to ${usd(r.callsUsd)} of estimated usage.`;
+  if (id === 'unattributed_usd' && r && r.unattributedUsd !== null) return `${usd(r.unattributedUsd)}.`;
+  if (id === 'uncached_usd' && facts.uncached !== null) return `${usd(facts.uncached)}, for the same calls that come to ${usd(facts.usd)} of estimated usage.`;
+  return '';
+}
 
-function definitions(e) {
+function definitions(e, snapshot) {
+  const facts = snapshot ? usageFacts(snapshot.overview) : null;
   const items = METRIC_CONFIG.metrics
     .map(
       (m) => `          <article class="sf-method" id="def-${e(m.id)}">
@@ -617,13 +627,18 @@ function definitions(e) {
           </article>`
     )
     .join('\n');
-  const separate = METRIC_CONFIG.separate.map((s) => `<li><strong>${e(s.label)}.</strong> ${e(separateNote(s.note))}</li>`).join('');
+  const values = METRIC_CONFIG.separate.map((s) => separateValue(s.id, facts));
+  const separate = METRIC_CONFIG.separate
+    .map((s, i) => `<li id="def-${e(s.id)}"><strong>${e(s.label)}.</strong> ${e(s.note)}${values[i] ? ` <span class="sf-separate-value">At this revision: ${e(values[i])}</span>` : ''}</li>`)
+    .join('');
   return `      <section class="sf-panel sf-definitions" id="definitions" aria-labelledby="sf-definitions-title">
         <h2 id="sf-definitions-title">Metric definitions</h2>
         <p class="sf-caption">Version ${e(METRIC_CONFIG.version)} of the definitions. ${e(METRIC_CONFIG.note.split('. ').slice(-1)[0])}</p>
 ${items}
         <h3>Figures kept separate</h3>
-        <p>These are other figures, never added to estimated model usage: they are not parts of one bill. Only this page would show them, and no published snapshot includes them yet.</p>
+        <p>These are other figures, never added to estimated model usage: they are not parts of one bill. ${
+          values.some(Boolean) ? 'Each stands beside the estimate, with its own meaning.' : snapshot ? 'This snapshot has no value for them.' : 'Their values appear here when a snapshot is published.'
+        }</p>
         <ul class="sf-list">${separate}</ul>
       </section>`;
 }
@@ -742,7 +757,7 @@ ${pageHead({ title: 'Methodology', lede: "How each number on the Software Factor
         snapshot ? ' · <a href="#coverage">Coverage</a> · <a href="#definitions">Definitions</a>' : ''
       } · <a href="#figures">Loops, tools and code</a> · <a href="#areas">Areas</a> · <a href="#limits">Limits</a> · <a href="#requests">Not measured yet</a></nav>
 ${data.join('\n')}
-${definitions(e)}
+${definitions(e, snapshot)}
 ${figureDefinitions(e)}
 ${areasSection(e)}
 ${limits(e)}

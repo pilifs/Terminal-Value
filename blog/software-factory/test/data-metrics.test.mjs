@@ -108,7 +108,7 @@ test('golden: the fixture gives the example snapshot’s tables, measures and st
   const pointer = readJson(path.join(EXAMPLE, 'latest.json'));
   const base = path.join(EXAMPLE, path.dirname(pointer.manifest));
   const example = readJson(path.join(base, 'overview.json'));
-  for (const key of ['days', 'models', 'efforts', 'usage', 'verification', 'measures', 'stocks'])
+  for (const key of ['days', 'models', 'efforts', 'usage', 'verification', 'measures', 'stocks', 'reported'])
     assert.deepStrictEqual(out.overview[key], example[key], key);
   assert.deepStrictEqual(out.manifest.datasets, readJson(path.join(base, 'manifest.json')).datasets);
   // The same insights, from the same templates.
@@ -486,4 +486,45 @@ test('no activity gives empty axes and unbounded datasets, still valid', () => {
       ['none', 'No effort recorded', 0.5],
     ]
   );
+});
+
+test('thinking tokens and the price with nothing cached are summed by row, and a row missing one says so', () => {
+  const out = run(
+    norm({
+      calls: [
+        call('2026-11-05T15:00:00Z', { thinkingTokens: 2, uncachedUsd: 4 }),
+        call('2026-11-05T16:00:00Z', { thinkingTokens: 3, uncachedUsd: 1.5 }),
+        // Another row: one of its calls has neither, so the row has neither.
+        call('2026-11-06T15:00:00Z', { thinkingTokens: 1, uncachedUsd: 2 }),
+        call('2026-11-06T16:00:00Z', { thinkingTokens: null, uncachedUsd: null }),
+        // An unpriced call has no price either way, and takes nothing from its row's.
+        call('2026-11-07T15:00:00Z', { thinkingTokens: 4, uncachedUsd: 3 }),
+        call('2026-11-07T16:00:00Z', { usd: null, thinkingTokens: 0, uncachedUsd: null }),
+      ],
+    })
+  );
+  assert.deepEqual(out.overview.usage.columns.slice(-2), ['thinkingTokens', 'uncachedUsd']);
+  const rows = usageRows(out);
+  assert.deepEqual(
+    rows.map((r) => [r.day, r.thinkingTokens, r.uncachedUsd, r.usd]),
+    [
+      ['2026-11-05', 5, 5.5, 1],
+      ['2026-11-06', null, null, 1],
+      ['2026-11-07', 4, 3, 0.5],
+    ]
+  );
+  // The estimate is untouched by either: they are other figures.
+  assert.equal(measure(out, 'usage_usd').value, 2.5);
+});
+
+test('what the client counted itself is carried beside the estimate, with the sessions it covers', () => {
+  assert.equal(run(norm({ calls: [call('2026-11-05T15:00:00Z')] })).overview.reported, null);
+  const out = run(norm({ calls: [call('2026-11-05T15:00:00Z')], reported: { sessions: 2, ofSessions: 3, usd: 12.3456789, callsUsd: 10, unattributedUsd: null } }));
+  assert.deepEqual(out.overview.reported, {
+    coverage: { included: 2, total: 3, missing: 1, note: 'sessions that had stopped, so the client had written its own count' },
+    usd: 12.345679,
+    callsUsd: 10,
+    unattributedUsd: null,
+  });
+  assert.equal(measure(out, 'usage_usd').value, 0.5);
 });

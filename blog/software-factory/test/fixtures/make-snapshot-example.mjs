@@ -72,16 +72,21 @@ for (let d = new Date(`${activity[0]}T12:00:00Z`); ; d.setUTCDate(d.getUTCDate()
 const modelIds = [...new Set(calls.map((c) => c.model))].sort();
 const efforts = [...new Set(calls.map((c) => c.effort))].sort();
 
+// A sum of values every one of which is known, or null: part of a sum is not the sum.
+const allOrNull = (values, round = (n) => n) => (values.includes(null) ? null : round(values.reduce((t, v) => t + v, 0)));
+
 // Usage: calls by (day, model, effort).
 const cells = new Map();
 for (const c of calls) {
   const key = [days.indexOf(localDay(c.start)), modelIds.indexOf(c.model), efforts.indexOf(c.effort)].join(',');
-  const cell = cells.get(key) ?? { calls: 0, priced: 0, usd: 0, input: 0, read: 0, write: 0, output: 0 };
+  const cell = cells.get(key) ?? { calls: 0, priced: 0, usd: 0, input: 0, read: 0, write: 0, output: 0, thinking: [], uncached: [] };
   cell.calls++;
   if (typeof c.usd === 'number') {
     cell.priced++;
     cell.usd += c.usd;
+    cell.uncached.push(c.uncached_usd ?? null);
   }
+  cell.thinking.push(c.thinking_tokens ?? null);
   cell.input += c.input_tokens;
   cell.read += c.cache_read_tokens;
   cell.write += c.cache_write_tokens;
@@ -89,9 +94,9 @@ for (const c of calls) {
   cells.set(key, cell);
 }
 const usage = {
-  columns: ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'],
+  columns: ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'],
   rows: [...cells]
-    .map(([key, c]) => [...key.split(',').map(Number), c.calls, c.priced, round6(c.usd), c.input, c.read, c.write, c.output])
+    .map(([key, c]) => [...key.split(',').map(Number), c.calls, c.priced, round6(c.usd), c.input, c.read, c.write, c.output, allOrNull(c.thinking), allOrNull(c.uncached, round6)])
     .sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]),
 };
 
@@ -249,9 +254,21 @@ const exampleRecords = examples.map((x) => ({
   tags: { domain: x.tags?.domain ?? [], defect: x.tags?.defect ?? [], technique: x.tags?.technique ?? [] },
 }));
 
+// What Claude Code counted itself: the rollup's sessions that have its count,
+// beside the price of the calls in the same sessions' logs.
+const counted = rollup.sessions.filter((s) => typeof s.reported_usd === 'number');
+const reported = counted.length
+  ? {
+      coverage: { included: counted.length, total: rollup.sessions.length, missing: rollup.sessions.length - counted.length, note: 'sessions that had stopped, so the client had written its own count' },
+      usd: round6(counted.reduce((t, s) => t + s.reported_usd, 0)),
+      callsUsd: round6(counted.reduce((t, s) => t + s.usd, 0)),
+      unattributedUsd: typeof rollup.totals.unattributed_usd === 'number' ? round6(rollup.totals.unattributed_usd) : null,
+    }
+  : null;
+
 // Collections with the placeholder id, then the real id (identity.mjs).
 const build = (id) => ({
-  overview: { schema: 'software-factory-overview/v1', snapshotId: id, timezone: TZ, pricingAsOf: rollup.pricing_as_of ?? null, days, models: modelIds.map((m) => ({ id: m, label: label(m) })), efforts, usage, verification, measures, stocks, breakdowns, insights },
+  overview: { schema: 'software-factory-overview/v1', snapshotId: id, timezone: TZ, pricingAsOf: rollup.pricing_as_of ?? null, days, models: modelIds.map((m) => ({ id: m, label: label(m) })), efforts, usage, verification, measures, stocks, breakdowns, insights, reported },
   sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
   changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },
   verification: { schema: 'software-factory-verification/v1', snapshotId: id, records: verificationRecords },

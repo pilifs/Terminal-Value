@@ -1229,6 +1229,46 @@ const MODEL_HUES = 3;
 const tokens = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(2)} billion` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} million` : count(n));
 
 /**
+ * What the model calls read and wrote, all time, from the usage table: token
+ * counts by kind, estimated usage, and the figures kept beside it where the
+ * snapshot has them: the same calls priced as if nothing were cached, and
+ * what Claude Code counted itself. `byModel` has the same counts for each
+ * model, largest usage first. Null when the snapshot has no model calls.
+ */
+export function usageFacts(overview) {
+  const { usage, models } = overview;
+  if (!usage?.rows?.length) return null;
+  const col = (name) => usage.columns.indexOf(name);
+  const at = Object.fromEntries(['model', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'].map((c) => [c, col(c)]));
+  // A sum that is null once a row has no value: part of a sum is not the sum.
+  const known = (t, v) => (t === null || v == null ? null : t + v);
+  const blank = () => ({ calls: 0, priced: 0, usd: 0, fresh: 0, cacheRead: 0, cacheWrite: 0, written: 0, thinking: at.thinkingTokens === -1 ? null : 0, uncached: at.uncachedUsd === -1 ? null : 0 });
+  const add = (t, r) => {
+    t.calls += r[at.calls];
+    t.priced += r[at.pricedCalls];
+    t.usd += r[at.usd];
+    t.fresh += r[at.inputTokens];
+    t.cacheRead += r[at.cacheReadTokens];
+    t.cacheWrite += r[at.cacheWriteTokens];
+    t.written += r[at.outputTokens];
+    t.thinking = known(t.thinking, r[at.thinkingTokens]);
+    if (r[at.pricedCalls]) t.uncached = known(t.uncached, r[at.uncachedUsd]);
+  };
+  const done = (t) => ({ ...t, read: t.fresh + t.cacheRead + t.cacheWrite });
+  const all = blank();
+  const by = new Map();
+  for (const r of usage.rows) {
+    add(all, r);
+    add(by.get(r[at.model]) ?? by.set(r[at.model], blank()).get(r[at.model]), r);
+  }
+  if (!all.calls) return null;
+  const byModel = [...by]
+    .sort((a, b) => b[1].usd - a[1].usd || a[0] - b[0])
+    .map(([m, t]) => ({ id: models[m]?.id ?? null, label: models[m]?.label ?? 'A model the snapshot doesn’t name', ...done(t) }));
+  return { ...done(all), byModel, reported: overview.reported ?? null, pricingAsOf: overview.pricingAsOf ?? null };
+}
+
+/**
  * Estimated usage per day, by model: the series (a model each for the largest,
  * then the others together) and a point for each day of the snapshot.
  */

@@ -176,7 +176,7 @@
         "efforts": { "type": "array", "items": { "type": ["string", "null"] } },
         "usage": {
           "$ref": "#/$defs/table",
-          "description": "Model calls by day, model and effort; only the combinations that occur. Columns: day, model, effort, calls, pricedCalls, usd, inputTokens, cacheReadTokens, cacheWriteTokens, outputTokens."
+          "description": "Model calls by day, model and effort; only the combinations that occur. Columns: day, model, effort, calls, pricedCalls, usd, inputTokens, cacheReadTokens, cacheWriteTokens, outputTokens and, since generator 6, thinkingTokens (part of outputTokens) and uncachedUsd (the same priced calls as if nothing were cached: a hypothetical, never added to usd). Either is null for a row where a call has none."
         },
         "verification": {
           "$ref": "#/$defs/table",
@@ -286,7 +286,19 @@
         "loops": { "$ref": "#/$defs/loopsOverview" },
         "tools": { "$ref": "#/$defs/toolsOverview" },
         "code": { "$ref": "#/$defs/codeOverview" },
-        "catalog": { "$ref": "#/$defs/catalogOverview" }
+        "catalog": { "$ref": "#/$defs/catalogOverview" },
+        "reported": {
+          "description": "What Claude Code counted itself, summed over the sessions that had stopped and so had its count, beside the price of the calls in those sessions' logs. The logs leave some calls out, so the two differ. Another figure, never added to estimated usage. Null when no session has one. Since generator 6.",
+          "type": ["object", "null"],
+          "required": ["coverage", "usd", "callsUsd", "unattributedUsd"],
+          "additionalProperties": false,
+          "properties": {
+            "coverage": { "$ref": "#/$defs/coverage" },
+            "usd": { "type": "number", "minimum": 0 },
+            "callsUsd": { "type": "number", "minimum": 0, "description": "Estimated usage of the same sessions: the calls in their logs at list prices." },
+            "unattributedUsd": { "type": ["number", "null"], "minimum": 0, "description": "The part of the client's count that no call in a log explains, as the source adds it up session by session." }
+          }
+        }
       }
     },
 

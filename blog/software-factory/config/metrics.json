@@ -1,6 +1,6 @@
 {
-  "version": "5",
-  "note": "Frozen in Phase 0 with schema.json; version 2 adds the figures of the feature loops, tools and code, and version 4 the example catalog's own answers about each example. The data stream implements these definitions; the dashboard and the methodology page show them. A change here is a contract change, and bumps version.",
+  "version": "6",
+  "note": "Frozen in Phase 0 with schema.json; version 2 adds the figures of the feature loops, tools and code, version 4 the example catalog's own answers about each example, and version 6 the values of the figures kept separate. The data stream implements these definitions; the dashboard and the methodology page show them. A change here is a contract change, and bumps version.",
   "periods": {
     "timezone": "America/Toronto",
     "interval": "half-open [start, end), on calendar days in the timezone, from the original UTC timestamps (never relabelled UTC days)",
@@ -111,8 +111,8 @@
     { "id": "tokens_per_change", "section": "code", "label": "Output tokens per line, change by change", "unit": "tokens", "definition": "For each recorded change that has a commit: the output tokens the rollup gives it (the model calls up to its commit) divided by the lines of code its commit added. The middle change is the nearest-rank median over the changes that added code and were given output tokens; one in ten lies under the 10th percentile and one in ten over the 90th.", "coverage": "Committed changes the rollup gives a cost for of all commits with a change id.", "notes": "A change that adds no code (docs, briefs, data) has no ratio and is counted apart. Tokens spent before a change's first commit in a session, such as reading and planning, are given to that change. A change is marked as a loop's when it was committed inside one of the loop's recorded runs." }
   ],
   "separate": [
-    { "id": "reported_usd", "label": "Client-reported usage", "note": "Claude Code's own figure, where the session recorded one. Shown on the methodology page only." },
-    { "id": "unattributed_usd", "label": "Unattributed usage", "note": "Client-reported usage the calls don't account for. Methodology page only." },
-    { "id": "uncached_usd", "label": "Cost without caching", "note": "Hypothetical. Methodology page only." }
+    { "id": "reported_usd", "label": "Client-reported usage", "note": "Claude Code's own figure, written when a session stops, summed over the sessions that have one. The source's logs leave some calls out, namely compactions and side calls, so this is not the estimate under another name; it is shown beside the estimate for the same sessions." },
+    { "id": "unattributed_usd", "label": "Unattributed usage", "note": "The part of client-reported usage that no call in a session's log explains, as the source adds it up session by session." },
+    { "id": "uncached_usd", "label": "Cost without caching", "note": "Hypothetical: the same priced calls at the same list prices, as if nothing had been read from cache. No call was made that way." }
   ]
 }

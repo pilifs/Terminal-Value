@@ -394,3 +394,65 @@ test('each example’s result file is read from its folder, listed as an input, 
   fs.writeFileSync(path.join(dir, 'examples/002-second/result.json'), '{ not json');
   await assert.rejects(load(dir), (err) => err instanceof SourceError && err.code === 'malformed' && err.path === 'examples/002-second/result.json');
 });
+
+test('a call keeps its thinking tokens and its price with nothing cached, beside its usd', async () => {
+  const { dir } = materialize('stale-source');
+  const rel = 'llm-dlc/traces/2e359813-25c2-4259-888b-42d3a5f0eee6/metrics.json';
+  const metrics = json(dir, rel);
+  const n = await load(dir);
+  const own = n.calls.filter((c) => c.session === '2e359813-25c2-4259-888b-42d3a5f0eee6');
+  assert.equal(own.length, metrics.calls.length);
+  for (const [i, c] of metrics.calls.entries()) {
+    assert.equal(own[i].thinkingTokens, c.thinking_tokens);
+    assert.equal(own[i].uncachedUsd, c.uncached_usd);
+  }
+  // A call that writes the cache is priced above the same call with nothing cached; over a session it is the other way.
+  assert.ok(own.some((c) => c.uncachedUsd < c.usd) && own.reduce((t, c) => t + c.uncachedUsd, 0) > own.reduce((t, c) => t + c.usd, 0));
+
+  // A call the source gives neither is kept, with nulls: never 0, which would read as a value.
+  delete metrics.calls[0].thinking_tokens;
+  delete metrics.calls[0].uncached_usd;
+  write(dir, rel, metrics);
+  const without = (await load(dir)).calls.filter((c) => c.session === '2e359813-25c2-4259-888b-42d3a5f0eee6')[0];
+  assert.equal(without.thinkingTokens, null);
+  assert.equal(without.uncachedUsd, null);
+
+  // One that is not a price is a schema error naming its file.
+  metrics.calls[1].uncached_usd = -1;
+  write(dir, rel, metrics);
+  const e = await failure(load(dir));
+  assert.equal(e.code, 'schema');
+  assert.equal(e.path, rel);
+});
+
+test('what the client counted itself is summed over the sessions that have it, beside their calls', async () => {
+  const { dir } = materialize('stale-source');
+  const rollup = json(dir, 'llm-dlc/traces/metrics.json');
+  const counted = rollup.sessions.filter((s) => s.reported_usd != null);
+  assert.ok(counted.length && counted.length < rollup.sessions.length, 'the fixture has sessions with a count and without');
+  const n = await load(dir);
+  assert.equal(n.reported.sessions, counted.length);
+  assert.equal(n.reported.ofSessions, rollup.sessions.length);
+  assert.ok(Math.abs(n.reported.usd - counted.reduce((t, s) => t + s.reported_usd, 0)) < 1e-9);
+  assert.ok(Math.abs(n.reported.callsUsd - counted.reduce((t, s) => t + s.usd, 0)) < 1e-9);
+  // The fixture's rollup has no unattributed total: unknown, not zero.
+  assert.equal(n.reported.unattributedUsd, null);
+
+  // A rollup total that disagrees with its sessions fails to reconcile.
+  rollup.totals.reported_usd = n.reported.usd + 1;
+  write(dir, 'llm-dlc/traces/metrics.json', rollup);
+  const e = await failure(load(dir));
+  assert.equal(e.code, 'reconcile');
+
+  // With the totals in agreement, the unattributed part is the source's own sum.
+  rollup.totals.reported_usd = n.reported.usd;
+  rollup.totals.unattributed_usd = 1.5;
+  write(dir, 'llm-dlc/traces/metrics.json', rollup);
+  assert.equal((await load(dir)).reported.unattributedUsd, 1.5);
+
+  // No session with a count: no figure at all.
+  for (const s of rollup.sessions) s.reported_usd = null;
+  delete rollup.totals.reported_usd;
+  write(dir, 'llm-dlc/traces/metrics.json', rollup);
+  assert.equal((await load(dir)).reported, null);
+});

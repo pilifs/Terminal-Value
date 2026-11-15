@@ -30,7 +30,12 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
-//   - Version 5 adds each example's `evidence` (what its verdict rests on,
+//   - Version 6 adds two columns to the usage table, thinkingTokens (part of
+//     the output) and uncachedUsd (the same calls priced as if nothing were
+//     cached; null for a row where a call has none), and overview.reported:
+//     what Claude Code counted itself for the sessions that had stopped. Both
+//     are figures beside estimated usage, never added to it.
+//   - Version 5 added each example's `evidence` (what its verdict rests on,
 //     from its own result file) and overview.catalog's counterexamples and
 //     attempts. Version 4 added an example's path, summary and the catalog's
 //     answers about it, with overview.catalog.
@@ -54,12 +59,12 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '5' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '6' };
 
 const STATUSES = ['passed', 'failed'];
 const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
 const SCOPE_TEXT = { 'all-time': 'all time', snapshot: 'at this revision' };
-const USAGE_COLUMNS = ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens'];
+const USAGE_COLUMNS = ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd', 'inputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'outputTokens', 'thinkingTokens', 'uncachedUsd'];
 
 const round6 = (n) => Math.round(n * 1e6) / 1e6;
 const share = (v, t) => (t ? v / t : null);
@@ -181,12 +186,16 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   for (const c of calls) {
     const key = [dayIndex.get(day(c.start)), modelIndex.get(c.model), effortIndex.get(c.effort)];
     const k = key.join(',');
-    const cell = cells.get(k) ?? { key, calls: 0, priced: 0, usd: 0, input: 0, read: 0, write: 0, output: 0 };
+    const cell = cells.get(k) ?? { key, calls: 0, priced: 0, usd: 0, input: 0, read: 0, write: 0, output: 0, thinking: 0, uncached: 0 };
     cell.calls++;
     if (c.usd !== null) {
       cell.priced++;
       cell.usd += c.usd;
+      // Null for the row once a priced call has none: a sum over some of the
+      // calls would not be the price of the same calls.
+      cell.uncached = cell.uncached === null || c.uncachedUsd == null ? null : cell.uncached + c.uncachedUsd;
     }
+    cell.thinking = cell.thinking === null || c.thinkingTokens == null ? null : cell.thinking + c.thinkingTokens;
     cell.input += c.inputTokens;
     cell.read += c.cacheReadTokens;
     cell.write += c.cacheWriteTokens;
@@ -196,7 +205,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const usage = {
     columns: USAGE_COLUMNS,
     rows: [...cells.values()]
-      .map((c) => [...c.key, c.calls, c.priced, round6(c.usd), c.input, c.read, c.write, c.output])
+      .map((c) => [...c.key, c.calls, c.priced, round6(c.usd), c.input, c.read, c.write, c.output, c.thinking, c.uncached === null ? null : round6(c.uncached)])
       .sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]),
   };
 
@@ -206,6 +215,18 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     columns: ['day', 'status', 'wallSeconds'],
     rows: completed.map((r) => [dayIndex.get(day(r.finishedAt)), STATUSES.indexOf(r.process), validSeconds(r.wallSeconds)]),
   };
+
+  // What Claude Code counted itself, for the sessions that had stopped: kept
+  // beside estimated usage, never added to it.
+  const r = normalized.reported ?? null;
+  const reported = r
+    ? {
+        coverage: { included: r.sessions, total: r.ofSessions, missing: r.ofSessions - r.sessions, note: 'sessions that had stopped, so the client had written its own count' },
+        usd: round6(r.usd),
+        callsUsd: round6(r.callsUsd),
+        unattributedUsd: r.unattributedUsd == null ? null : round6(r.unattributedUsd),
+      }
+    : null;
 
   // Measures, all time and at the revision.
   const priced = calls.filter((c) => c.usd !== null);
@@ -428,6 +449,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       tools: factory.tools,
       code: factory.code,
       catalog,
+      reported,
     },
     sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },

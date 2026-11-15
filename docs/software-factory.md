@@ -303,6 +303,32 @@ $2,174.98 of model usage" (`usageFinding` in `factory.js`). The card is gone; th
   names each model with its raw id.
 - `columnsSvg` takes `unit: 'usd'` for a dollar axis.
 
+### The figures kept beside the estimate (generator 6)
+
+The source's rollup has always carried three more cost figures, and the brief keeps them apart from estimated
+usage: "they are not additive components of one bill." Until now they were described on the methodology page with
+no values. Read at the same revision (`fbd1fa86`), they are in the snapshot, each still apart:
+
+- **The same calls with nothing cached** (`uncached_usd`): each call's own figure, summed by day, model and effort
+  as a new column of `overview.usage`, `uncachedUsd`. A row where a priced call has none is null: part of a sum is
+  not the sum. At this revision it is $18,406.98, against $2,174.98 as recorded. It is a hypothetical: no call was
+  made that way, and a single call that writes the cache is priced above its own uncached figure.
+- **Thinking tokens** (`thinking_tokens`), a second new column, `thinkingTokens`: 9,080,406 of the 23,298,512
+  output tokens. The source counts them as part of the output; one call at this revision has 153 thinking tokens
+  and no output, so the importer checks only that it is a count.
+- **What Claude Code counted itself** (`reported_usd`, on a session once it stops): `overview.reported`, summed
+  over the sessions that have one, beside the estimated usage of the same sessions (`callsUsd`) and the source's
+  own sum of what no call explains (`unattributedUsd`). At this revision: $2,806.76 for 104 of 107 sessions,
+  whose calls come to $2,168.17. The source's specification says why they differ: its logs leave out compactions
+  and side calls. So the estimate on these pages runs below the client's own count, and the pages should say so.
+
+Both sums equal the rollup's totals at this revision (`uncached_usd` 18406.97669, `thinking_tokens` 9080406), and
+the importer fails to reconcile when the rollup's `reported_usd` total disagrees with its sessions. Nothing else
+moved: every measure, breakdown and record is as it was. The new snapshot is `sf1-7cf8461b4bb82b59`. Metric
+definitions are version 6: the three separate figures' notes say what each is, and no longer say "methodology
+page only". The methodology page gives each its value, with the estimate it stands beside (`usageFacts` in
+`factory.js` is the one place that adds them up).
+
 ### What the section ships: its scripts and stylesheet without comments
 
 The fifth finding took the overview's first load to 154.1 KB gzip, over the plan's 150 KB
