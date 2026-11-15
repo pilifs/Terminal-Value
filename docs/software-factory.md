@@ -181,6 +181,36 @@ the tests they change: the claim is about a catalog built to show this, not a fi
   change, and the definition on the methodology page says so.
 - The snapshot was made again from the same source revision (`fbd1fa86`), so no other number moved.
 
+### The catalog's own page
+
+The Output finding was the only one with no page under it: its link went to a records table on the usage page.
+`/software-factory/examples/` ("Examples" in the navigation, after "Feature loops") is that page, drawn by
+`examplesHtml(snapshot, examples)` in `factory.js`. It needs nothing new in the snapshot: everything on it is
+counted from the `examples` collection's records, and the head from `overview.stocks.examples` and
+`overview.catalog`, as the finding is (`catalogFacts` is what the two share).
+
+- **The same claim, with what it doesn't mean.** The sentence under it says this describes the catalog and not how
+  often tests miss a defect elsewhere, and a note at the foot of the page says why: the statements are the
+  catalog's own, about examples it mostly wrote, tests included.
+- **A grid that can be narrowed.** Six lists above the squares: verdict, existing tests, severity, kind of change,
+  system and kind of defect (`catalogFacets`). A square carries a token for each value it has (`data-f="kind:0
+  system:3 …"`), and stays lit when it has every token picked; the rest are dimmed. So narrowing needs no record
+  and no request. `matchWords` says what is lit in a sentence: how many, their verdicts, and what the existing
+  tests did on the violations among them.
+- **Places to start.** Three links narrow the grid in one step: the violations the existing tests also caught, the
+  violations rated critical, and the changes to published libraries. Each is shown only when it has something.
+- **The pick follows the lists.** The buttons step through the lit squares only ("Example 2 of 8"). A pick that is
+  still lit stays and is counted again; one that is not closes. A dimmed square can't be picked.
+- **Every title**, under the grid, for reading and for a reader who can't use the picture: a title picks its
+  example. The list follows the lists above it.
+- **Four tables**: by kind of change, system, kind of defect (the ten most common) and severity. A row has its
+  count, a bar of that length coloured by verdict, its violations, and the violations whose tests passed of those
+  that say. A row's name narrows the grid to it. The published libraries are one row.
+- **Without the records** (a snapshot whose collection can't be read) the page keeps the head and the squares by
+  verdict and says nothing is cut further. A snapshot from before the catalog's answers were carried has no list
+  or table for them. For a remote snapshot other than the one built in, the browser draws the page from the
+  overview at once and again when that snapshot's records arrive.
+
 ### Every run on one clock
 
 The loops finding leads the overview with one figure of every finished loop run, and its claim is the pace of the

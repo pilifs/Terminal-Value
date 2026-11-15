@@ -14,7 +14,7 @@
 //     has escapeHtml, formatDate and postImage. paths has route, staticData and
 //     remoteData. path is relative to /software-factory/: 'index.html',
 //     'analysis/index.html', 'methodology/index.html', and with a snapshot
-//     'loops/', 'tools/', 'code/' and 'usage/index.html'. body is the HTML
+//     'loops/', 'examples/', 'tools/', 'code/' and 'usage/index.html'. body is the HTML
 //     inside <main>; index.mjs wraps it in the site layout with the section's
 //     class, styles and scripts. A page that shows the snapshot's numbers has
 //     app: true (optional, added with the second layout): index.mjs gives it
@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
-import { codeHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml } from '../assets/software-factory/factory.js';
+import { codeHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -117,11 +117,12 @@ function banner(fixture, e) {
 const LEDE =
   'What the software factory in in-the-loop produces, how its activity and efficiency change, and what running it teaches. Agents build and verify software there; these are the numbers they leave behind.';
 
-// The section's pages, as its navigation lists them. The four in the middle
+// The section's pages, as its navigation lists them. The five in the middle
 // show a snapshot's numbers and exist only when there is one.
 const NAV = [
   ['', 'Overview'],
   ['loops/', 'Feature loops', true],
+  ['examples/', 'Examples', true],
   ['tools/', 'Model performance', true],
   ['code/', 'Code', true],
   ['usage/', 'Usage', true],
@@ -427,7 +428,7 @@ ${parts.join('\n')}
   };
 }
 
-/** loops/, tools/, code/ and usage/: everything under the overview's findings. */
+/** loops/, examples/, tools/, code/ and usage/: everything under the overview's findings. */
 function dataPages(input) {
   const { snapshot, preview = false, helpers, paths } = input;
   const e = helpers.escapeHtml;
@@ -438,6 +439,15 @@ function dataPages(input) {
         title: 'Feature loops',
         description: 'Every campaign and run of the feature loops in in-the-loop: who set off the work, how the loop changed, and each cycle’s commit.',
         parts: [feature('loops', 'loops', loopsHtml(snapshot), runningHtml(preview ? RUNNING_PREVIEW : null))],
+      },
+      input
+    ),
+    dataPage(
+      'examples',
+      {
+        title: 'Example catalog',
+        description: 'Every example in the in-the-loop catalog: code changes run through its formal verifier, by verdict, kind of change, system and kind of defect.',
+        parts: [feature('examples', 'examples', examplesHtml(snapshot, input.examples ?? null))],
       },
       input
     ),

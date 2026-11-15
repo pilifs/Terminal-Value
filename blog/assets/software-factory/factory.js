@@ -1229,28 +1229,63 @@ export function exampleRecordHtml(x, { sha }) {
 }
 
 /**
+ * What the finding and the catalog's page both say of the catalog: its counts
+ * and the claim they lead with. `examples` is the records of the examples
+ * collection; they name the squares only when they are the snapshot's own
+ * (as many as the overview counts). Null for a snapshot with no catalog.
+ */
+function catalogFacts(snapshot, examples) {
+  const { overview, manifest } = snapshot;
+  const stock = overview.stocks?.examples;
+  if (!stock?.total) return null;
+  const n = (key) => stock.verdict?.[key] ?? 0;
+  const named = Array.isArray(examples) && examples.length === stock.total ? examples : null;
+  // The catalog's own answers, when the snapshot counts them: of the changes
+  // where the verifier found a violation, how many the existing tests passed,
+  // and how many it rates severe.
+  const answers = overview.catalog ?? null;
+  const tests = answers?.tests?.violation ?? null;
+  const said = tests ? (tests.passed ?? 0) + (tests.failed ?? 0) : 0;
+  const passed = said ? (tests.passed ?? 0) : 0;
+  const severity = answers?.severity?.violation ?? null;
+  const counts = `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`;
+  const libraries = stock.origin?.[LIBRARY] ?? 0;
+  return {
+    sha: manifest.source.sha,
+    stock,
+    n,
+    named,
+    libraries,
+    withResult: named ? named.filter((x) => x.origin === LIBRARY && hasResult(x)) : [],
+    answers,
+    said,
+    passed,
+    rated: severity ? Object.values(severity).reduce((t, v) => t + v, 0) : 0,
+    severe: severity ? SEVERE.reduce((t, k) => t + (severity[k] ?? 0), 0) : 0,
+    counts,
+    claim: said && passed ? `The existing tests passed on ${count(passed)} of the ${count(said)} changes where the verifier found a violation` : counts,
+    legend: `<ul class="sf-legend">${VERDICTS.filter((v) => n(v.key))
+      .map((v) => `<li><span class="sf-swatch sf-verdict-${v.key}" aria-hidden="true"></span>${e(v.label)}: ${count(n(v.key))}</li>`)
+      .join('')}${named && libraries ? '<li><span class="sf-swatch sf-verdict-none sf-cell-ring" aria-hidden="true"></span>A change to a published library</li>' : ''}</ul>`,
+  };
+}
+
+const cellTip = (x) => `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${x.verdictLabel ?? 'No verdict'}${x.vacuous ? ' (vacuous)' : ''}`;
+// Without the records the squares are counted from the overview, by verdict, and none is named.
+const countedCells = (c) => VERDICTS.flatMap((v) => Array.from({ length: c.n(v.key) }, () => ({ key: v.key, ring: false, tip: v.label })));
+
+/**
  * What the factory makes: the example catalog, a square for each example.
  * `examples` is the records of the examples collection. Without them (a
  * snapshot whose records aren't loaded yet) the squares are counted from the
  * overview and none is named.
  */
 function outputFinding(snapshot, examples) {
-  const { overview, manifest } = snapshot;
-  const stock = overview.stocks?.examples;
-  if (!stock?.total) return '';
-  const sha = manifest.source.sha;
-  const n = (key) => stock.verdict?.[key] ?? 0;
-  const libraries = stock.origin?.[LIBRARY] ?? 0;
-  const named = Array.isArray(examples) && examples.length === stock.total ? examples : null;
-  const cells = named
-    ? named.map((x) => ({
-        id: x.id,
-        key: x.verdict ?? 'none',
-        ring: x.origin === LIBRARY,
-        tip: `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${x.verdictLabel ?? 'No verdict'}${x.vacuous ? ' (vacuous)' : ''}`,
-      }))
-    : VERDICTS.flatMap((v) => Array.from({ length: n(v.key) }, () => ({ key: v.key, ring: false, tip: v.label })));
-  const shown = named ? named.filter((x) => x.origin === LIBRARY && hasResult(x)) : [];
+  const c = catalogFacts(snapshot, examples);
+  if (!c) return '';
+  const { sha, stock, named, libraries } = c;
+  const cells = named ? named.map((x) => ({ id: x.id, key: x.verdict ?? 'none', ring: x.origin === LIBRARY, tip: cellTip(x) })) : countedCells(c);
+  const shown = c.withResult;
   const titled = (x) => (exampleUrl(x, sha) ? `<a href="${e(exampleUrl(x, sha))}">${e(x.title)}</a>` : e(x.title));
   const list = shown.length
     ? `<div class="sf-catalog-list">
@@ -1261,44 +1296,311 @@ function outputFinding(snapshot, examples) {
                 .join('')}</ul>
             </div>`
     : '';
-  const jobs = overview.verification?.rows ?? [];
-  const passed = jobs.filter((r) => r[1] === 0).length;
-  // The catalog's own answers, when the snapshot counts them: of the changes
-  // where the verifier found a violation, how many the existing tests passed,
-  // and how many it rates severe.
-  const answers = overview.catalog ?? null;
-  const tests = answers?.tests?.violation ?? null;
-  const said = tests ? (tests.passed ?? 0) + (tests.failed ?? 0) : 0;
-  const severity = answers?.severity?.violation ?? null;
-  const rated = severity ? Object.values(severity).reduce((t, v) => t + v, 0) : 0;
-  const severe = severity ? SEVERE.reduce((t, k) => t + (severity[k] ?? 0), 0) : 0;
-  const counts = `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`;
-  const legend = `<ul class="sf-legend">${VERDICTS.filter((v) => n(v.key))
-    .map((v) => `<li><span class="sf-swatch sf-verdict-${v.key}" aria-hidden="true"></span>${e(v.label)}: ${count(n(v.key))}</li>`)
-    .join('')}${named && libraries ? '<li><span class="sf-swatch sf-verdict-none sf-cell-ring" aria-hidden="true"></span>A change to a published library</li>' : ''}</ul>`;
-  const href = `${ROUTE}usage/#explore-examples`;
+  const jobs = snapshot.overview.verification?.rows ?? [];
+  const jobsPassed = jobs.filter((r) => r[1] === 0).length;
+  const led = c.claim !== c.counts;
   return finding({
     id: 'output',
     eyebrow: 'Output',
     wide: true,
-    claim: said && tests.passed ? `The existing tests passed on ${count(tests.passed)} of the ${count(said)} changes where the verifier found a violation` : counts,
-    lede: `Each example is a code change run through the project’s formal verifier${said && tests.passed ? `: ${counts}` : ', with the verdict it gave'}. ${
-      said ? 'Most were constructed for the catalog, with the systems and the tests they change. ' : ''
+    claim: c.claim,
+    lede: `Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${
+      c.said ? 'Most were constructed for the catalog, with the systems and the tests they change. ' : ''
     }A verified label is not a claim of a current, non-vacuous proof${
       stock.vacuous ? `: ${plural(stock.vacuous, 'proof')} ${stock.vacuous === 1 ? 'is' : 'are'} recorded as vacuous` : ''
     }. <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a>`,
     facts: [
-      rated && severe ? [`${count(severe)} of ${count(rated)}`, 'violations the catalog rates high or critical if they shipped unnoticed'] : null,
+      c.rated && c.severe ? [`${count(c.severe)} of ${count(c.rated)}`, 'violations the catalog rates high or critical if they shipped unnoticed'] : null,
       libraries ? [count(libraries), `${libraries === 1 ? 'is a change' : 'are changes'} to published libraries${shown.length ? `; ${count(shown.length)} ${shown.length === 1 ? 'has' : 'have'} a result so far` : ''}`] : null,
-      jobs.length ? [`${count(passed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
+      jobs.length ? [`${count(jobsPassed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
     ],
-    href,
-    more: 'Every example and its verdict',
-    legend,
+    href: `${ROUTE}examples/`,
+    more: 'The whole catalog, by change, system and defect',
+    legend: c.legend,
     chart: catalogHtml(cells),
     caption: `${named ? 'Each square is an example, in the order of the catalog.' : 'Each square is an example, by verdict.'} From <a href="${REPO}/blob/${e(sha)}/examples/README.md">the catalog</a> at this revision.`,
     after: `${named ? inspectHtml('example', 'Pick a square to read what the example changed and what the verifier found.') : ''}${list}`,
   });
+}
+
+// --- The catalog's own page ---------------------------------------------------
+
+const SEVERITY = ['critical', 'high', 'medium', 'low', 'none'];
+const lower = (words) => (words ? words[0].toLowerCase() + words.slice(1) : words);
+const tally = () => ({ n: 0, violation: 0, verified: 0, unverifiable: 0, none: 0, passed: 0, said: 0 });
+const verdictOf = (x) => (VERDICTS.some((v) => v.key === x.verdict) ? x.verdict : 'none');
+
+/**
+ * The ways the catalog's page cuts the examples: by verdict, by whether the
+ * existing tests passed, by severity, kind of change, system and kind of
+ * defect. Each value has a token (`kind:0`) that a square of the grid carries,
+ * so the page's script can narrow the grid without the records, and counts by
+ * verdict; `passed` of `said` are the violations whose tests passed, of those
+ * that say. A facet no example has a value for is left out.
+ */
+export function catalogFacets(examples) {
+  const facet = (key, label, all, of, { order = null, words = (v) => v, token = null, group = null } = {}) => {
+    const by = new Map();
+    for (const x of examples)
+      for (const v of of(x)) {
+        const t = by.get(v) ?? by.set(v, { value: v, ...tally() }).get(v);
+        const verdict = verdictOf(x);
+        t.n += 1;
+        t[verdict] += 1;
+        if (verdict === 'violation' && typeof x.testsPassed === 'boolean') {
+          t.said += 1;
+          if (x.testsPassed) t.passed += 1;
+        }
+        if (group) t.group ??= group(x);
+      }
+    const rank = (v) => (order?.includes(v.value) ? order.indexOf(v.value) : (order?.length ?? 0));
+    const values = [...by.values()]
+      .sort((a, b) => rank(a) - rank(b) || (order ? 0 : b.n - a.n) || (a.value < b.value ? -1 : 1))
+      .map((v, i) => ({ ...v, label: words(v.value), token: token ? token(v.value) : `${key}:${i}` }));
+    return { key, label, all, values, of };
+  };
+  return [
+    facet('verdict', 'Verdict', 'Any', (x) => [verdictOf(x)], { order: VERDICTS.map((v) => v.key), words: (v) => VERDICTS.find((k) => k.key === v).label, token: (v) => `verdict:${v}` }),
+    facet('tests', 'Existing tests', 'Either', (x) => (typeof x.testsPassed === 'boolean' ? [x.testsPassed ? 'passed' : 'failed'] : []), {
+      order: ['passed', 'failed'],
+      words: sentence,
+      token: (v) => `tests:${v}`,
+    }),
+    facet('severity', 'Severity', 'Any', (x) => (x.severity ? [x.severity] : []), { order: SEVERITY, words: sentence }),
+    facet('kind', 'Kind of change', 'Any', (x) => (x.changeKind ? [x.changeKind] : []), { words: (v) => WORDS_OF[v] ?? sentence(v) }),
+    facet('system', 'System', 'Any', (x) => (x.system ? [x.system] : []), { group: (x) => (x.origin === LIBRARY ? 'library' : 'constructed') }),
+    facet('defect', 'Kind of defect', 'Any', (x) => x.tags?.defect ?? []),
+  ].filter((f) => f.values.length);
+}
+
+const LIBRARY_TOKEN = 'origin:library';
+const SEVERE_TOKEN = 'severe';
+/** The tokens of one example: a value's token in each facet, and whether it is a library change and rated severe. */
+function tokensOf(x, facets) {
+  return [
+    ...facets.flatMap((f) => f.of(x).map((v) => f.values.find((k) => k.value === v).token)),
+    x.origin === LIBRARY ? LIBRARY_TOKEN : null,
+    SEVERE.includes(x.severity) ? SEVERE_TOKEN : null,
+  ].filter(Boolean);
+}
+
+/**
+ * What the squares still lit say, in a sentence: how many, their verdicts,
+ * and what the existing tests did on the violations among them. `matches` is
+ * the tokens of each, `total` the squares in all.
+ */
+export function matchWords(matches, total) {
+  const m = matches.length;
+  if (m === total) return `Showing all ${plural(total, 'example')}.`;
+  if (!m) return `None of the ${plural(total, 'example')} matches.`;
+  const has = (...tokens) => matches.filter((f) => tokens.every((t) => f.includes(t))).length;
+  const violations = has('verdict:violation');
+  const verdicts = [
+    violations ? `${plural(violations, 'violation')} found` : null,
+    has('verdict:verified') ? `${count(has('verdict:verified'))} verified` : null,
+    has('verdict:unverifiable') ? `${count(has('verdict:unverifiable'))} unverifiable` : null,
+    has('verdict:none') ? `${count(has('verdict:none'))} with several verdicts or none yet` : null,
+  ].filter(Boolean);
+  const passed = has('verdict:violation', 'tests:passed');
+  const said = passed + has('verdict:violation', 'tests:failed');
+  const severe = has('verdict:violation', SEVERE_TOKEN);
+  const which = said === 1 ? 'the one violation' : `${passed === said || !passed ? 'all ' : `${count(passed)} of the `}${count(said)} violations`;
+  const tests = said
+    ? ` The existing tests ${passed ? 'passed' : 'failed'} on ${which}${said < violations ? ' that say' : ''}${severe ? `; ${count(severe)} ${severe === 1 ? 'is' : 'are'} rated high or critical` : ''}.`
+    : '';
+  return `${count(m)} of ${plural(total, 'example')}: ${verdicts.join(', ')}.${tests}`;
+}
+
+// A row's examples as a bar beside their count: its length is the count, its colours the verdicts.
+const splitBar = (v, most) =>
+  `<span class="sf-split-box" aria-hidden="true"><span class="sf-split" style="width:${most ? ((v.n / most) * 100).toFixed(1) : 0}%">${VERDICTS.filter((k) => v[k.key])
+    .map((k) => `<span class="sf-verdict-${k.key}" style="flex:${v[k.key]}"></span>`)
+    .join('')}</span></span>`;
+
+/** One cut of the catalog as a table: a row narrows the grid above to its examples. */
+function facetTable({ id, title, caption, head, rows }) {
+  if (!rows.length) return '';
+  const most = Math.max(...rows.map((r) => r.n));
+  const body = rows
+    .map(
+      (r) =>
+        `<tr><th scope="row"><a href="#every-example" data-sf-show="${e(r.token)}">${e(r.label)}</a></th><td>${count(r.n)}${splitBar(r, most)}</td><td>${count(r.violation)}</td><td>${
+          r.said ? `${count(r.passed)} of ${count(r.said)}` : `<span class="sf-muted">${r.violation ? 'Not said' : 'No violations'}</span>`
+        }</td></tr>`
+    )
+    .join('');
+  return `<section class="sf-breakdown" id="${id}" aria-labelledby="${id}-title">
+            <h3 id="${id}-title">${e(title)}</h3>
+            <p class="sf-caption">${caption}</p>
+            <table class="sf-table"><thead><tr><th scope="col">${e(head)}</th><th scope="col">Examples</th><th scope="col">Violations</th><th scope="col">Tests passed</th></tr></thead><tbody>${body}</tbody></table>
+          </section>`;
+}
+
+const DEFECTS_SHOWN = 10;
+
+/**
+ * The catalog's own page: the claim, every example as a square that can be
+ * narrowed down and picked, and the catalog cut by kind of change, system,
+ * kind of defect and severity. `examples` is the records of the examples
+ * collection; without them the page has the overview's counts and the
+ * squares by verdict, and says what is missing.
+ */
+export function examplesHtml(snapshot, examples = null) {
+  const c = catalogFacts(snapshot, examples);
+  if (!c) return unavailable('Example catalog', 'This snapshot has no example catalog: the source had none at its revision.');
+  const { sha, stock, n, named, libraries } = c;
+  const constructed = stock.origin?.constructed ?? 0;
+  const led = c.claim !== c.counts;
+  const figures = [
+    tile('Examples', count(stock.total), constructed ? `${count(constructed)} constructed for the catalog` : ''),
+    tile('Violations found', count(n('violation')), n('unverifiable') ? `${count(n('unverifiable'))} more unverifiable` : ''),
+    tile('Verified', count(n('verified')), stock.vacuous ? `${count(stock.vacuous)} recorded as vacuous` : ''),
+    c.said ? tile('Tests passed on a violation', `${count(c.passed)} of ${count(c.said)}`, 'the module’s own unit tests, on the same patch') : '',
+    c.rated ? tile('Rated high or critical', `${count(c.severe)} of ${count(c.rated)}`, 'violations, if they shipped unnoticed') : '',
+    libraries ? tile('Changes to published libraries', count(libraries), c.withResult.length ? `${count(c.withResult.length)} with a result so far` : '') : '',
+  ].join('');
+  const head = `<p class="sf-eyebrow">Example catalog</p>
+        <h1 id="sf-examples-title">${e(c.claim)}</h1>
+        <p class="sf-section-lede">Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${
+          c.said ? 'Most were constructed for the catalog, with the systems and the tests they change, so this describes the catalog and not how often tests miss a defect elsewhere. ' : ''
+        }A verified label is not a claim of a current, non-vacuous proof.</p>
+        <dl class="sf-figures">${figures}</dl>
+        <p class="sf-coverage">Coverage: ${e(c.answers ? formatCoverage(c.answers.coverage) : `${count(stock.total - n('none'))} of ${count(stock.total)} examples with a verdict`)} · A snapshot total; no filter of dates applies · <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a></p>`;
+  const source = `From <a href="${REPO}/blob/${e(sha)}/examples/README.md">the catalog</a> at this revision.`;
+  if (!named)
+    return `${head}
+        <div class="sf-subhead" id="every-example"><h2>Every example</h2></div>
+        <div class="sf-subhead sf-subhead-legend">${c.legend}</div>
+        ${catalogHtml(countedCells(c))}
+        <p class="sf-caption">Each square is an example, by verdict. The catalog’s records aren’t at hand, so none is named and nothing is cut further. ${source}</p>`;
+
+  const facets = catalogFacets(named);
+  const of = (key) => facets.find((f) => f.key === key);
+  const tokens = new Map(named.map((x) => [x.id, tokensOf(x, facets)]));
+  const cells = named.map((x) => ({ id: x.id, key: verdictOf(x), ring: x.origin === LIBRARY, tip: cellTip(x), tokens: tokens.get(x.id) }));
+  const option = (v) => `<option value="${e(v.token)}">${e(v.label)} (${count(v.n)})</option>`;
+  const options = (f) => {
+    if (f.key !== 'system' || !libraries) return f.values.map(option).join('');
+    const made = f.values.filter((v) => v.group !== 'library');
+    const published = f.values.filter((v) => v.group === 'library');
+    return `${made.length ? `<optgroup label="Constructed for the catalog">${made.map(option).join('')}</optgroup>` : ''}<optgroup label="Published libraries"><option value="${LIBRARY_TOKEN}">All of them (${count(libraries)})</option>${published
+      .map(option)
+      .join('')}</optgroup>`;
+  };
+  const controls = `<form class="sf-filters sf-facets" data-sf-facets hidden aria-label="Narrow the examples">${facets
+    .map((f) => `<label>${e(f.label)} <select name="${f.key}" data-sf-facet><option value="">${e(f.all)}</option>${options(f)}</select></label>`)
+    .join('')}<button type="reset" data-sf-facet-reset hidden>Show all</button></form>`;
+  // A few places to start: each is a set of tokens the grid narrows to.
+  const start = (label, wanted) => (wanted.every(Boolean) ? `<a href="#every-example" data-sf-show="${e(wanted.join(' '))}">${e(label)}</a>` : null);
+  const caught = of('tests')?.values.find((v) => v.value === 'failed');
+  const critical = of('severity')?.values.find((v) => v.value === 'critical');
+  const starts = [
+    caught?.violation ? start(`the ${plural(caught.violation, 'violation')} the existing tests also caught`, ['verdict:violation', 'tests:failed']) : null,
+    critical?.violation ? start(`the ${plural(critical.violation, 'violation')} rated critical`, ['verdict:violation', critical.token]) : null,
+    libraries ? start(`the ${plural(libraries, 'change')} to published libraries`, [LIBRARY_TOKEN]) : null,
+  ].filter(Boolean);
+  const titles = `<details class="sf-titles" data-sf-titles>
+          <summary>Read them by title: <span data-sf-titles-count>${plural(named.length, 'example')}</span></summary>
+          <ol>${named
+            .map(
+              (x) =>
+                `<li data-for="${e(x.id)}"><span class="sf-swatch sf-verdict-${verdictOf(x)}" aria-hidden="true"></span><a href="#example-${encodeURIComponent(x.id)}"><code>${e(x.id)}</code> ${e(x.title)}</a>${
+                  x.system ? ` <span class="sf-muted">${e(x.system)}</span>` : ''
+                }</li>`
+            )
+            .join('')}</ol>
+        </details>`;
+
+  const kind = of('kind');
+  const top = kind?.values[0];
+  const system = of('system');
+  const made = system ? system.values.filter((v) => v.group !== 'library') : [];
+  const published = system ? system.values.filter((v) => v.group === 'library') : [];
+  const libraryRow = published.length
+    ? [published.reduce((t, v) => Object.fromEntries(Object.keys(tally()).map((k) => [k, t[k] + v[k]])), tally())].map((t) => ({
+        ...t,
+        label: 'Published libraries',
+        token: LIBRARY_TOKEN,
+      }))
+    : [];
+  const defect = of('defect');
+  const untagged = named.filter((x) => !(x.tags?.defect ?? []).length).length;
+  const severity = of('severity');
+  const tables = [
+    kind
+      ? facetTable({
+          id: 'examples-by-kind',
+          title: 'By kind of change',
+          caption: `What the change set out to do, in the catalog’s words. The largest group is ${e(lower(top.label))}: ${count(top.violation)} of its ${plural(top.n, 'example')} ${top.violation === 1 ? 'has' : 'have'} a violation${
+            top.said ? `, and the existing tests passed on ${count(top.passed)} of ${top.said === top.violation ? 'them' : `the ${count(top.said)} that say`}` : ''
+          }.`,
+          head: 'Kind of change',
+          rows: kind.values,
+        })
+      : '',
+    system
+      ? facetTable({
+          id: 'examples-by-system',
+          title: 'By system',
+          caption: `${made.length ? `${word(made.length)} ${made.length === 1 ? 'system was' : 'systems were'} written for the catalog. ` : ''}${
+            published.length ? `The ${plural(published.length, 'published library', 'published libraries')} ${published.length === 1 ? 'is' : 'are'} open-source code the catalog did not write; their examples have several verdicts each, or none yet.` : ''
+          }`,
+          head: 'System',
+          rows: [...made, ...libraryRow],
+        })
+      : '',
+    defect
+      ? facetTable({
+          id: 'examples-by-defect',
+          title: 'By kind of defect',
+          caption: `The catalog’s tag for what goes wrong. An example can have several${untagged ? `, and ${count(untagged)} ${untagged === 1 ? 'has' : 'have'} none` : ''}. ${
+            defect.values.length > DEFECTS_SHOWN ? `The ${DEFECTS_SHOWN} most common of ${count(defect.values.length)}; the rest are in the list above the squares.` : ''
+          }`,
+          head: 'Kind of defect',
+          rows: defect.values.slice(0, DEFECTS_SHOWN),
+        })
+      : '',
+    severity
+      ? facetTable({
+          id: 'examples-by-severity',
+          title: 'By severity if it shipped unnoticed',
+          caption: 'The catalog’s rating of the change, not of the verdict: a change the verifier passed is mostly rated none.',
+          head: 'Severity',
+          rows: severity.values,
+        })
+      : '',
+  ].filter(Boolean);
+  const pending = libraries - c.withResult.length;
+  return `${head}
+        <div class="sf-subhead" id="every-example"><h2>Every example</h2></div>
+        <p class="sf-caption">Each square is an example, in the order of the catalog. Narrow them down, then pick one to read what it changed and what the verifier found.${
+          starts.length ? ` <span class="sf-starts" data-sf-starts hidden>Start with ${starts.join(', ').replace(/, ([^,]*)$/, starts.length > 2 ? ', or $1' : ' or $1')}.</span>` : ''
+        }</p>
+        ${controls}
+        <p class="sf-facet-status" data-sf-facet-status role="status" hidden>${e(matchWords(cells.map((x) => x.tokens), cells.length))}</p>
+        <div class="sf-subhead sf-subhead-legend">${c.legend}</div>
+        ${catalogHtml(cells)}
+        <p class="sf-caption">${source}</p>
+        ${inspectHtml('example', 'Pick a square to read what the example changed and what the verifier found.')}
+        ${titles}
+        ${
+          tables.length
+            ? `<div class="sf-subhead"><h2>What the catalog is made of</h2></div>
+        <p class="sf-caption">The same examples, cut ${lower(word(tables.length))} ways. A bar’s length is the examples in the row and its colours are their verdicts. A row’s name narrows the squares above to its examples. Tests passed is of the violations that say.</p>
+        <div class="sf-breakdowns sf-example-tables">
+          ${tables.join('\n          ')}
+        </div>`
+            : ''
+        }
+        <p class="sf-caption">Every record as a table, with its tags: <a href="${ROUTE}usage/#explore-examples">Examples, under Usage</a>.</p>
+        <aside class="sf-note">
+          <h2>What this can't say</h2>
+          <p>${
+            c.said
+              ? 'Whether the existing tests passed, and how severe a change would be, are the catalog’s own statements about examples it mostly wrote, tests included. They show what the verifier finds that these tests don’t. They are not a rate at which tests miss defects in other code. '
+              : ''
+          }${pending > 0 ? `${word(pending)} of the ${plural(libraries, 'change')} to published libraries ${pending === 1 ? 'is' : 'are'} entered in the catalog and not run yet. ` : ''}The <a href="${ROUTE}methodology/#def-examples_catalog">definition</a> says how an example is counted.</p>
+        </aside>`;
 }
 
 /**

@@ -15,7 +15,7 @@ const EXAMPLE = path.join(HERE, 'fixtures', 'snapshot-example');
 const { snapshot, examples } = loadSnapshot(EXAMPLE);
 // The committed snapshot has the loops, tools and code the example lacks: used for structure, never for a number.
 const { snapshot: committed } = loadSnapshot();
-const DATA_PAGES = ['loops/index.html', 'tools/index.html', 'code/index.html', 'usage/index.html'];
+const DATA_PAGES = ['loops/index.html', 'examples/index.html', 'tools/index.html', 'code/index.html', 'usage/index.html'];
 
 const helpers = { escapeHtml, formatDate: formatDay, postImage: () => undefined };
 const paths = { route: '/software-factory/', staticData: '/software-factory/static-data/', remoteData: '/software-factory/data/' };
@@ -92,7 +92,7 @@ test('the overview is short: the headline, four findings, and where to go next',
 test('each page under the overview leads with its own statement, and the usage page keeps the plan’s order', () => {
   const pages = render({ snapshot: committed });
   const of = (file) => pages.find((p) => p.path === file).body;
-  for (const [file, id] of [['loops/index.html', 'sf-loops-title'], ['tools/index.html', 'sf-tools-title'], ['code/index.html', 'sf-code-title'], ['usage/index.html', 'sf-usage-title']]) {
+  for (const [file, id] of [['loops/index.html', 'sf-loops-title'], ['examples/index.html', 'sf-examples-title'], ['tools/index.html', 'sf-tools-title'], ['code/index.html', 'sf-code-title'], ['usage/index.html', 'sf-usage-title']]) {
     const html = of(file);
     assert.equal((html.match(/<h1/g) ?? []).length, 1, file);
     assert.match(html, new RegExp(`<h1 id="${id}">`), file);
@@ -261,7 +261,7 @@ test('the overview names its catalog from the examples collection, and counts it
   const cells = (html) => html.match(/<span class="sf-cell [^>]*>/g) ?? [];
   // With the records: a square for each example in the catalog's order, named for the pointer, the library changes ringed.
   const named = overview({ examples: records });
-  assert.match(named, /<h2 id="finding-output-title"><a href="\/software-factory\/usage\/#explore-examples">2 violations found and 3 changes verified, in a catalog of 11 examples<\/a><\/h2>/);
+  assert.match(named, /<h2 id="finding-output-title"><a href="\/software-factory\/examples\/">2 violations found and 3 changes verified, in a catalog of 11 examples<\/a><\/h2>/);
   assert.equal(cells(named).length, stock.total);
   assert.deepEqual(
     cells(named).map((c) => c.match(/sf-verdict-(\w+)/)[1]),

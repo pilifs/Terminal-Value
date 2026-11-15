@@ -2135,3 +2135,123 @@ body.software-factory .sf-shell .sf-history-list a:hover {
   color: var(--sf-accent);
   text-decoration: underline;
 }
+
+/* The catalog's page: lists that narrow the grid, squares dimmed when they
+   don't match, the titles under it, and the catalog cut into tables. */
+body.software-factory .sf-facets {
+  margin: 0.75rem 0 0;
+  gap: 0.5rem 1.25rem;
+}
+body.software-factory .sf-facets select {
+  max-width: 13rem;
+}
+body.software-factory .sf-facet-status {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+body.software-factory .sf-facet-status[hidden],
+body.software-factory .sf-starts[hidden] {
+  display: none;
+}
+body.software-factory .sf-catalog .sf-cell-off {
+  opacity: 0.16;
+}
+body.software-factory [data-pick] > .sf-cell-off {
+  cursor: default;
+}
+body.software-factory .sf-examples .sf-catalog {
+  margin-top: 0.5rem;
+}
+body.software-factory .sf-titles {
+  margin-top: 1rem;
+  border-top: 1px solid var(--sf-rule);
+  border-bottom: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-titles > summary {
+  padding: 0.6rem 0;
+  font-weight: 600;
+}
+body.software-factory .sf-titles ol {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-titles li {
+  padding: 0.3rem 0;
+  line-height: 1.4;
+}
+body.software-factory .sf-titles li[hidden] {
+  display: none;
+}
+body.software-factory .sf-titles .sf-swatch {
+  margin-right: 0.5rem;
+}
+body.software-factory .sf-titles .sf-muted {
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+@media (min-width: 60.0625rem) {
+  body.software-factory .sf-titles ol {
+    columns: 2;
+    column-gap: 2rem;
+  }
+  body.software-factory .sf-titles li {
+    break-inside: avoid;
+  }
+}
+body.software-factory .sf-example-tables .sf-table :is(td, thead th:not(:first-child)) {
+  text-align: right;
+  white-space: nowrap;
+}
+body.software-factory .sf-example-tables .sf-table tbody th {
+  font-weight: 400;
+}
+body.software-factory .sf-example-tables + .sf-caption {
+  margin-top: 1.5rem;
+}
+/* The bar sits in a box of one width, so the counts before it stay in line. */
+body.software-factory .sf-split-box {
+  display: inline-block;
+  width: 7rem;
+  margin-left: 0.6rem;
+  vertical-align: -0.05em;
+}
+body.software-factory .sf-split {
+  display: flex;
+  gap: 2px;
+  min-width: 4px;
+  height: 0.625rem;
+}
+/* On a phone the names wrap, and the bar gives them room. */
+@media (max-width: 30rem) {
+  body.software-factory .sf-example-tables .sf-table th:first-child,
+  body.software-factory .sf-example-tables .sf-table thead th:nth-child(n) {
+    white-space: normal;
+  }
+  body.software-factory .sf-example-tables .sf-table :is(th, td):not(:first-child) {
+    padding-inline: 0.25rem;
+  }
+  body.software-factory .sf-example-tables .sf-table :is(th, td):last-child {
+    padding-right: 0;
+  }
+  body.software-factory .sf-split-box {
+    width: 2.5rem;
+    margin-left: 0.375rem;
+  }
+  body.software-factory .sf-facets label {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  body.software-factory .sf-facets select {
+    flex: 0 1 13rem;
+    min-width: 0;
+  }
+}
+body.software-factory .sf-split > span {
+  min-width: 2px;
+  border-radius: 1px;
+}

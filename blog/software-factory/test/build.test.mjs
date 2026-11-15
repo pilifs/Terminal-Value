@@ -66,6 +66,7 @@ test('a published section is listed in the sitemap and llms.txt', () => {
   assert.deepEqual(result.sitemap, [
     '/software-factory/',
     '/software-factory/loops/',
+    '/software-factory/examples/',
     '/software-factory/tools/',
     '/software-factory/code/',
     '/software-factory/usage/',

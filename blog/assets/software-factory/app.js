@@ -15,7 +15,20 @@
 
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, exampleRecordHtml, findingsHtml, heroHtml, loopsHtml, runRecordHtml, toolChartHtml, toolsHtml } from './factory.js';
+import {
+  campaignRunsHtml,
+  changePlotHtml,
+  codeHtml,
+  exampleRecordHtml,
+  examplesHtml,
+  findingsHtml,
+  heroHtml,
+  loopsHtml,
+  matchWords,
+  runRecordHtml,
+  toolChartHtml,
+  toolsHtml,
+} from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
 import { computeMeasures, series } from './measures.js';
@@ -229,7 +242,10 @@ async function start(shell) {
     if (control) control.hidden = false;
     for (const title of $$('[data-tip] > title', root)) title.parentNode.removeChild(title);
     for (const mark of $$('[data-tip][title]', root)) mark.removeAttribute('title');
-    if (root === shell) readyInspector();
+    if (root === shell) {
+      readyFacets();
+      readyInspector();
+    }
   }
 
   function drawFactory(snap) {
@@ -238,6 +254,7 @@ async function start(shell) {
       hero: () => heroHtml(snap, { title: hero.dataset.title, lede: hero.dataset.lede }),
       findings: () => findingsHtml(snap, { examples: catalog }),
       loops: () => loopsHtml(snap),
+      examples: () => examplesHtml(snap, catalog),
       tools: () => toolsHtml(snap),
       code: () => codeHtml(snap),
     };
@@ -252,19 +269,22 @@ async function start(shell) {
     nameCatalog(snap);
   }
 
-  // The overview names its catalog's squares from the examples collection. The
-  // build did that for the snapshot it had; for another, the squares are drawn
-  // by verdict first and named once that snapshot's records are here.
+  // The overview and the catalog's page name the catalog's squares from the
+  // examples collection. The build did that for the snapshot it had; for
+  // another, the squares are drawn by verdict first and named once that
+  // snapshot's records are here.
   let catalog = null;
   async function nameCatalog(snap) {
     const findings = section('findings');
-    if (!findings || !snap.manifest.collections.some((c) => c.name === 'examples')) return;
+    const page = section('examples');
+    if (!(findings || page) || !snap.manifest.collections.some((c) => c.name === 'examples')) return;
     try {
       examples ??= loadCollection(snap, 'examples', { fetch: get });
       const file = await examples;
       if (snap !== current) return;
       catalog = file.records;
-      findings.innerHTML = findingsHtml(snap, { examples: catalog });
+      if (findings) findings.innerHTML = findingsHtml(snap, { examples: catalog });
+      if (page) page.innerHTML = examplesHtml(snap, catalog);
       readyFactory();
     } catch {
       // Unnamed squares are still right; the next snapshot tries again.
@@ -277,6 +297,61 @@ async function start(shell) {
     const chart = $('[data-sf-tool-chart]');
     chart.innerHTML = toolChartHtml(current.overview, ev.target.value === '' ? null : Number(ev.target.value));
     readyFactory(chart);
+  });
+
+  // The catalog's page narrows its grid: a square carries a token for each of
+  // its values (data-f), a list above the grid picks one token, and a square
+  // stays lit when it has every token picked. No record is needed for it.
+  const facetCells = () => $$('.sf-catalog .sf-cell[data-f]');
+  function narrow() {
+    const form = $('[data-sf-facets]');
+    if (!form) return;
+    const want = $$('[data-sf-facet]', form)
+      .map((s) => s.value)
+      .filter(Boolean);
+    const lit = [];
+    for (const cell of facetCells()) {
+      const has = cell.dataset.f.split(' ');
+      const on = want.every((t) => has.includes(t));
+      cell.classList.toggle('sf-cell-off', !on);
+      if (on) lit.push(has);
+      else cell.classList.remove(PICKS.example.on);
+    }
+    for (const li of $$('[data-sf-titles] li[data-for]')) li.hidden = Boolean(document.getElementById(`example-${li.dataset.for}`)?.classList.contains('sf-cell-off'));
+    $('[data-sf-facet-status]').textContent = matchWords(lit, facetCells().length);
+    $('[data-sf-titles-count]').textContent = `${lit.length.toLocaleString('en-US')} ${lit.length === 1 ? 'example' : 'examples'}`;
+    $('[data-sf-facet-reset]', form).hidden = !want.length;
+    // The pick stays if it is still lit, and its place among them is counted again.
+    if (PICKS.example.picked !== null) pick('example', PICKS.example.picked);
+  }
+  /** Narrow to a set of tokens: each goes to the list that has it, and the other lists are cleared. */
+  function show(tokens) {
+    const form = $('[data-sf-facets]');
+    if (!form) return;
+    for (const select of $$('[data-sf-facet]', form)) select.value = tokens.find((t) => [...select.options].some((o) => o.value === t)) ?? '';
+    narrow();
+  }
+  function readyFacets() {
+    const form = $('[data-sf-facets]');
+    if (!form) return;
+    form.hidden = false;
+    for (const el of $$('[data-sf-facet-status], [data-sf-starts]')) el.hidden = false;
+  }
+  shell.addEventListener('change', (ev) => {
+    if (ev.target.matches?.('[data-sf-facet]')) narrow();
+  });
+  shell.addEventListener('reset', (ev) => {
+    // The lists have their first value again only after the event.
+    if (ev.target.matches?.('[data-sf-facets]')) setTimeout(narrow);
+  });
+  shell.addEventListener('click', (ev) => {
+    const link = ev.target.closest?.('[data-sf-show]');
+    if (!link || !$('[data-sf-facets]')) return;
+    ev.preventDefault();
+    show(link.dataset.sfShow.split(' '));
+    const top = $('#every-example');
+    const y = top.getBoundingClientRect().top;
+    if (y < 0 || y > window.innerHeight / 2) top.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   });
 
   // A campaign's runs and cycles, from the loops collection, loaded once per snapshot.
@@ -311,7 +386,7 @@ async function start(shell) {
       picked: null,
     },
     example: {
-      marks: '.sf-catalog .sf-cell[data-example]',
+      marks: '.sf-catalog .sf-cell[data-example]:not(.sf-cell-off)',
       idOf: (el) => el.dataset.example,
       on: 'sf-cell-on',
       records: (snap) => (examples ??= loadCollection(snap, 'examples', { fetch: get })),

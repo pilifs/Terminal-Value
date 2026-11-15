@@ -270,7 +270,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
     }
 
     await t.test('the overview and the pages under it: the bundled snapshot as built, nothing added to the address', async () => {
-      for (const [pathname, name] of [['/software-factory/', 'overview'], ['/software-factory/loops/', 'loops'], ['/software-factory/tools/', 'tools'], ['/software-factory/code/', 'code']]) {
+      for (const [pathname, name] of [['/software-factory/', 'overview'], ['/software-factory/loops/', 'loops'], ['/software-factory/examples/', 'examples'], ['/software-factory/tools/', 'tools'], ['/software-factory/code/', 'code']]) {
         const { context, page, errors } = await open(pathname, REMOTES['no binding (503)']);
         try {
           const shown = await page.evaluate(() => ({
@@ -454,6 +454,93 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
       try {
         await until(() => visit.page.evaluate(() => Boolean(document.querySelector('.sf-example'))), 'the record of the example in the address');
         assert.deepEqual((await seen(visit.page)).on, [fifth[0]]);
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+    });
+
+    await t.test('the catalog’s page: lists narrow the grid, the pick stays among what is lit, and a row or a start narrows it too', async () => {
+      const state = (page) =>
+        page.evaluate(() => {
+          const cells = [...document.querySelectorAll('.sf-catalog .sf-cell[data-example]')];
+          return {
+            total: cells.length,
+            lit: cells.filter((el) => !el.classList.contains('sf-cell-off')).map((el) => el.dataset.example),
+            status: document.querySelector('[data-sf-facet-status]').textContent,
+            titles: [...document.querySelectorAll('[data-sf-titles] li')].filter((li) => !li.hidden).map((li) => li.dataset.for),
+            count: document.querySelector('[data-sf-titles-count]').textContent,
+            lists: Object.fromEntries([...document.querySelectorAll('[data-sf-facet]')].filter((el) => el.value).map((el) => [el.name, el.value])),
+            reset: !document.querySelector('[data-sf-facet-reset]').hidden,
+            at: document.querySelector('[data-sf-inspect="example"] [data-sf-inspect-at]').textContent,
+            on: cells.filter((el) => el.classList.contains('sf-cell-on')).map((el) => el.dataset.example),
+          };
+        });
+      let visit = await open('/software-factory/examples/', REMOTES['no binding (503)']);
+      try {
+        const { page } = visit;
+        const records = json(COMMITTED, `${snapDir(COMMITTED)}details/examples.json`).records;
+        const ids = (keep) => records.filter(keep).map((x) => x.id);
+        let now = await state(page);
+        assert.deepEqual([now.total, now.lit.length, now.status, now.count, now.lists, now.reset], [records.length, records.length, `Showing all ${records.length} examples.`, `${records.length} examples`, {}, false]);
+        assert.equal(await page.evaluate(() => document.querySelector('[data-sf-facets]').hidden || document.querySelector('[data-sf-starts]').hidden), false, 'the lists and the places to start are shown once the script is there');
+        // A start: the violations the existing tests also caught.
+        const caught = ids((x) => x.verdict === 'violation' && x.testsPassed === false);
+        assert.ok(caught.length > 0 && caught.length < records.length);
+        await page.click('[data-sf-starts] a');
+        now = await state(page);
+        assert.deepEqual([now.lit, now.titles, now.lists, now.reset], [caught, caught, { verdict: 'verdict:violation', tests: 'tests:failed' }, true]);
+        assert.ok(now.status.startsWith(`${caught.length} of ${records.length} examples: ${caught.length} violations found. The existing tests failed on all ${caught.length} violations`), now.status);
+        assert.equal(now.count, `${caught.length} examples`);
+        // The buttons step through what is lit, and only that.
+        await page.click('[data-sf-inspect="example"] [data-sf-step="1"]');
+        await page.click('[data-sf-inspect="example"] [data-sf-step="1"]');
+        await until(() => page.evaluate(() => Boolean(document.querySelector('.sf-example'))), 'the record of the second example lit');
+        now = await state(page);
+        assert.deepEqual([now.at, now.on], [`Example 2 of ${caught.length}`, [caught[1]]]);
+        // A second list narrows further. The pick stays while it is lit and is counted again.
+        const system = records.find((x) => x.id === caught[1]).system;
+        const both = ids((x) => x.verdict === 'violation' && x.testsPassed === false && x.system === system);
+        await page.selectOption('select[name="system"]', { label: `${system} (${records.filter((x) => x.system === system).length})` });
+        now = await state(page);
+        assert.deepEqual([now.lit, now.at, now.on], [both, `Example ${both.indexOf(caught[1]) + 1} of ${both.length}`, [caught[1]]]);
+        // Narrowed to where the pick is not: the record closes.
+        await page.selectOption('select[name="verdict"]', 'verdict:verified');
+        now = await state(page);
+        assert.deepEqual([now.on, now.at], [[], 'Pick a square to read what the example changed and what the verifier found.']);
+        assert.equal(await page.evaluate(() => document.querySelector('.sf-example')), null);
+        assert.equal(now.lit.length, ids((x) => x.verdict === 'verified' && x.testsPassed === false && x.system === system).length);
+        // A square that is not lit can't be picked.
+        await page.click(`[id="example-${caught[1]}"]`, { force: true });
+        assert.deepEqual((await state(page)).on, []);
+        // Show all: every list is cleared.
+        await page.click('[data-sf-facet-reset]');
+        await until(async () => (await state(page)).lit.length === records.length, 'every square lit again');
+        now = await state(page);
+        assert.deepEqual([now.lists, now.reset, now.status], [{}, false, `Showing all ${records.length} examples.`]);
+        // A row of a table narrows the grid to its examples, alone.
+        await page.selectOption('select[name="verdict"]', 'verdict:verified');
+        const row = await page.evaluate(() => {
+          const a = document.querySelector('#examples-by-kind tbody a');
+          return { label: a.textContent, n: Number(a.closest('tr').cells[1].textContent.replace(/,/g, '')) };
+        });
+        await page.click('#examples-by-kind tbody a');
+        now = await state(page);
+        assert.deepEqual([Object.keys(now.lists), now.lit.length], [['kind'], row.n]);
+        assert.deepEqual(now.lit, ids((x) => x.changeKind === records.find((r) => r.id === now.lit[0]).changeKind));
+        assert.equal(visit.requests.filter((p) => p.endsWith('/details/examples.json')).length, 1, 'narrowing needs no record; the picks loaded them once');
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+      // On a different remote snapshot the page is that snapshot's: counted at once, cut once its own records arrive.
+      visit = await open('/software-factory/examples/', REMOTES['the Function, with a different snapshot']);
+      try {
+        const catalog = json(EXAMPLE, `${snapDir(EXAMPLE)}details/examples.json`).records;
+        await until(() => visit.page.evaluate(() => Boolean(document.querySelector('[data-sf-facets]:not([hidden])'))), 'the lists of the other snapshot');
+        const now = await state(visit.page);
+        assert.deepEqual([now.total, now.titles, now.status], [catalog.length, catalog.map((x) => x.id), `Showing all ${catalog.length} examples.`]);
+        assert.match(await visit.page.evaluate(() => document.querySelector('#sf-examples-title').textContent), new RegExp(`in a catalog of ${catalog.length} examples$`));
         assert.deepEqual(visit.errors, []);
       } finally {
         await visit.context.close();

@@ -228,15 +228,16 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
 
 /**
  * A catalog as a grid of squares, one for each entry, in the order given.
- *   cells: [{ id, key, tip, ring }]: a cell is sf-verdict-<key>; `ring` marks one
- *     out. With an id a cell can be linked to (#example-<id>) and picked.
+ *   cells: [{ id, key, tip, ring, tokens }]: a cell is sf-verdict-<key>; `ring` marks one
+ *     out. With an id a cell can be linked to (#example-<id>) and picked. `tokens` are
+ *     what the page's script narrows the grid by (data-f).
  * A picture of records a table lists elsewhere, so it is hidden from a screen
  * reader. A cell's words are for the pointer's tooltip only: a title as well
  * would say every one of them twice in the page.
  */
 export function catalogHtml(cells) {
   return `<div class="sf-catalog" aria-hidden="true">${cells
-    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.id ? ` id="example-${e(c.id)}" data-example="${e(c.id)}"` : ''}${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
+    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.id ? ` id="example-${e(c.id)}" data-example="${e(c.id)}"` : ''}${c.tokens ? ` data-f="${e(c.tokens.join(' '))}"` : ''}${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
     .join('')}</div>`;
 }
 

@@ -860,6 +860,11 @@ Settled by the author on 2026-11-14:
   finding's claim is now "The existing tests passed on 92 of the 100 changes where the verifier found a violation",
   with the sentence that most examples were constructed for the catalog. A square opens its example's record under
   the grid, with links to the example and the change it verifies; the address keeps the pick as `#example-<id>`.
+- **The catalog's own page** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, "The
+  catalog's own page". `/software-factory/examples/`, linked from the Output finding and the navigation: the grid
+  narrowed by verdict, existing tests, severity, kind of change, system and kind of defect, with a sentence for
+  what is lit, every title, and the catalog cut into four tables. From the `examples` collection; no change to the
+  contract or the snapshot.
 - Status: done
 
 ## Loop settings
