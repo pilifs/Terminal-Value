@@ -161,7 +161,7 @@ test('methodology: coverage per dataset, periods by Toronto day and stocks as to
   const table = body.slice(body.indexOf('id="coverage"'), body.indexOf('id="definitions"'));
   assert.match(table, /Model usage<\/th><td data-label="Kind">Period<\/td><td data-label="Measured"><time datetime="2026-10-30">Oct 30, 2026<\/time> to <time datetime="2026-11-02">Nov 2, 2026<\/time><\/td><td data-label="Coverage">4 of 5 sessions with a metrics file<\/td>/);
   assert.match(table, /Verification results<\/th><td data-label="Kind">Period<\/td><td data-label="Measured"><time datetime="2026-11-07">/);
-  assert.match(table, /Example catalog<\/th><td data-label="Kind">Snapshot total<\/td><td data-label="Measured">Snapshot total at <code>7384f8c<\/code><\/td><td data-label="Coverage">7 of 11 examples with a verdict<\/td>/);
+  assert.match(table, /Example catalog<\/th><td data-label="Kind">Snapshot total<\/td><td data-label="Measured">Snapshot total at <code>7384f8c<\/code><\/td><td data-label="Coverage">11 of 11 examples with a verdict<\/td>/);
 });
 
 test('methodology: the area mapping with its status, and comparison limits', () => {

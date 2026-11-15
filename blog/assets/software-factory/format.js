@@ -64,6 +64,18 @@ export function formatCoverage(coverage) {
 }
 
 /** The unit as words, for captions and accessible names. */
+// The catalog's verdicts, in the order a legend lists them and in the words of
+// the project's own page: a violation is refuted, a verified change is
+// established, and what the tools could not decide is left open. An example
+// the catalog gives no single verdict has more than one, or is not proved yet.
+export const VERDICTS = [
+  { key: 'violation', label: 'Refuted', word: 'refuted' },
+  { key: 'verified', label: 'Established', word: 'established' },
+  { key: 'unverifiable', label: 'Left open', word: 'left open' },
+  { key: 'several', label: 'More than one verdict', word: 'with more than one verdict' },
+  { key: 'none', label: 'Not proved yet', word: 'not proved yet' },
+];
+
 export const UNIT_WORDS = {
   usd: 'US dollars',
   calls: 'calls',

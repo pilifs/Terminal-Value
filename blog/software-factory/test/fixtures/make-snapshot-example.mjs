@@ -121,6 +121,12 @@ const median = durations.length
     ? durations[(durations.length - 1) / 2]
     : (durations[durations.length / 2 - 1] + durations[durations.length / 2]) / 2
   : null;
+// An example the catalog gives no verdict is counted by the marks in its label: one kind is that verdict, more is several.
+const verdictOf = (x) => {
+  if (x.verdict != null) return x.verdict;
+  const kinds = [['\u2717', 'violation'], ['\u2713', 'verified'], ['\u26a0', 'unverifiable']].filter(([mark]) => (x.verdictLabel ?? '').includes(mark));
+  return kinds.length > 1 ? 'several' : kinds.length === 1 ? kinds[0][1] : 'none';
+};
 const housekeepingSummaries = new Set(source.housekeeping.summaries);
 const changeIds = new Map();
 for (const c of rollup.commits) if (!changeIds.has(c.change_id)) changeIds.set(c.change_id, c);
@@ -132,7 +138,7 @@ const measures = [
   { id: 'verification_completed', value: completed.length, unit: 'jobs', scope: 'all-time', coverage: { included: completed.length, total: results.length, missing: results.length - completed.length } },
   { id: 'verification_duration_median', value: median, unit: 'seconds', scope: 'all-time', coverage: { included: durations.length, total: completed.length, missing: completed.length - durations.length } },
   { id: 'changes_recorded', value: changes.length, unit: 'changes', scope: 'snapshot', coverage: { included: changes.filter((c) => c.sessions.length).length, total: changes.length } },
-  { id: 'examples_catalog', value: examples.length, unit: 'examples', scope: 'snapshot', coverage: { included: examples.filter((x) => x.verdict != null).length, total: examples.length, missing: examples.filter((x) => x.verdict == null).length, note: 'examples with a verdict' } },
+  { id: 'examples_catalog', value: examples.length, unit: 'examples', scope: 'snapshot', coverage: { included: examples.filter((x) => verdictOf(x) !== 'none').length, total: examples.length, missing: examples.filter((x) => verdictOf(x) === 'none').length, note: 'examples with a verdict' } },
 ];
 
 // Stocks.
@@ -142,7 +148,7 @@ const stocks = {
   examples: {
     total: examples.length,
     origin: countBy(examples, (x) => x.origin),
-    verdict: countBy(examples, (x) => x.verdict ?? 'none'),
+    verdict: countBy(examples, verdictOf),
     vacuous: examples.filter((x) => x.vacuous === true).length,
     freshness: countBy(examples, (x) => x.snapshot ?? 'absent'),
   },

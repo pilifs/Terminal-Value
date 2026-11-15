@@ -202,5 +202,8 @@ lists hold some of this as prose.
   With times in the rollup, recorded changes become a daily series without a checkout.
 - **Model display names.** `config/models.json` here maps raw ids to names by hand. A documented map in
   `llm-dlc/pricing.json` would be the source to cite.
+- **Verdicts by claim in the examples index.** `examples/index.json` gives six examples with results no `verdict`:
+  the label records one for each claim ("✗ unbounded on 2.7.17; ✓ bounded on 2.7.18"). The pages read the label's
+  marks (✗, ✓, ⚠) to count them. A `verdicts` list on the entry, one per claim, would replace that.
 - **Loops before 2026-11-06.** A one-off backfill of run records from the logs would extend the loops section back
   to the first loop.

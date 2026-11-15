@@ -906,6 +906,12 @@ Settled by the author on 2026-11-14:
   now opens with the landing page's sentence, "590 of 742 commits were made inside a loop run", and the loops page
   with 34 loops, 109 runs and 350 cycles, a table by kind and every loop. The clock and the campaigns still come
   from the 50 run records and say so.
+- **The landing page's verdict words and count** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "The landing page's verdict words and count". Refuted, Established and Left open on
+  every page (generator 8, snapshot `sf1-2bb59ff53f60af2d`). The claim is the landing page's "92 of 100 refuted
+  example changes had passed their unit tests". An example the catalog gives no verdict is counted by the marks
+  in its label, so 163 of 183 have a verdict, as the landing page says; five have more than one and are drawn
+  split.
 - Status: done
 
 ## Loop settings

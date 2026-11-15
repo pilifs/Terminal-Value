@@ -494,7 +494,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         await page.click('[data-sf-starts] a');
         now = await state(page);
         assert.deepEqual([now.lit, now.titles, now.lists, now.reset], [caught, caught, { verdict: 'verdict:violation', tests: 'tests:failed' }, true]);
-        assert.ok(now.status.startsWith(`${caught.length} of ${records.length} examples: ${caught.length} violations found. The existing tests failed on all ${caught.length} violations`), now.status);
+        assert.ok(now.status.startsWith(`${caught.length} of ${records.length} examples: ${caught.length} refuted. The existing tests failed on all ${caught.length} refuted changes`), now.status);
         assert.equal(now.count, `${caught.length} examples`);
         // The buttons step through what is lit, and only that.
         await page.click('[data-sf-inspect="example"] [data-sf-step="1"]');

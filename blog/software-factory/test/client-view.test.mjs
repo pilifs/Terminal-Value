@@ -11,7 +11,7 @@ import { detailCount, detailTable } from '../../assets/software-factory/details.
 import { usageBreakdown } from '../../assets/software-factory/measures-local.js';
 import { computeMeasures } from '../measures.mjs';
 import { DEFAULT_STATE, queryOptions } from '../../assets/software-factory/state.js';
-import { breakdownRows, breakdownTag, chartCaption, METRIC_LABELS, metricScope } from '../../assets/software-factory/view.js';
+import { breakdownRows, breakdownTag, chartCaption, METRIC_LABELS, metricScope, stockTexts } from '../../assets/software-factory/view.js';
 import { loadSnapshot } from '../index.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -68,6 +68,13 @@ test('each metric and the chart say which filters apply', () => {
     'Completed verification jobs per day, last 30 days (Oct 10 – Nov 8, 2026), in jobs. Days are calendar days in Toronto. A day whose value is zero has no column; a short mark on the baseline is a day with no value: outside the data, or with nothing to divide. The model and effort filters don’t apply to this measure.'
   );
   assert.match(chartCaption('model_calls', state, overview), /^Model calls per day, last 30 days \(Oct 10 – Nov 8, 2026\), Opus 5\.5 only, in calls\./);
+});
+
+test('the catalog’s stock says its verdicts in the legend’s order and words', () => {
+  const stocks = { changes: { total: 3, housekeeping: 1 }, examples: { total: 9, origin: { constructed: 8, 'real-world': 1 }, verdict: { none: 2, several: 1, unverifiable: 1, verified: 2, violation: 3 }, vacuous: 1, freshness: { current: 9 } } };
+  assert.equal(stockTexts(stocks).examples.note, 'Origin: 8 constructed, 1 real-world. Verdict: 3 refuted, 2 established, 1 left open, 1 with more than one verdict, 2 not proved yet. Vacuous: 1. Freshness: 9 current.');
+  // A verdict the pages have no word for is said as the catalog has it.
+  assert.match(stockTexts({ ...stocks, examples: { ...stocks.examples, verdict: { verified: 1, odd: 1 } } }).examples.note, /Verdict: 1 established, 1 odd\./);
 });
 
 test('the deeper exploration’s tables show raw ids, escape, and shorten a long list', () => {

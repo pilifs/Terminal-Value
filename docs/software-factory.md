@@ -393,12 +393,12 @@ What does not agree yet, and why:
   pages said 25 loops, 50 runs, 253 cycles and 323 commits, from the markdown run records, which only loops since
   Nov 6 left. They now read the source's own account as well and lead with it: see "The source's own account of
   its loops" below.
-- **Examples with a verdict.** 163 there, 157 of 183 here. Here an example with several verdicts in its label
-  counts as having none.
+- **Examples with a verdict.** 163 there, and 157 of 183 here until generator 8: an example with several verdicts
+  in its label counted as having none. Now 163 here too: see "The landing page's verdict words and count" below.
 - **Lines of code.** 167,128 there is lines added less lines removed in five languages; 181,451 here is lines added
   in seven. The parts agree: added less removed for Rust, Python, Java, shell and TLA+ come to 167,128.
-- **Verdict words.** Refuted, Established and Left open there; Violation found, Verified and Unverifiable here.
-  The author decided these pages take the landing page's words.
+- **Verdict words.** Refuted, Established and Left open there; Violation found, Verified and Unverifiable here
+  until generator 8. The author decided these pages take the landing page's words, and they now do.
 - **Fable 5.2.** The data now has calls by `claude-fable-5-2`. `config/models.json` and a contract test say no id
   maps to "Fable 5.2" until the author supplies a mapping, so the model is shown by its raw id, once
   (`modelName` in `factory.js`). The landing page names it Fable 5.2.
@@ -443,6 +443,45 @@ script left records, read from their sessions' prompts. It is the answer to requ
 
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
+
+### The landing page's verdict words and count (generator 8)
+
+The example pages now say a verdict the way `/prove-java-change/` does, and count the same examples as having one.
+
+- **The words.** A violation is **Refuted**, a verified change is **Established**, an unverifiable one is **Left
+  open**. The words and their order are `VERDICTS` in `format.js`, the one place every page reads them from. The
+  data keeps the catalog's own keys (`violation`, `verified`, `unverifiable`), so a token such as
+  `verdict:violation` and a class such as `sf-verdict-violation` are unchanged. A label of the catalog's
+  ("✗ Violation: 2 of 36 cases changed") is quoted as written, beside the word.
+- **The claim** is the landing page's sentence: "92 of 100 refuted example changes had passed their unit tests".
+  It heads the overview's output finding and the examples page, and so the link preview of that page.
+- **163 with a verdict.** `examples/index.json` gives 26 examples no single verdict. Six of them have results: the
+  label records a verdict for each claim with the catalog's marks (✗, ✓, ⚠). The landing page counts those six, and
+  so do these pages now. The rule (`verdictKey` in `metrics.mjs`, `verdictOf` in `factory.js`, and the fixture
+  generator's own copy): the catalog's verdict where it gives one; otherwise one kind of mark is that verdict,
+  more than one kind is `several`, and no mark is `none`. At this revision: 100 refuted, 55 established, 3 left
+  open (the catalog's 2 and example 108), 5 with more than one verdict (105, 106, 107, 109, 285) and 20 not proved
+  yet. 183 less 20 is the landing page's 163.
+- **In the snapshot** `stocks.examples.verdict` has the new `several` key, and `none` means not proved yet. The
+  catalog's answers (`overview.catalog`) are grouped the same way. The 100 refuted and the 92 of 100 are unchanged:
+  no example without a verdict has only a ✗ in its label. Records keep `verdict` and `verdictLabel` as the catalog
+  has them.
+- **A square with more than one verdict** is split between its verdicts' own fills (`sf-parts-…` classes), in the
+  grid, the list of titles and the record. In a table's bar it is striped, since a split would read as two lengths.
+  The legend says "More than one verdict" and "Not proved yet" in place of "Several verdicts, or none yet".
+- **The record** leads with the verdict in words ("Refuted and established") and gives the catalog's label after
+  it, unless the label only names the verdict.
+- **The examples page** says under its claim: "163 have a verdict so far; the other 20 are prepared or catalogued,
+  and not proved yet", the landing page's sentence. Its first number carries the 163 as well.
+- **Also fixed:** on a phone the table by kind of change ran 17px past its column; a row with nothing refuted
+  now wraps its words.
+
+A suggestion for the source, not a blocker: a `verdicts` list on each entry of `examples/index.json` (one per
+claim) would replace reading the marks in the label. It is under "Smaller things" in
+[software-factory-upstream.md](./software-factory-upstream.md).
+
+Metric definitions are version 8: the catalog's definition says the words and the rule. Snapshot
+`sf1-2bb59ff53f60af2d`, the same revision.
 
 ### What the section ships: its scripts and stylesheet without comments
 

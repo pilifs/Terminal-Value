@@ -267,6 +267,34 @@ test('partial coverage is counted, never filled in', () => {
   assert.deepEqual(out.overview.stocks.examples, { total: 2, origin: { constructed: 2 }, verdict: { verified: 1, none: 1 }, vacuous: 0, freshness: { current: 1, absent: 1 } });
 });
 
+test('an example the catalog gives no verdict is counted by the marks in its label: one kind, more than one, or none', () => {
+  const out = run(
+    norm({
+      calls: [call('2026-11-05T15:00:00Z')],
+      examples: [
+        example('a', { verdict: 'violation', verdictLabel: '✗ Violation: 2 of 36 cases changed', testsPassed: true }),
+        example('b', { verdict: 'verified', verdictLabel: '✗ a mark the catalog overrules' }),
+        example('c', { verdict: null, verdictLabel: '✗ the bug found; ✓ change confined; ✓ never throws', testsPassed: false }),
+        example('d', { verdict: null, verdictLabel: '⚠ unverifiable: solver budget; one witness' }),
+        example('e', { verdict: null, verdictLabel: '✗ on the old release; ✗ on the mutant', testsPassed: true }),
+        example('f', { verdict: null, verdictLabel: 'not run: a catalog entry, no proof verdict' }),
+        example('g', { verdict: null, verdictLabel: null }),
+      ],
+    })
+  );
+  assert.deepEqual(out.overview.stocks.examples.verdict, { violation: 2, verified: 1, several: 1, unverifiable: 1, none: 2 });
+  // With a verdict: all but the two not proved yet.
+  assert.deepEqual(measure(out, 'examples_catalog').coverage, { included: 5, total: 7, missing: 2, note: 'examples with a verdict' });
+  // The catalog's answers and what a refuted change comes with are counted the same way.
+  assert.deepEqual(out.overview.catalog.tests, { violation: { passed: 2 }, several: { failed: 1 } });
+  assert.equal(out.overview.catalog.counterexamples.violations, 2);
+  // The breakdown says them in the project's own page's words.
+  const rows = out.overview.breakdowns.find((b) => b.id === 'examples-by-verdict').rows;
+  assert.deepEqual(Object.fromEntries(rows.map((r) => [r.key, r.label])), { violation: 'Refuted', verified: 'Established', unverifiable: 'Left open', several: 'More than one verdict', none: 'Not proved yet' });
+  // The records keep the catalog's own verdict and label.
+  assert.deepEqual(out.details.examples.records.map((x) => x.verdict), ['violation', 'verified', null, null, null, null, null]);
+});
+
 const evidence = (o = {}) => ({ tests: null, counterexample: null, trace: null, seconds: null, checker: null, ...o });
 
 test('the catalog’s answers are counted by verdict, and an example with none is in neither count', () => {

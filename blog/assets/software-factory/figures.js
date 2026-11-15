@@ -289,7 +289,7 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
  */
 export function catalogHtml(cells) {
   return `<div class="sf-catalog" aria-hidden="true">${cells
-    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.id ? ` id="example-${e(c.id)}" data-example="${e(c.id)}"` : ''}${c.tokens ? ` data-f="${e(c.tokens.join(' '))}"` : ''}${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
+    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.parts ? ` sf-parts-${e(c.parts.join('-'))}` : ''}${c.ring ? ' sf-cell-ring' : ''}"${c.id ? ` id="example-${e(c.id)}" data-example="${e(c.id)}"` : ''}${c.tokens ? ` data-f="${e(c.tokens.join(' '))}"` : ''}${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
     .join('')}</div>`;
 }
 

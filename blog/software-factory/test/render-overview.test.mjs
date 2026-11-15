@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { verdictOf } from '../../assets/software-factory/factory.js';
 import { escapeHtml, formatDay } from '../../assets/software-factory/format.js';
 import { loadSnapshot } from '../index.mjs';
 import { filterScope, renderPages } from '../render.mjs';
@@ -262,16 +263,17 @@ test('the overview names its catalog from the examples collection, and counts it
   const cells = (html) => html.match(/<span class="sf-cell [^>]*>/g) ?? [];
   // With the records: a square for each example in the catalog's order, named for the pointer, the library changes ringed.
   const named = overview({ examples: records });
-  assert.match(named, /<h2 id="finding-output-title"><a href="\/software-factory\/examples\/">2 violations found and 3 changes verified, in a catalog of 11 examples<\/a><\/h2>/);
+  assert.match(named, /<h2 id="finding-output-title"><a href="\/software-factory\/examples\/">2 changes refuted and 3 established, in a catalog of 11 examples<\/a><\/h2>/);
   assert.equal(cells(named).length, stock.total);
   assert.deepEqual(
     cells(named).map((c) => c.match(/sf-verdict-(\w+)/)[1]),
-    examples.map((x) => x.verdict ?? 'none')
+    records.map(verdictOf),
+    'the catalog’s verdict, or the marks in a label: more than one kind, one kind, or none'
   );
   assert.equal(cells(named).filter((c) => c.includes('sf-cell-ring')).length, libraries.length);
   assert.ok(cells(named).every((c) => /data-tip="\d+ · /.test(c) && !c.includes('title=')), 'said once, for the pointer');
   assert.match(named, /data-tip="072 · Quorum: A vote rule[^"]*✓ Verified, vacuously[^"]*\(vacuous\)"/);
-  assert.match(named, /A verified label is not a claim of a current, non-vacuous proof: 2 proofs are recorded as vacuous\./);
+  assert.match(named, /An established label is not a claim of a current, non-vacuous proof: 2 proofs are recorded as vacuous\./);
   assert.match(named, /href="\/software-factory\/methodology\/#def-examples_catalog"/);
   // Only a library change whose label records a result is listed by name.
   const listed = (named.match(/<div class="sf-catalog-list">[\s\S]*?<\/div>/) ?? [''])[0];
@@ -284,8 +286,8 @@ test('the overview names its catalog from the examples collection, and counts it
   const counted = overview();
   assert.equal(cells(counted).length, stock.total);
   assert.deepEqual(
-    Object.fromEntries(['violation', 'verified', 'unverifiable', 'none'].map((k) => [k, cells(counted).filter((c) => c.includes(`sf-verdict-${k}`)).length])),
-    { violation: stock.verdict.violation, verified: stock.verdict.verified, unverifiable: stock.verdict.unverifiable, none: stock.verdict.none }
+    Object.fromEntries(['violation', 'verified', 'unverifiable', 'several', 'none'].map((k) => [k, cells(counted).filter((c) => c.includes(`sf-verdict-${k}`)).length])),
+    { violation: stock.verdict.violation, verified: stock.verdict.verified, unverifiable: stock.verdict.unverifiable, several: stock.verdict.several, none: stock.verdict.none ?? 0 }
   );
   assert.doesNotMatch(counted, /sf-cell-ring|sf-catalog-list|a result so far/);
   assert.match(counted, /Each square is an example, by verdict\./);

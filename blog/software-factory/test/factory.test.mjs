@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
@@ -685,28 +685,34 @@ test('the output finding claims what the catalog says of its own violations, and
     catalogExample('004', { origin: 'real-world', system: 'A <b>Library</b>', verdict: null, verdictLabel: '✗ the bug found; ✓ confined', testsPassed: null, sourceUrl: 'https://example.invalid/pull/4' }),
     catalogExample('005', { origin: 'real-world', verdict: null, verdictLabel: 'not run: a catalog entry', testsPassed: null, path: null }),
   ];
-  const stocks = { ...snap.overview.stocks, examples: { total: 5, origin: { constructed: 3, 'real-world': 2 }, verdict: { violation: 2, verified: 1, none: 2 }, vacuous: 0, freshness: { current: 5 } } };
-  const catalog = { coverage: { included: 3, total: 5, missing: 2 }, tests: { violation: { passed: 1, failed: 1 }, verified: { passed: 1 } }, severity: { violation: { critical: 1, low: 1 }, verified: { none: 1 }, none: { critical: 2 } } };
+  const stocks = { ...snap.overview.stocks, examples: { total: 5, origin: { constructed: 3, 'real-world': 2 }, verdict: { violation: 2, verified: 1, several: 1, none: 1 }, vacuous: 0, freshness: { current: 5 } } };
+  const catalog = { coverage: { included: 3, total: 5, missing: 2 }, tests: { violation: { passed: 1, failed: 1 }, verified: { passed: 1 } }, severity: { violation: { critical: 1, low: 1 }, verified: { none: 1 }, several: { critical: 1 }, none: { critical: 1 } } };
   const sha = snap.manifest.source.sha;
   const output = (overview, examples = records) => {
     const html = findingsHtml({ ...snap, overview: { ...snap.overview, ...overview } }, { examples });
     return html.slice(html.indexOf('id="finding-output"'), html.indexOf('id="finding-tools"'));
   };
   const html = output({ stocks, catalog });
-  assert.match(html, />The existing tests passed on 1 of the 2 changes where the verifier found a violation<\/a><\/h2>/);
-  assert.match(html, /formal verifier: 2 violations found and 1 change verified, in a catalog of 5 examples\. Most were constructed for the catalog, with the systems and the tests they change\. A verified label is not a claim of a current, non-vacuous proof\./);
-  assert.match(html, /<dt>violations the catalog rates high or critical if they shipped unnoticed<\/dt><dd>1 of 2<\/dd>/);
+  // The claim is the project's own page's sentence, and the verdicts are in its words.
+  assert.match(html, />1 of 2 refuted example changes had passed their unit tests<\/a><\/h2>/);
+  assert.match(html, /formal verifier: 2 changes refuted and 1 established, in a catalog of 5 examples\. 4 have a verdict so far; the other one is prepared or catalogued, and not proved yet\. Most were constructed for the catalog, with the systems and the tests they change\. An established label is not a claim of a current, non-vacuous proof\./);
+  assert.match(html, /<dt>refuted changes the catalog rates high or critical if they shipped unnoticed<\/dt><dd>1 of 2<\/dd>/);
+  assert.match(html, /<ul class="sf-legend"><li><span class="sf-swatch sf-verdict-violation" aria-hidden="true"><\/span>Refuted: 2<\/li><li><span class="sf-swatch sf-verdict-verified" aria-hidden="true"><\/span>Established: 1<\/li><li><span class="sf-swatch sf-verdict-several" aria-hidden="true"><\/span>More than one verdict: 1<\/li><li><span class="sf-swatch sf-verdict-none" aria-hidden="true"><\/span>Not proved yet: 1<\/li>/);
+  assert.doesNotMatch(html, /Violation found|Unverifiable|verified label/);
   assert.match(html, /<dt>are changes to published libraries; 1 has a result so far<\/dt><dd>2<\/dd>/);
   // A square can be linked to and picked; a listed library change links its example at the snapshot's revision.
-  assert.match(html, /<span class="sf-cell sf-verdict-violation" id="example-001" data-example="001" data-tip="001 · Quorum: Title 001\. /);
+  assert.match(html, /<span class="sf-cell sf-verdict-violation" id="example-001" data-example="001" data-tip="001 · Quorum: Title 001\. Refuted: ✗ Violation: counterexample found"/);
+  // An example the catalog gives no single verdict is read from its label's marks: split between them, or not proved yet.
+  assert.match(html, /<span class="sf-cell sf-verdict-several sf-parts-violation-verified sf-cell-ring" id="example-004" data-example="004" data-tip="004 · A &lt;b&gt;Library&lt;\/b&gt;: Title 004\. Refuted and established: ✗ the bug found; ✓ confined"/);
+  assert.match(html, /<span class="sf-cell sf-verdict-none sf-cell-ring" id="example-005" data-example="005" data-tip="005 · Quorum: Title 005\. Not proved yet: not run: a catalog entry"/);
   assert.match(html, /<div class="sf-inspect" data-sf-inspect="example" hidden>/);
   assert.match(html, /<button type="button" data-sf-step="1">Show the first example<\/button>/);
   assert.ok(html.includes(`<li><strong>A &lt;b&gt;Library&lt;/b&gt;</strong> <a href="https://github.com/pilifs/in-the-loop/tree/${sha}/examples/004-slug">Title 004</a> <span class="sf-catalog-verdict">✗ the bug found; ✓ confined</span></li>`));
   assert.equal((html.match(/<li><strong>/g) ?? []).length, 1, 'the one that was not run is not listed');
   // No answers counted (an older snapshot), or none that passed: the claim counts verdicts and says no more.
   for (const older of [output({ stocks }), output({ stocks, catalog: { ...catalog, tests: { violation: { failed: 2 } } } })]) {
-    assert.match(older, />2 violations found and 1 change verified, in a catalog of 5 examples<\/a><\/h2>/);
-    assert.doesNotMatch(older, /existing tests passed/);
+    assert.match(older, />2 changes refuted and 1 established, in a catalog of 5 examples<\/a><\/h2>/);
+    assert.doesNotMatch(older, /had passed their unit tests/);
   }
   assert.doesNotMatch(output({ stocks }), /rates high or critical|Most were constructed/);
   // Without the records nothing can be picked.
@@ -718,7 +724,7 @@ test('an example’s record is the catalog’s own words, escaped, with links on
   const html = exampleRecordHtml(catalogExample('013', { title: 'A "longest log" <rule>', vacuous: true }), { sha });
   assert.match(html, /<p class="sf-example-kicker"><code>013<\/code> Quorum · Constructed for the catalog<\/p>/);
   assert.match(html, /<h3>A &quot;longest log&quot; &lt;rule&gt;<\/h3>/);
-  assert.match(html, /<span class="sf-swatch sf-verdict-violation" aria-hidden="true"><\/span>✗ Violation: counterexample found <span class="sf-tag">Vacuous<\/span>/);
+  assert.match(html, /<span class="sf-swatch sf-verdict-violation" aria-hidden="true"><\/span><span><strong>Refuted<\/strong> <span class="sf-example-label">✗ Violation: counterexample found<\/span> <span class="sf-tag">Vacuous<\/span><\/span><\/p>/);
   assert.match(html, /<p class="sf-example-summary">Every unit test passes\. The prover finds <code>vote\(a, b\)<\/code> &amp; more\.<\/p>/, 'the catalog’s backticks are code');
   assert.match(html, /<dt>Existing tests on the same patch<\/dt><dd>Passed<\/dd>/);
   assert.match(html, /<dt>Severity if it shipped unnoticed<\/dt><dd>Critical<\/dd>/);
@@ -726,15 +732,19 @@ test('an example’s record is the catalog’s own words, escaped, with links on
   assert.match(html, /<span class="sf-tag">stale-messages<\/span> <span class="sf-tag">consensus<\/span>/);
   assert.ok(html.includes(`<a href="https://github.com/pilifs/in-the-loop/tree/${sha}/examples/013-slug">The example, with its evidence</a>`));
   assert.doesNotMatch(html, /The change it verifies/);
-  const library = exampleRecordHtml(catalogExample('105', { origin: 'real-world', verdict: null, testsPassed: false, sourceUrl: 'https://example.invalid/pull/1', changeKind: 'bug-fix' }), { sha });
+  const library = exampleRecordHtml(catalogExample('105', { origin: 'real-world', verdict: null, verdictLabel: '✗ the <bug> found; ✓ confined; ⚠ one left', testsPassed: false, sourceUrl: 'https://example.invalid/pull/1', changeKind: 'bug-fix' }), { sha });
   assert.match(library, /· A change to a published library<\/p>/);
-  assert.match(library, /sf-verdict-none/);
+  assert.match(library, /<span class="sf-swatch sf-verdict-several sf-parts-violation-verified-unverifiable" aria-hidden="true"><\/span><span><strong>Refuted, established and left open<\/strong> <span class="sf-example-label">✗ the &lt;bug&gt; found; ✓ confined; ⚠ one left<\/span><\/span>/);
+  // One kind of mark is that verdict; no mark is an example not proved yet; a label that only names the verdict is not repeated.
+  assert.match(exampleRecordHtml(catalogExample('108', { verdict: null, verdictLabel: '⚠ unverifiable: solver budget' }), { sha }), /sf-swatch sf-verdict-unverifiable" aria-hidden="true"><\/span><span><strong>Left open<\/strong> <span class="sf-example-label">⚠ unverifiable: solver budget<\/span>/);
+  assert.match(exampleRecordHtml(catalogExample('288', { verdict: null, verdictLabel: 'not run: a catalog entry' }), { sha }), /sf-swatch sf-verdict-none" aria-hidden="true"><\/span><span><strong>Not proved yet<\/strong> <span class="sf-example-label">not run: a catalog entry<\/span>/);
+  assert.match(exampleRecordHtml(catalogExample('003', { verdict: 'verified', verdictLabel: '✓ Verified' }), { sha }), /<strong>Established<\/strong><\/span><\/p>/);
   assert.match(library, /<dd>Failed<\/dd>/);
   assert.match(library, /<dd>Bug fix<\/dd>/);
   assert.match(library, /<a href="https:\/\/example\.invalid\/pull\/1">The change it verifies<\/a>/);
   // A record from before these were carried, and a link that isn't https: nothing is made up, nothing is followed.
   const bare = exampleRecordHtml({ id: '1', title: 'T', origin: 'constructed', system: null, verdict: 'verified', verdictLabel: null, vacuous: null, freshness: null, tags: { domain: [], defect: [], technique: [] }, sourceUrl: 'javascript:alert(1)' }, { sha });
-  assert.match(bare, /No verdict/);
+  assert.match(bare, /<strong>Established<\/strong><\/span><\/p>/);
   assert.doesNotMatch(bare, /<dl|<a |sf-example-summary|sf-example-tags|javascript:/);
 });
 
@@ -749,8 +759,8 @@ const pageExamples = () => [
 ];
 const pageSnapshot = (overview = {}) => {
   const snap = snapshotOf(run());
-  const stocks = { ...snap.overview.stocks, examples: { total: 5, origin: { constructed: 3, 'real-world': 2 }, verdict: { violation: 2, verified: 1, none: 2 }, vacuous: 0, freshness: { current: 5 } } };
-  const catalog = { coverage: { included: 3, total: 5, missing: 2, note: 'examples whose entry says whether the existing tests passed' }, tests: { violation: { passed: 1, failed: 1 }, verified: { passed: 1 } }, severity: { violation: { critical: 1, low: 1 }, verified: { none: 1 }, none: { high: 1 } } };
+  const stocks = { ...snap.overview.stocks, examples: { total: 5, origin: { constructed: 3, 'real-world': 2 }, verdict: { violation: 2, verified: 1, several: 1, none: 1 }, vacuous: 0, freshness: { current: 5 } } };
+  const catalog = { coverage: { included: 3, total: 5, missing: 2, note: 'examples whose entry says whether the existing tests passed' }, tests: { violation: { passed: 1, failed: 1 }, verified: { passed: 1 } }, severity: { violation: { critical: 1, low: 1 }, verified: { none: 1 }, several: { high: 1 } } };
   return { ...snap, overview: { ...snap.overview, stocks, catalog, ...overview } };
 };
 
@@ -758,8 +768,17 @@ test('the catalog is cut by verdict, tests, severity, kind, system and defect, e
   const facets = catalogFacets(pageExamples());
   assert.deepEqual(facets.map((f) => f.key), ['verdict', 'tests', 'severity', 'kind', 'system', 'defect']);
   const of = (key) => facets.find((f) => f.key === key).values.map((v) => [v.token, v.label, v.n, v.violation, v.passed, v.said]);
-  // In the legend's order, with words; a library change with several verdicts counts under none.
-  assert.deepEqual(of('verdict'), [['verdict:violation', 'Violation found', 2, 2, 1, 2], ['verdict:verified', 'Verified', 1, 0, 0, 0], ['verdict:none', 'Several verdicts, or none yet', 2, 0, 0, 0]]);
+  // In the legend's order, in the project's own page's words; a library change with two kinds of mark in its label has more than one verdict.
+  assert.deepEqual(of('verdict'), [
+    ['verdict:violation', 'Refuted', 2, 2, 1, 2],
+    ['verdict:verified', 'Established', 1, 0, 0, 0],
+    ['verdict:several', 'More than one verdict', 1, 0, 0, 0],
+    ['verdict:none', 'Not proved yet', 1, 0, 0, 0],
+  ]);
+  assert.deepEqual([verdictsOf(pageExamples()[3]), verdictOf(pageExamples()[3]), verdictsOf(pageExamples()[4]), verdictOf(pageExamples()[4])], [['violation', 'verified'], 'several', [], 'none']);
+  // One kind of mark, however often, is that verdict; a verdict the catalog gives is taken as given.
+  assert.equal(verdictOf({ verdict: null, verdictLabel: '✗ one; ✗ two' }), 'violation');
+  assert.equal(verdictOf({ verdict: 'verified', verdictLabel: '✗ odd' }), 'verified');
   // Only the examples that say: the two library changes are in neither.
   assert.deepEqual(of('tests'), [['tests:passed', 'Passed', 2, 1, 1, 1], ['tests:failed', 'Failed', 1, 1, 0, 1]]);
   // Worst first, whatever the counts; kinds and systems by count, then by name.
@@ -777,23 +796,27 @@ test('what the lit squares say: how many, their verdicts, and what the tests did
   assert.equal(matchWords([v(), ['verdict:verified']], 2), 'Showing all 2 examples.');
   assert.equal(matchWords([], 183), 'None of the 183 examples matches.');
   assert.equal(
-    matchWords([v('tests:passed', 'severe'), v('tests:passed'), v('tests:failed', 'severe'), ['verdict:verified', 'tests:passed'], ['verdict:unverifiable'], ['verdict:none', 'severe']], 183),
-    '6 of 183 examples: 3 violations found, 1 verified, 1 unverifiable, 1 with several verdicts or none yet. The existing tests passed on 2 of the 3 violations; 2 are rated high or critical.'
+    matchWords([v('tests:passed', 'severe'), v('tests:passed'), v('tests:failed', 'severe'), ['verdict:verified', 'tests:passed'], ['verdict:unverifiable'], ['verdict:several'], ['verdict:none', 'severe']], 183),
+    '7 of 183 examples: 3 refuted, 1 established, 1 left open, 1 with more than one verdict, 1 not proved yet. The existing tests passed on 2 of the 3 refuted changes; 2 are rated high or critical.'
   );
-  assert.equal(matchWords([v('tests:failed', 'severe'), v('tests:failed')], 9), '2 of 9 examples: 2 violations found. The existing tests failed on all 2 violations; 1 is rated high or critical.');
-  assert.equal(matchWords([v('tests:passed'), v('tests:passed'), v()], 9), '3 of 9 examples: 3 violations found. The existing tests passed on all 2 violations that say.');
-  assert.equal(matchWords([v('tests:passed')], 9), '1 of 9 examples: 1 violation found. The existing tests passed on the one violation.');
-  // Nothing about tests where there is no violation, or none that says.
-  assert.equal(matchWords([['verdict:verified', 'tests:failed']], 9), '1 of 9 examples: 1 verified.');
-  assert.equal(matchWords([v('severe')], 9), '1 of 9 examples: 1 violation found.');
+  assert.equal(matchWords([v('tests:failed', 'severe'), v('tests:failed')], 9), '2 of 9 examples: 2 refuted. The existing tests failed on all 2 refuted changes; 1 is rated high or critical.');
+  assert.equal(matchWords([v('tests:passed'), v('tests:passed'), v()], 9), '3 of 9 examples: 3 refuted. The existing tests passed on all 2 refuted changes that say.');
+  assert.equal(matchWords([v('tests:passed')], 9), '1 of 9 examples: 1 refuted. The existing tests passed on the one refuted change.');
+  // Nothing about tests where nothing is refuted, or none that says.
+  assert.equal(matchWords([['verdict:verified', 'tests:failed']], 9), '1 of 9 examples: 1 established.');
+  assert.equal(matchWords([v('severe')], 9), '1 of 9 examples: 1 refuted.');
 });
 
 test('the catalog’s page: the claim, a grid that can be narrowed and picked, and the catalog cut four ways', () => {
   const snap = pageSnapshot();
   const html = examplesHtml(snap, pageExamples());
-  assert.match(html, /<h1 id="sf-examples-title">The existing tests passed on 1 of the 2 changes where the verifier found a violation<\/h1>/);
-  assert.match(html, /so this describes the catalog and not how often tests miss a defect elsewhere\./);
-  assert.match(html, /<dt>Tests passed on a violation<\/dt><dd><span class="sf-figure-value">1 of 2<\/span>/);
+  assert.match(html, /<h1 id="sf-examples-title">1 of 2 refuted example changes had passed their unit tests<\/h1>/);
+  assert.match(html, /2 changes refuted and 1 established, in a catalog of 5 examples\. 4 have a verdict so far; the other one is prepared or catalogued, and not proved yet\. Most were constructed for the catalog, with the systems and the tests they change, so this describes the catalog and not how often tests miss a defect elsewhere\. An established label is not a claim of a current, non-vacuous proof\./);
+  assert.match(html, /<dt>Examples<\/dt><dd><span class="sf-figure-value">5<\/span><span class="sf-figure-note">4 with a verdict so far, 3 constructed for the catalog<\/span>/);
+  assert.match(html, /<dt>Refuted<\/dt><dd><span class="sf-figure-value">2<\/span>/);
+  assert.match(html, /<dt>Established<\/dt><dd><span class="sf-figure-value">1<\/span>/);
+  assert.match(html, /<dt>Unit tests passed on a refuted change<\/dt><dd><span class="sf-figure-value">1 of 2<\/span>/);
+  assert.doesNotMatch(html, /Violations? found|No violations|a violation|violations[ .,;<]|Unverifiable<|[Vv]erified label|Several verdicts/, 'the page’s older words for a verdict are gone; a label of the catalog’s is quoted as written');
   assert.match(html, /<dt>Changes to published libraries<\/dt><dd><span class="sf-figure-value">2<\/span><span class="sf-figure-note">1 with a result so far<\/span>/);
   assert.match(html, /Coverage: 3 of 5 examples whose entry says whether the existing tests passed · /);
   // The lists that narrow the grid wait for the script; each value says how many it has.
@@ -806,24 +829,24 @@ test('the catalog’s page: the claim, a grid that can be narrowed and picked, a
   const cell = (id) => html.match(new RegExp(`<span class="sf-cell [^>]*id="example-${id}"[^>]*>`))[0];
   assert.match(cell('001'), /data-f="verdict:violation tests:passed severity:0 kind:2 system:0 defect:0 severe"/);
   assert.match(cell('002'), /data-f="verdict:violation tests:failed severity:2 kind:0 system:3 defect:1 defect:0"/);
-  assert.match(cell('004'), /class="sf-cell sf-verdict-none sf-cell-ring"[^>]*data-f="verdict:none severity:1 kind:0 system:1 defect:0 origin:library severe"/);
+  assert.match(cell('004'), /class="sf-cell sf-verdict-several sf-parts-violation-verified sf-cell-ring"[^>]*data-f="verdict:several severity:1 kind:0 system:1 defect:0 origin:library severe"/);
   assert.match(cell('005'), /data-f="verdict:none system:2 origin:library"/);
   // Places to start, each a set of tokens, and only those that have something.
-  assert.match(html, /<span class="sf-starts" data-sf-starts hidden>Start with <a href="#every-example" data-sf-show="verdict:violation tests:failed">the 1 violation the existing tests also caught<\/a>, <a href="#every-example" data-sf-show="verdict:violation severity:0">the 1 violation rated critical<\/a>, or <a href="#every-example" data-sf-show="origin:library">the 2 changes to published libraries<\/a>\.<\/span>/);
+  assert.match(html, /<span class="sf-starts" data-sf-starts hidden>Start with <a href="#every-example" data-sf-show="verdict:violation tests:failed">the 1 refuted change the existing tests also caught<\/a>, <a href="#every-example" data-sf-show="verdict:violation severity:0">the 1 refuted change rated critical<\/a>, or <a href="#every-example" data-sf-show="origin:library">the 2 changes to published libraries<\/a>\.<\/span>/);
   assert.match(html, /<div class="sf-inspect" data-sf-inspect="example" hidden>/);
   // Every title, for a reader who can't use the picture: a link picks the example.
   assert.equal((html.match(/<li data-for="/g) ?? []).length, 5);
   assert.match(html, /<li data-for="002"><span class="sf-swatch sf-verdict-violation" aria-hidden="true"><\/span><a href="#example-002"><code>002<\/code> Title 002<\/a> <span class="sf-muted">Box &lt;Office&gt;<\/span><\/li>/);
   // The tables: a row's name narrows the grid, its bar is its examples by verdict.
   const table = (id) => html.slice(html.indexOf(`id="${id}"`), html.indexOf('</section>', html.indexOf(`id="${id}"`)));
-  assert.match(table('examples-by-kind'), /The largest group is bug fix: 1 of its 2 examples has a violation, and the existing tests passed on 0 of them\./);
+  assert.match(table('examples-by-kind'), /The largest group is bug fix: 1 of its 2 examples is refuted, and the existing tests passed on 0 of them\./);
   assert.match(
     table('examples-by-kind'),
-    /<tr><th scope="row"><a href="#every-example" data-sf-show="kind:0">Bug fix<\/a><\/th><td>2<span class="sf-split-box" aria-hidden="true"><span class="sf-split" style="width:100\.0%"><span class="sf-verdict-violation" style="flex:1"><\/span><span class="sf-verdict-none" style="flex:1"><\/span><\/span><\/span><\/td><td>1<\/td><td>0 of 1<\/td><\/tr>/
+    /<tr><th scope="row"><a href="#every-example" data-sf-show="kind:0">Bug fix<\/a><\/th><td>2<span class="sf-split-box" aria-hidden="true"><span class="sf-split" style="width:100\.0%"><span class="sf-verdict-violation" style="flex:1"><\/span><span class="sf-verdict-several" style="flex:1"><\/span><\/span><\/span><\/td><td>1<\/td><td>0 of 1<\/td><\/tr>/
   );
-  assert.match(table('examples-by-kind'), /data-sf-show="kind:1">Feature<\/a><\/th><td>1<span[\s\S]*?<\/td><td>0<\/td><td><span class="sf-muted">No violations<\/span><\/td>/);
+  assert.match(table('examples-by-kind'), /data-sf-show="kind:1">Feature<\/a><\/th><td>1<span[\s\S]*?<\/td><td>0<\/td><td><span class="sf-muted">None refuted<\/span><\/td>/);
   // The libraries are one row, by where they come from.
-  assert.match(table('examples-by-system'), /Two systems were written for the catalog\. The 2 published libraries are open-source code/);
+  assert.match(table('examples-by-system'), /Two systems were written for the catalog\. The 2 published libraries are open-source code the catalog did not write\.<\/p>/);
   assert.deepEqual([...table('examples-by-system').matchAll(/data-sf-show="([^"]+)">([^<]+)</g)].map((m) => [m[1], m[2]]), [['system:0', 'Quorum'], ['system:3', 'Box &lt;Office&gt;'], ['origin:library', 'Published libraries']]);
   assert.match(table('examples-by-system'), /Published libraries<\/a><\/th><td>2<span[\s\S]*?<\/td><td>0<\/td>/);
   assert.match(table('examples-by-defect'), /An example can have several, and 2 have none\./);
@@ -836,16 +859,16 @@ test('the catalog’s page without its records, or without a catalog: what the o
   const snap = pageSnapshot();
   for (const records of [null, pageExamples().slice(1)]) {
     const html = examplesHtml(snap, records);
-    assert.match(html, /<h1 id="sf-examples-title">The existing tests passed on 1 of the 2 changes/);
+    assert.match(html, /<h1 id="sf-examples-title">1 of 2 refuted example changes had passed their unit tests/);
     assert.equal((html.match(/<span class="sf-cell /g) ?? []).length, 5, 'a square for each example the overview counts');
     assert.match(html, /The catalog’s records aren’t at hand, so none is named and nothing is cut further\./);
     assert.doesNotMatch(html, /data-sf-facets|data-example|data-sf-inspect|sf-breakdown|data-sf-show/);
   }
   // A snapshot from before the answers were counted leads with the verdicts and makes no claim about tests.
   const older = examplesHtml(pageSnapshot({ catalog: undefined }), pageExamples().map(({ severity, changeKind, testsPassed, ...x }) => x));
-  assert.match(older, /<h1 id="sf-examples-title">2 violations found and 1 change verified, in a catalog of 5 examples<\/h1>/);
-  assert.match(older, /Coverage: 3 of 5 examples with a verdict · /);
-  assert.doesNotMatch(older, /existing tests|examples-by-kind|examples-by-severity|rated critical/);
+  assert.match(older, /<h1 id="sf-examples-title">2 changes refuted and 1 established, in a catalog of 5 examples<\/h1>/);
+  assert.match(older, /Coverage: 4 of 5 examples with a verdict · /);
+  assert.doesNotMatch(older, /existing tests|unit tests|examples-by-kind|examples-by-severity|rated critical/);
   assert.match(older, /id="examples-by-system"/);
   const none = pageSnapshot();
   none.overview.stocks = { ...none.overview.stocks, examples: { total: 0, origin: {}, verdict: {}, vacuous: 0, freshness: {} } };
@@ -1288,11 +1311,11 @@ test('the finding and the catalog’s page say what the violations come with, wh
   const counted = (counterexamples) => pageSnapshot({ catalog: { ...pageSnapshot().overview.catalog, counterexamples, attempts: { timed: 1, medianSeconds: 2 } } });
   const all = counted({ violations: 2, input: 1, trace: 1 });
   const finding = findingsHtml(all, { examples: records });
-  assert.match(finding, /<dt>violations come with a counterexample: 1 an input, 1 a trace<\/dt><dd>2 of 2<\/dd>/);
+  assert.match(finding, /<dt>refuted changes come with a counterexample: 1 an input, 1 a trace<\/dt><dd>2 of 2<\/dd>/);
   assert.doesNotMatch(finding, /verification jobs passed/);
   assert.match(finding, /Pick a square to read what the example changed and the counterexample the verifier found\./);
   const page = examplesHtml(all, records);
-  assert.match(page, /<dt>Violations found<\/dt><dd><span class="sf-figure-value">2<\/span><span class="sf-figure-note">each with a counterexample: 1 an input, 1 a trace<\/span>/);
+  assert.match(page, /<dt>Refuted<\/dt><dd><span class="sf-figure-value">2<\/span><span class="sf-figure-note">each with a counterexample: 1 an input, 1 a trace<\/span>/);
   // The grid can be narrowed by what the counterexample is, and a square carries it.
   assert.match(page, /<label>Counterexample <select name="shown" data-sf-facet><option value="">Any<\/option><option value="shown:0">An input \(1\)<\/option><option value="shown:1">A trace \(1\)<\/option><\/select><\/label>/);
   assert.match(page, /id="example-001"[^>]*data-f="[^"]*shown:0[^"]*"/);

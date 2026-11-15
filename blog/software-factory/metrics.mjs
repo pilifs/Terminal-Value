@@ -63,7 +63,20 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '7' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '8' };
+
+// An example's verdict as the pages count it. The catalog gives most examples
+// one verdict. Where it gives none, the label may still record a result for
+// each claim with the catalog's own marks. One kind of mark is that verdict,
+// more than one kind is `several`, and no mark is `none`: not proved yet.
+// Since generator 8.
+const VERDICT_MARKS = { '\u2717': 'violation', '\u2713': 'verified', '\u26a0': 'unverifiable' };
+const VERDICT_WORDS = { violation: 'Refuted', verified: 'Established', unverifiable: 'Left open', several: 'More than one verdict', none: 'Not proved yet' };
+export function verdictKey(x) {
+  if (x.verdict !== null && x.verdict !== undefined) return x.verdict;
+  const marked = Object.keys(VERDICT_MARKS).filter((mark) => (x.verdictLabel ?? '').includes(mark));
+  return marked.length > 1 ? 'several' : marked.length ? VERDICT_MARKS[marked[0]] : 'none';
+}
 
 const STATUSES = ['passed', 'failed'];
 // The source's kind for the loop a person ran by hand, before the script existed.
@@ -260,7 +273,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const withMetrics = sessions.filter((s) => s.hasMetrics).length;
   const durations = completed.map((r) => validSeconds(r.wallSeconds)).filter((s) => s !== null).sort((a, b) => a - b);
   const medianSeconds = median(durations);
-  const exampleVerdicts = examples.filter((x) => x.verdict !== null).length;
+  const exampleVerdicts = examples.filter((x) => verdictKey(x) !== 'none').length;
   const coverage = {
     usage: { included: priced.length, total: calls.length, missing: calls.length - priced.length },
     calls: { included: withMetrics, total: sessions.length, missing: sessions.length - withMetrics, note: 'sessions with a metrics file' },
@@ -287,7 +300,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     examples: {
       total: examples.length,
       origin: countBy(examples, (x) => x.origin),
-      verdict: countBy(examples, (x) => x.verdict ?? 'none'),
+      verdict: countBy(examples, verdictKey),
       vacuous: examples.filter((x) => x.vacuous === true).length,
       freshness: countBy(examples, (x) => x.freshness ?? 'absent'),
     },
@@ -298,8 +311,8 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   // change. An example with no answer is in neither count.
   const tested = examples.filter((x) => typeof x.testsPassed === 'boolean');
   const byVerdict = (rows, key) =>
-    Object.fromEntries(Object.entries(Object.groupBy(rows, (x) => x.verdict ?? 'none')).map(([verdict, list]) => [verdict, countBy(list, key)]));
-  const violations = examples.filter((x) => x.verdict === 'violation');
+    Object.fromEntries(Object.entries(Object.groupBy(rows, verdictKey)).map(([verdict, list]) => [verdict, countBy(list, key)]));
+  const violations = examples.filter((x) => verdictKey(x) === 'violation');
   const timed = examples
     .map((x) => x.evidence?.seconds)
     .filter((s) => typeof s === 'number')
@@ -374,7 +387,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     },
     { id: 'examples-by-system', metricId: 'examples_catalog', dimension: 'exampleSystem', scope: 'snapshot', rows: catalogRows(countBy(examples, (x) => x.system ?? 'none'), (k) => (k === 'none' ? 'No system' : k)), coverage: { included: examples.filter((x) => x.system).length, total: examples.length } },
     { id: 'examples-by-origin', metricId: 'examples_catalog', dimension: 'exampleOrigin', scope: 'snapshot', rows: catalogRows(stocks.examples.origin, (k) => k), coverage: { included: examples.length, total: examples.length } },
-    { id: 'examples-by-verdict', metricId: 'examples_catalog', dimension: 'verdict', scope: 'snapshot', rows: catalogRows(stocks.examples.verdict, (k) => (k === 'none' ? 'No verdict' : k)), coverage: coverage.catalog },
+    { id: 'examples-by-verdict', metricId: 'examples_catalog', dimension: 'verdict', scope: 'snapshot', rows: catalogRows(stocks.examples.verdict, (k) => VERDICT_WORDS[k] ?? k), coverage: coverage.catalog },
   ];
 
   // Insights: config/metrics.json's templates over the values above. Descriptive only.

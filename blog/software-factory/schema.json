@@ -221,7 +221,7 @@
               "properties": {
                 "total": { "type": "integer", "minimum": 0 },
                 "origin": { "type": "object", "additionalProperties": { "type": "integer" } },
-                "verdict": { "type": "object", "additionalProperties": { "type": "integer" } },
+                "verdict": { "type": "object", "description": "Examples by verdict. The catalog's own verdict where it gives one. Where it gives none, the marks in the example's label: one kind of mark is that verdict, more than one kind is several, no mark is none. Since generator 8; before it, every example without a single verdict was none.", "additionalProperties": { "type": "integer" } },
                 "vacuous": { "type": "integer", "minimum": 0 },
                 "freshness": { "type": "object", "additionalProperties": { "type": "integer" } }
               }
@@ -1033,7 +1033,7 @@
     },
 
     "catalogOverview": {
-      "description": "The example catalog's own answers about each example, counted by verdict (none for an example with no single verdict), and what its violations come with. Since generator 4.",
+      "description": "The example catalog's own answers about each example, counted by verdict as stocks.examples.verdict has it, and what its violations come with. Since generator 4.",
       "type": "object",
       "required": ["coverage", "tests", "severity"],
       "additionalProperties": false,

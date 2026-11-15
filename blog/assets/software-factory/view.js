@@ -2,7 +2,7 @@
 // default view) and the browser (app.js, after a filter or the snapshot
 // changes). Strings in, strings out: no DOM, no Node APIs.
 
-import { escapeHtml as e, formatCoverage, formatDay, formatValue, UNIT_WORDS } from './format.js';
+import { escapeHtml as e, formatCoverage, formatDay, formatValue, UNIT_WORDS, VERDICTS } from './format.js';
 import { METRICS, torontoDay } from './measures-local.js';
 import { DEFAULT_STATE, filterText, modelLabel, PERIOD_LABELS, periodText } from './state.js';
 
@@ -120,11 +120,13 @@ export function stockTexts(stocks) {
       .map(([k, n]) => `${n} ${k}`)
       .join(', ');
   const ex = stocks.examples;
+  // Verdicts in the legend's order and words; a key with no word of its own is said as it is.
+  const verdicts = [...VERDICTS.filter((v) => ex.verdict[v.key]).map((v) => `${ex.verdict[v.key]} ${v.word}`), ...Object.entries(ex.verdict).filter(([k]) => !VERDICTS.some((v) => v.key === k)).map(([k, n]) => `${n} ${k}`)].join(', ');
   return {
     changes: { value: formatValue(stocks.changes.total, 'changes'), note: `${stocks.changes.housekeeping} of them trace-publication housekeeping, counted apart` },
     examples: {
       value: formatValue(ex.total, 'examples'),
-      note: `Origin: ${counts(ex.origin)}. Verdict: ${counts(ex.verdict)}. Vacuous: ${ex.vacuous}. Freshness: ${counts(ex.freshness)}.`,
+      note: `Origin: ${counts(ex.origin)}. Verdict: ${verdicts}. Vacuous: ${ex.vacuous}. Freshness: ${counts(ex.freshness)}.`,
     },
   };
 }

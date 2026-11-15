@@ -8,7 +8,7 @@
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
 import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, ratesHtml, scaleHtml, scatterSvg } from './figures.js';
-import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
+import { escapeHtml as e, formatCoverage, formatDay, formatValue, VERDICTS } from './format.js';
 import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
 const REPO = 'https://github.com/pilifs/in-the-loop';
@@ -1607,17 +1607,46 @@ function usageFinding(overview) {
   });
 }
 
-// The catalog's verdicts, in the order the legend lists them. An example with
-// no single verdict has several in its label, or none yet.
-const VERDICTS = [
-  { key: 'violation', label: 'Violation found' },
-  { key: 'verified', label: 'Verified' },
-  { key: 'unverifiable', label: 'Unverifiable' },
-  { key: 'none', label: 'Several verdicts, or none yet' },
-];
+// The verdicts an example can have alone: the first three of the legend's (format.js).
+const SINGLE = VERDICTS.slice(0, 3);
 const LIBRARY = 'real-world';
+// The catalog's own mark for each verdict, as its labels write them.
+const MARKS = [
+  ['✗', 'violation'],
+  ['✓', 'verified'],
+  ['⚠', 'unverifiable'],
+];
+/**
+ * The verdicts an example has. Most have the one the catalog gives. Where it
+ * gives none, the label may still record a result for each claim with the
+ * catalog's marks: those are read, each verdict once, in the legend's order.
+ * [] for an example with no result yet.
+ */
+export function verdictsOf(x) {
+  if (SINGLE.some((v) => v.key === x.verdict)) return [x.verdict];
+  const label = x.verdictLabel ?? '';
+  return MARKS.filter(([mark]) => label.includes(mark)).map(([, key]) => key);
+}
+/** How an example is counted: by its one verdict, as having more than one, or as not proved yet. */
+export function verdictOf(x) {
+  const all = verdictsOf(x);
+  return all.length > 1 ? 'several' : (all[0] ?? 'none');
+}
 // A label that records a result carries one of the catalog's own marks.
-const hasResult = (x) => /[✓✗⚠]/.test(x.verdictLabel ?? '');
+const hasResult = (x) => verdictsOf(x).length > 0;
+const wordOf = (key) => VERDICTS.find((v) => v.key === key);
+// The classes of an example's swatch or square: more than one verdict is drawn as its parts.
+const verdictParts = (x) => (verdictOf(x) === 'several' ? verdictsOf(x) : null);
+const verdictClass = (x) => `sf-verdict-${verdictOf(x)}${verdictParts(x) ? ` sf-parts-${verdictParts(x).join('-')}` : ''}`;
+// An example's verdicts in words: "Refuted", "Refuted and established", "Not proved yet".
+const verdictWords = (x) => {
+  const all = verdictsOf(x);
+  if (!all.length) return wordOf('none').label;
+  return sentence(all.map((k) => wordOf(k).word).join(all.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1'));
+};
+// The catalog's label, where it says more than the verdict's own name.
+const BARE = /^[✓✗⚠]\s*(Violation|Verified|Unverifiable)$/i;
+const labelBeside = (x) => (x.verdictLabel && !BARE.test(x.verdictLabel.trim()) ? x.verdictLabel : null);
 
 const SEVERE = ['critical', 'high'];
 const WORDS_OF = { 'bug-fix': 'Bug fix', refactor: 'Refactor', feature: 'Feature', cleanup: 'Cleanup', logging: 'Logging', configuration: 'Configuration' };
@@ -1692,7 +1721,9 @@ export function exampleRecordHtml(x, { sha }) {
   return `<article class="sf-example">
             <p class="sf-example-kicker"><code>${e(x.id)}</code>${x.system ? ` ${e(x.system)}` : ''} · ${x.origin === LIBRARY ? 'A change to a published library' : 'Constructed for the catalog'}</p>
             <h3>${e(x.title)}</h3>
-            <p class="sf-example-verdict"><span class="sf-swatch sf-verdict-${e(x.verdict ?? 'none')}" aria-hidden="true"></span>${e(x.verdictLabel ?? 'No verdict')}${x.vacuous ? ' <span class="sf-tag">Vacuous</span>' : ''}</p>
+            <p class="sf-example-verdict"><span class="sf-swatch ${verdictClass(x)}" aria-hidden="true"></span><span><strong>${e(verdictWords(x))}</strong>${labelBeside(x) ? ` <span class="sf-example-label">${e(labelBeside(x))}</span>` : ''}${
+              x.vacuous ? ' <span class="sf-tag">Vacuous</span>' : ''
+            }</span></p>
             ${x.summary ? `<p class="sf-example-summary">${prose(x.summary)}</p>` : ''}
             ${evidenceHtml(x)}
             ${facts.length ? `<dl class="sf-example-facts">${facts.map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl>` : ''}
@@ -1714,38 +1745,45 @@ function catalogFacts(snapshot, examples) {
   const n = (key) => stock.verdict?.[key] ?? 0;
   const named = Array.isArray(examples) && examples.length === stock.total ? examples : null;
   // The catalog's own answers, when the snapshot counts them: of the changes
-  // where the verifier found a violation, how many the existing tests passed,
-  // and how many it rates severe.
+  // the verifier refuted, how many the existing tests passed, and how many it
+  // rates severe.
   const answers = overview.catalog ?? null;
   const tests = answers?.tests?.violation ?? null;
   const said = tests ? (tests.passed ?? 0) + (tests.failed ?? 0) : 0;
   const passed = said ? (tests.passed ?? 0) : 0;
   const severity = answers?.severity?.violation ?? null;
-  const counts = `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`;
+  const counts = `${plural(n('violation'), 'change')} refuted and ${count(n('verified'))} established, in a catalog of ${plural(stock.total, 'example')}`;
+  // Those with a verdict so far: all but the ones not proved yet.
+  const decided = stock.total - n('none');
   const libraries = stock.origin?.[LIBRARY] ?? 0;
   return {
     sha: manifest.source.sha,
     stock,
     n,
+    decided,
     named,
     libraries,
     withResult: named ? named.filter((x) => x.origin === LIBRARY && hasResult(x)) : [],
     answers,
     said,
     passed,
-    // What the violations come with, when the snapshot counts it: an input, or a trace.
+    // What the refuted changes come with, when the snapshot counts it: an input, or a trace.
     shown: answers?.counterexamples && answers.counterexamples.input + answers.counterexamples.trace > 0 ? answers.counterexamples : null,
     rated: severity ? Object.values(severity).reduce((t, v) => t + v, 0) : 0,
     severe: severity ? SEVERE.reduce((t, k) => t + (severity[k] ?? 0), 0) : 0,
     counts,
-    claim: said && passed ? `The existing tests passed on ${count(passed)} of the ${count(said)} changes where the verifier found a violation` : counts,
+    // The project's own page says it in these words.
+    claim: said && passed ? (said === 1 ? 'The one refuted example change had passed its unit tests' : `${count(passed)} of ${count(said)} refuted example changes had passed their unit tests`) : counts,
     legend: `<ul class="sf-legend">${VERDICTS.filter((v) => n(v.key))
       .map((v) => `<li><span class="sf-swatch sf-verdict-${v.key}" aria-hidden="true"></span>${e(v.label)}: ${count(n(v.key))}</li>`)
       .join('')}${named && libraries ? '<li><span class="sf-swatch sf-verdict-none sf-cell-ring" aria-hidden="true"></span>A change to a published library</li>' : ''}</ul>`,
   };
 }
 
-const cellTip = (x) => `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${x.verdictLabel ?? 'No verdict'}${x.vacuous ? ' (vacuous)' : ''}`;
+const cellTip = (x) => `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${verdictWords(x)}${labelBeside(x) ? `: ${labelBeside(x)}` : ''}${x.vacuous ? ' (vacuous)' : ''}`;
+const cellOf = (x) => ({ id: x.id, key: verdictOf(x), parts: verdictParts(x), ring: x.origin === LIBRARY, tip: cellTip(x) });
+// Those with a verdict so far, said where some examples have none: the project's own page counts them the same way.
+const withVerdict = (c) => (c.decided < c.stock.total ? `${count(c.decided)} have a verdict so far; the other ${c.stock.total - c.decided === 1 ? 'one is' : `${count(c.stock.total - c.decided)} are`} prepared or catalogued, and not proved yet. ` : '');
 // Without the records the squares are counted from the overview, by verdict, and none is named.
 const countedCells = (c) => VERDICTS.flatMap((v) => Array.from({ length: c.n(v.key) }, () => ({ key: v.key, ring: false, tip: v.label })));
 
@@ -1759,7 +1797,7 @@ function outputFinding(snapshot, examples) {
   const c = catalogFacts(snapshot, examples);
   if (!c) return '';
   const { sha, stock, named, libraries } = c;
-  const cells = named ? named.map((x) => ({ id: x.id, key: x.verdict ?? 'none', ring: x.origin === LIBRARY, tip: cellTip(x) })) : countedCells(c);
+  const cells = named ? named.map(cellOf) : countedCells(c);
   const shown = c.withResult;
   const titled = (x) => (exampleUrl(x, sha) ? `<a href="${e(exampleUrl(x, sha))}">${e(x.title)}</a>` : e(x.title));
   const list = shown.length
@@ -1779,15 +1817,15 @@ function outputFinding(snapshot, examples) {
     eyebrow: 'Output',
     wide: true,
     claim: c.claim,
-    lede: `Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${
+    lede: `Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${withVerdict(c)}${
       c.said ? 'Most were constructed for the catalog, with the systems and the tests they change. ' : ''
-    }A verified label is not a claim of a current, non-vacuous proof${
+    }An established label is not a claim of a current, non-vacuous proof${
       stock.vacuous ? `: ${plural(stock.vacuous, 'proof')} ${stock.vacuous === 1 ? 'is' : 'are'} recorded as vacuous` : ''
     }. <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a>`,
     facts: [
-      // What a violation comes with leads when the snapshot counts it; the verification jobs stand in when it doesn't.
-      c.shown ? [`${count(c.shown.input + c.shown.trace)} of ${count(c.shown.violations)}`, `violations come with a counterexample: ${count(c.shown.input)} an input, ${count(c.shown.trace)} a trace`] : null,
-      c.rated && c.severe ? [`${count(c.severe)} of ${count(c.rated)}`, 'violations the catalog rates high or critical if they shipped unnoticed'] : null,
+      // What a refuted change comes with leads when the snapshot counts it; the verification jobs stand in when it doesn't.
+      c.shown ? [`${count(c.shown.input + c.shown.trace)} of ${count(c.shown.violations)}`, `refuted changes come with a counterexample: ${count(c.shown.input)} an input, ${count(c.shown.trace)} a trace`] : null,
+      c.rated && c.severe ? [`${count(c.severe)} of ${count(c.rated)}`, 'refuted changes the catalog rates high or critical if they shipped unnoticed'] : null,
       libraries ? [count(libraries), `${libraries === 1 ? 'is a change' : 'are changes'} to published libraries${shown.length ? `; ${count(shown.length)} ${shown.length === 1 ? 'has' : 'have'} a result so far` : ''}`] : null,
       !c.shown && jobs.length ? [`${count(jobsPassed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
     ],
@@ -1804,15 +1842,14 @@ function outputFinding(snapshot, examples) {
 
 const SEVERITY = ['critical', 'high', 'medium', 'low', 'none'];
 const lower = (words) => (words ? words[0].toLowerCase() + words.slice(1) : words);
-const tally = () => ({ n: 0, violation: 0, verified: 0, unverifiable: 0, none: 0, passed: 0, said: 0 });
-const verdictOf = (x) => (VERDICTS.some((v) => v.key === x.verdict) ? x.verdict : 'none');
+const tally = () => ({ n: 0, violation: 0, verified: 0, unverifiable: 0, several: 0, none: 0, passed: 0, said: 0 });
 
 /**
  * The ways the catalog's page cuts the examples: by verdict, by whether the
  * existing tests passed, by severity, kind of change, system, kind of defect
  * and what a counterexample is (an input, or a model checker's trace). Each value has a token (`kind:0`) that a square of the grid carries,
  * so the page's script can narrow the grid without the records, and counts by
- * verdict; `passed` of `said` are the violations whose tests passed, of those
+ * verdict; `passed` of `said` are the refuted changes whose tests passed, of those
  * that say. A facet no example has a value for is left out.
  */
 export function catalogFacets(examples) {
@@ -1867,7 +1904,7 @@ function tokensOf(x, facets) {
 
 /**
  * What the squares still lit say, in a sentence: how many, their verdicts,
- * and what the existing tests did on the violations among them. `matches` is
+ * and what the existing tests did on the refuted changes among them. `matches` is
  * the tokens of each, `total` the squares in all.
  */
 export function matchWords(matches, total) {
@@ -1876,16 +1913,11 @@ export function matchWords(matches, total) {
   if (!m) return `None of the ${plural(total, 'example')} matches.`;
   const has = (...tokens) => matches.filter((f) => tokens.every((t) => f.includes(t))).length;
   const violations = has('verdict:violation');
-  const verdicts = [
-    violations ? `${plural(violations, 'violation')} found` : null,
-    has('verdict:verified') ? `${count(has('verdict:verified'))} verified` : null,
-    has('verdict:unverifiable') ? `${count(has('verdict:unverifiable'))} unverifiable` : null,
-    has('verdict:none') ? `${count(has('verdict:none'))} with several verdicts or none yet` : null,
-  ].filter(Boolean);
+  const verdicts = VERDICTS.map((v) => (has(`verdict:${v.key}`) ? `${count(has(`verdict:${v.key}`))} ${v.word}` : null)).filter(Boolean);
   const passed = has('verdict:violation', 'tests:passed');
   const said = passed + has('verdict:violation', 'tests:failed');
   const severe = has('verdict:violation', SEVERE_TOKEN);
-  const which = said === 1 ? 'the one violation' : `${passed === said || !passed ? 'all ' : `${count(passed)} of the `}${count(said)} violations`;
+  const which = said === 1 ? 'the one refuted change' : `${passed === said || !passed ? 'all ' : `${count(passed)} of the `}${count(said)} refuted changes`;
   const tests = said
     ? ` The existing tests ${passed ? 'passed' : 'failed'} on ${which}${said < violations ? ' that say' : ''}${severe ? `; ${count(severe)} ${severe === 1 ? 'is' : 'are'} rated high or critical` : ''}.`
     : '';
@@ -1895,7 +1927,7 @@ export function matchWords(matches, total) {
 // A row's examples as a bar beside their count: its length is the count, its colours the verdicts.
 const splitBar = (v, most) =>
   `<span class="sf-split-box" aria-hidden="true"><span class="sf-split" style="width:${most ? ((v.n / most) * 100).toFixed(1) : 0}%">${VERDICTS.filter((k) => v[k.key])
-    .map((k) => `<span class="sf-verdict-${k.key}" style="flex:${v[k.key]}"></span>`)
+    .map((k) => `<span class="sf-verdict-${k.key}" style="flex:${v[k.key]}"></span>`) // more than one verdict is striped here, not split
     .join('')}</span></span>`;
 
 /** One cut of the catalog as a table: a row narrows the grid above to its examples. */
@@ -1906,14 +1938,14 @@ function facetTable({ id, title, caption, head, rows }) {
     .map(
       (r) =>
         `<tr><th scope="row"><a href="#every-example" data-sf-show="${e(r.token)}">${e(r.label)}</a></th><td>${count(r.n)}${splitBar(r, most)}</td><td>${count(r.violation)}</td><td>${
-          r.said ? `${count(r.passed)} of ${count(r.said)}` : `<span class="sf-muted">${r.violation ? 'Not said' : 'No violations'}</span>`
+          r.said ? `${count(r.passed)} of ${count(r.said)}` : `<span class="sf-muted">${r.violation ? 'Not said' : 'None refuted'}</span>`
         }</td></tr>`
     )
     .join('');
   return `<section class="sf-breakdown" id="${id}" aria-labelledby="${id}-title">
             <h3 id="${id}-title">${e(title)}</h3>
             <p class="sf-caption">${caption}</p>
-            <table class="sf-table"><thead><tr><th scope="col">${e(head)}</th><th scope="col">Examples</th><th scope="col">Violations</th><th scope="col">Tests passed</th></tr></thead><tbody>${body}</tbody></table>
+            <table class="sf-table"><thead><tr><th scope="col">${e(head)}</th><th scope="col">Examples</th><th scope="col">Refuted</th><th scope="col">Tests passed</th></tr></thead><tbody>${body}</tbody></table>
           </section>`;
 }
 
@@ -1933,28 +1965,28 @@ export function examplesHtml(snapshot, examples = null) {
   const constructed = stock.origin?.constructed ?? 0;
   const led = c.claim !== c.counts;
   const figures = [
-    tile('Examples', count(stock.total), constructed ? `${count(constructed)} constructed for the catalog` : ''),
+    tile('Examples', count(stock.total), [c.decided < stock.total ? `${count(c.decided)} with a verdict so far` : '', constructed ? `${count(constructed)} constructed for the catalog` : ''].filter(Boolean).join(', ')),
     tile(
-      'Violations found',
+      'Refuted',
       count(n('violation')),
       c.shown
         ? `${c.shown.input + c.shown.trace === c.shown.violations ? 'each' : count(c.shown.input + c.shown.trace)} with a counterexample: ${count(c.shown.input)} an input, ${count(c.shown.trace)} a trace`
         : n('unverifiable')
-          ? `${count(n('unverifiable'))} more unverifiable`
+          ? `${count(n('unverifiable'))} more left open`
           : ''
     ),
-    tile('Verified', count(n('verified')), stock.vacuous ? `${count(stock.vacuous)} recorded as vacuous` : ''),
-    c.said ? tile('Tests passed on a violation', `${count(c.passed)} of ${count(c.said)}`, 'the module’s own unit tests, on the same patch') : '',
-    c.rated ? tile('Rated high or critical', `${count(c.severe)} of ${count(c.rated)}`, 'violations, if they shipped unnoticed') : '',
+    tile('Established', count(n('verified')), stock.vacuous ? `${count(stock.vacuous)} recorded as vacuous` : ''),
+    c.said ? tile('Unit tests passed on a refuted change', `${count(c.passed)} of ${count(c.said)}`, 'the system’s own unit tests, on the same patch') : '',
+    c.rated ? tile('Rated high or critical', `${count(c.severe)} of ${count(c.rated)}`, 'refuted changes, if they shipped unnoticed') : '',
     libraries ? tile('Changes to published libraries', count(libraries), c.withResult.length ? `${count(c.withResult.length)} with a result so far` : '') : '',
   ].join('');
   const head = `<p class="sf-eyebrow">Example catalog</p>
         <h1 id="sf-examples-title">${e(c.claim)}</h1>
-        <p class="sf-section-lede">Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${
+        <p class="sf-section-lede">Each example is a code change run through the project’s formal verifier${led ? `: ${c.counts}` : ', with the verdict it gave'}. ${withVerdict(c)}${
           c.said ? 'Most were constructed for the catalog, with the systems and the tests they change, so this describes the catalog and not how often tests miss a defect elsewhere. ' : ''
-        }A verified label is not a claim of a current, non-vacuous proof.</p>
+        }An established label is not a claim of a current, non-vacuous proof.</p>
         <dl class="sf-figures">${figures}</dl>
-        <p class="sf-coverage">Coverage: ${e(c.answers ? formatCoverage(c.answers.coverage) : `${count(stock.total - n('none'))} of ${count(stock.total)} examples with a verdict`)} · A snapshot total; no filter of dates applies · <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a></p>`;
+        <p class="sf-coverage">Coverage: ${e(c.answers ? formatCoverage(c.answers.coverage) : `${count(c.decided)} of ${count(stock.total)} examples with a verdict`)} · A snapshot total; no filter of dates applies · <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a></p>`;
   const source = `From <a href="${REPO}/blob/${e(sha)}/examples/README.md">the catalog</a> at this revision.`;
   if (!named)
     return `${head}
@@ -1966,7 +1998,7 @@ export function examplesHtml(snapshot, examples = null) {
   const facets = catalogFacets(named);
   const of = (key) => facets.find((f) => f.key === key);
   const tokens = new Map(named.map((x) => [x.id, tokensOf(x, facets)]));
-  const cells = named.map((x) => ({ id: x.id, key: verdictOf(x), ring: x.origin === LIBRARY, tip: cellTip(x), tokens: tokens.get(x.id) }));
+  const cells = named.map((x) => ({ ...cellOf(x), tokens: tokens.get(x.id) }));
   const option = (v) => `<option value="${e(v.token)}">${e(v.label)} (${count(v.n)})</option>`;
   const options = (f) => {
     if (f.key !== 'system' || !libraries) return f.values.map(option).join('');
@@ -1984,8 +2016,8 @@ export function examplesHtml(snapshot, examples = null) {
   const caught = of('tests')?.values.find((v) => v.value === 'failed');
   const critical = of('severity')?.values.find((v) => v.value === 'critical');
   const starts = [
-    caught?.violation ? start(`the ${plural(caught.violation, 'violation')} the existing tests also caught`, ['verdict:violation', 'tests:failed']) : null,
-    critical?.violation ? start(`the ${plural(critical.violation, 'violation')} rated critical`, ['verdict:violation', critical.token]) : null,
+    caught?.violation ? start(`the ${plural(caught.violation, 'refuted change')} the existing tests also caught`, ['verdict:violation', 'tests:failed']) : null,
+    critical?.violation ? start(`the ${plural(critical.violation, 'refuted change')} rated critical`, ['verdict:violation', critical.token]) : null,
     libraries ? start(`the ${plural(libraries, 'change')} to published libraries`, [LIBRARY_TOKEN]) : null,
   ].filter(Boolean);
   const titles = `<details class="sf-titles" data-sf-titles>
@@ -1993,7 +2025,7 @@ export function examplesHtml(snapshot, examples = null) {
           <ol>${named
             .map(
               (x) =>
-                `<li data-for="${e(x.id)}"><span class="sf-swatch sf-verdict-${verdictOf(x)}" aria-hidden="true"></span><a href="#example-${encodeURIComponent(x.id)}"><code>${e(x.id)}</code> ${e(x.title)}</a>${
+                `<li data-for="${e(x.id)}"><span class="sf-swatch ${verdictClass(x)}" aria-hidden="true"></span><a href="#example-${encodeURIComponent(x.id)}"><code>${e(x.id)}</code> ${e(x.title)}</a>${
                   x.system ? ` <span class="sf-muted">${e(x.system)}</span>` : ''
                 }</li>`
             )
@@ -2020,7 +2052,7 @@ export function examplesHtml(snapshot, examples = null) {
       ? facetTable({
           id: 'examples-by-kind',
           title: 'By kind of change',
-          caption: `What the change set out to do, in the catalog’s words. The largest group is ${e(lower(top.label))}: ${count(top.violation)} of its ${plural(top.n, 'example')} ${top.violation === 1 ? 'has' : 'have'} a violation${
+          caption: `What the change set out to do, in the catalog’s words. The largest group is ${e(lower(top.label))}: ${count(top.violation)} of its ${plural(top.n, 'example')} ${top.violation === 1 ? 'is' : 'are'} refuted${
             top.said ? `, and the existing tests passed on ${count(top.passed)} of ${top.said === top.violation ? 'them' : `the ${count(top.said)} that say`}` : ''
           }.`,
           head: 'Kind of change',
@@ -2032,7 +2064,7 @@ export function examplesHtml(snapshot, examples = null) {
           id: 'examples-by-system',
           title: 'By system',
           caption: `${made.length ? `${word(made.length)} ${made.length === 1 ? 'system was' : 'systems were'} written for the catalog. ` : ''}${
-            published.length ? `The ${plural(published.length, 'published library', 'published libraries')} ${published.length === 1 ? 'is' : 'are'} open-source code the catalog did not write; their examples have several verdicts each, or none yet.` : ''
+            published.length ? `The ${plural(published.length, 'published library', 'published libraries')} ${published.length === 1 ? 'is' : 'are'} open-source code the catalog did not write.` : ''
           }`,
           head: 'System',
           rows: [...made, ...libraryRow],
@@ -2075,7 +2107,7 @@ export function examplesHtml(snapshot, examples = null) {
         ${
           tables.length
             ? `<div class="sf-subhead"><h2>What the catalog is made of</h2></div>
-        <p class="sf-caption">The same examples, cut ${lower(word(tables.length))} ways. A bar’s length is the examples in the row and its colours are their verdicts. A row’s name narrows the squares above to its examples. Tests passed is of the violations that say.</p>
+        <p class="sf-caption">The same examples, cut ${lower(word(tables.length))} ways. A bar’s length is the examples in the row and its colours are their verdicts. A row’s name narrows the squares above to its examples. Tests passed is of the refuted changes that say.</p>
         <div class="sf-breakdowns sf-example-tables">
           ${tables.join('\n          ')}
         </div>`
