@@ -306,8 +306,8 @@ decisions a person made: 0</pre>
         <div class="wrap">
           <div class="head">
             <p class="kicker">Examples</p>
-            <h2>183 changes, each with its verdict</h2>
-            <p>Every example is a code change run through the verifier, with the input or the trace behind its verdict. They are also the plugin's memory: it sizes your change against the closest ones.</p>
+            <h2>183 changes, 163 with a verdict so far</h2>
+            <p>Each verdict comes with the input or the trace behind it. The other 20 are prepared or catalogued, and not proved yet. The examples are also the plugin's memory: it sizes your change against the closest ones.</p>
           </div>
           <ul class="cats">
             <li><b>66</b><h3>Service plumbing</h3><p>Payments, retries, circuit breakers, rate limits, idempotency keys, Kafka, and Spring advice that doesn't do what it says.</p></li>
@@ -483,7 +483,7 @@ after:  -2147483648</pre>
             <p>There is no benchmark score on this page. Evals work well for discrete tasks, where there is a fixed input and an answer to grade. This is a much bigger task: an open-ended loop that runs for hours and may extend the verifier it runs on.</p>
             <p>Large models are very hard to evaluate, and a moonshot on one is harder. I have an idea of how I would do it, but it would take far more resources.</p>
             <p>For now I am evaluating qualitatively, in my head, as we work. Take that for what it's worth.</p>
-            <p>A verdict is not the model's opinion, though. It comes from the verifier, and a refuted claim is run on a real JVM. What I can't measure yet is the loop around it: how often it gets there, and at what cost. So the page shows the record instead: <a href="#examples">every example with its receipts</a>, <a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/README.md">every session that produced them</a>, and a request for <a href="#contribute">your failed runs</a>.</p>
+            <p>A verdict is not the model's opinion, though. It comes from the verifier, and a refuted claim is run on a real JVM. What I can't measure yet is the loop around it: how often it gets there, and at what cost. So the page shows the record instead: <a href="#examples">the examples with their receipts</a>, <a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/traces/README.md">every session that produced them</a>, and a request for <a href="#contribute">your failed runs</a>.</p>
             <p class="signed">Filip Stankovic</p>
           </div>
         </div>
