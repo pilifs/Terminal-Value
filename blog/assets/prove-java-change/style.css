@@ -873,6 +873,12 @@ summary {
   color: var(--brand-ink);
   font-size: 0.72rem;
 }
+.aside a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
 .aside.lead {
   margin: -0.4rem 0 1rem;
 }

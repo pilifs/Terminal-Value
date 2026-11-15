@@ -232,16 +232,16 @@ decisions a person made: 0</pre>
             <li><b>The library is larger</b><span>so your next run starts with what this one needed.</span></li>
           </ol>
           <p class="loop-back"><span>each run extends your local copy, and the next one is cheaper</span></p>
-          <p class="note"><b>This happened on the first target.</b> On 2026-11-14 every proof task of example 285 stopped at something the verifier could not model: a parameter of an interface type, and two releases with different dependencies. The next day the proof loop extended <code>jvmcontract</code> for both in three commits, reran the unchanged claims on the same JARs, and all four came out as expected. <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md#closed-gaps">Read the closed gaps →</a></p>
+          <p class="note"><b>This happened on the first real target.</b> Every proof task of example 285 first stopped at something the verifier could not model. The proof loop extended <code>jvmcontract</code> in three commits, reran the unchanged claims on the same JARs, and all four came out as expected. <a href="https://github.com/pilifs/in-the-loop/blob/main/examples/285-spring-boot-cve-2023-34055-unbounded-http-method-labels/README.md#closed-gaps">Read the closed gaps →</a></p>
 
           <h3 class="sub">The four steps</h3>
           <ol class="steps four">
-            <li><h3>Set up and measure</h3><p>A subagent installs a released copy of the repository, checked against a SHA-256 the skill carries, and measures your machine for a memory budget.</p><p class="you">You confirm.</p></li>
-            <li><h3>State the claims</h3><p>It pins the change to two exact commits, sizes it against the closest past examples, writes each claim in full, and runs the change once on a JVM.</p><p class="you">You confirm the claims and the estimate.</p></li>
-            <li class="star"><p class="badge">The moonshot</p><h3>Prove it</h3><p>A fork of the session runs unattended on one line: <q>Formally prove example NNN as elegantly and efficiently as possible.</q> Fable 5.2 works out what stands between the library and your code, closes it, and proves the claims. It may not change a claim to fit a result.</p></li>
-            <li><h3>Report</h3><p>Each claim comes back established, refuted with an input replayed on a JVM, or left open with the reason, under stated bounds. Then it offers to send what it added upstream.</p><p class="you">You decide.</p></li>
+            <li><h3>Set up and measure</h3><p>It installs a released copy of the repository, checked against a hash the skill carries, and measures your machine.</p><p class="you">You confirm.</p></li>
+            <li><h3>State the claims</h3><p>It pins the change to two exact commits, sizes it against the closest past examples, and writes each claim in full.</p><p class="you">You confirm the claims and the estimate.</p></li>
+            <li class="star"><p class="badge">The moonshot</p><h3>Prove it</h3><p>A fork of the session runs unattended on one line: <q>Formally prove example NNN as elegantly and efficiently as possible.</q> Fable 5.2 closes what stands between the library and your code, then proves the claims. It may not change a claim to fit a result.</p></li>
+            <li><h3>Report</h3><p>Each claim comes back with one of three answers, under stated bounds. Then it offers to send what it added upstream.</p><p class="you">You decide.</p></li>
           </ol>
-          <p class="aside">Step 3 has no acceptance criteria to meet, so the session that started it stays outside as its conductor. When the loop fills 600k tokens of context without a commit, the conductor reads the transcript, the commits and the jobs, and decides whether it is working or stuck.</p>
+          <p class="aside">When the loop fills 600k tokens of context without a commit, the session that started it reads the transcript and the commits, and decides whether it is working or stuck. <a href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md">What each step stands on →</a></p>
           <h3 class="sub">Three answers, and none is the model's opinion</h3>
           <p class="aside lead">Fable writes the claims and drives the tools. The answer to each claim comes from a model checker.</p>
           <div class="grid g3">
@@ -250,8 +250,8 @@ decisions a person made: 0</pre>
             <div class="card verdict unverifiable"><span class="pill unverifiable">Left open</span><p>The tools could not decide, and the report says why. It never counts as a pass.</p></div>
           </div>
           <div class="actions">
-            <a class="btn primary" href="#examples">Browse 183 examples</a>
-            <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md">What each step stands on</a>
+            <a class="btn primary" href="#install">Try it in three steps</a>
+            <a class="btn" href="#examples">Browse 183 examples</a>
           </div>
         </div>
       </section>
@@ -365,10 +365,10 @@ after:  -2147483648</pre>
               <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/108-jackson-core-1203-division-by-1000-as-multiply-and-shift/README.md">Read example 108 →</a>
             </article>
           </div>
-          <p class="note"><b>What these are.</b> 159 are changes written for small systems built to be provable, not bugs found in the wild. Of the 100 the verifier refuted, the systems' own unit tests passed on 92. The 24 from published libraries are real commits. Of the 16 Spring security fixes, one is proved so far, two replay on a JVM and wait on gaps in the verifier, and 13 are catalogued and not run yet.</p>
+          <p class="note"><b>What these are.</b> 159 are changes written for small systems built to be provable, not bugs found in the wild. Of the 100 the verifier refuted, the systems' own unit tests passed on 92. The 24 from published libraries are real commits. Of the 16 Spring security fixes, one is proved so far, two replay on a JVM and wait on gaps in the verifier, and 13 are catalogued and not run yet. Every proof job behind them is <a href="https://github.com/pilifs/in-the-loop/tree/main/verification/results">recorded with its result</a>.</p>
           <div class="actions">
-            <a class="btn primary" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">Browse all 183 examples</a>
-            <a class="btn" href="https://github.com/pilifs/in-the-loop/tree/main/verification/results">394 proof jobs and their results</a>
+            <a class="btn primary" href="#install">Try it on your own change</a>
+            <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/examples/README.md">Browse all 183 examples</a>
           </div>
         </div>
       </section>
