@@ -89,6 +89,35 @@ test('analysis: no posts is an honest empty state, with or without data', () => 
   }
 });
 
+test('a page’s description starts with the result it leads with, in plain text', () => {
+  const committed = loadSnapshot(path.join(HERE, '..', 'data')).snapshot;
+  const pages = renderPages({ snapshot: committed, unavailable: null, fixture: false, posts: noPosts, site, helpers, paths });
+  const of = (file) => pages.find((p) => p.path === file);
+  // The overview: its headline, then what is under it.
+  const headline = of('index.html').body.match(/<span class="sf-headline">([^<]+)<\/span>/)[1];
+  assert.match(headline, /^[\d,]+ tool calls and [\d,]+ commits without a prompt from a person$/);
+  assert.equal(of('index.html').description, `${headline}. What the feature loops did in in-the-loop, a project that formally verifies Java code, with every run, example, tool call and line of code under the numbers.`);
+  // Each page under it: its own statement, then what the page holds.
+  for (const name of ['loops', 'examples', 'tools', 'code', 'usage']) {
+    const p = of(`${name}/index.html`);
+    const claim = p.body.match(new RegExp(`<h1 id="sf-${name}-title">([^<]+)</h1>`))[1];
+    assert.ok(p.description.startsWith(`${claim}. `) && p.description.length > claim.length + 40, name);
+    assert.doesNotMatch(p.description, /[<>]|&(?:amp|lt|gt|quot|#39);/, `${name}: text, to be escaped once by the page template`);
+  }
+  for (const p of pages) assert.equal('after' in p, false, p.path);
+  // A page with no statement keeps its own description: the analysis, the methodology, and an overview with no headline.
+  assert.match(of('analysis/index.html').description, /analysis of the software factory in in-the-loop/);
+  assert.match(of('methodology/index.html').description, /^How each Software Factory number is defined and measured/);
+  const bare = renderPages({ snapshot, unavailable: null, fixture: true, posts: noPosts, site, helpers, paths }).find((p) => p.path === 'index.html');
+  assert.doesNotMatch(bare.body, /sf-headline/);
+  assert.match(bare.description, /^What the software factory in in-the-loop produces/);
+  const none = renderPages({ snapshot: null, unavailable: 'No data.', fixture: false, posts: noPosts, site, helpers, paths }).find((p) => p.path === 'index.html');
+  assert.match(none.description, /^What the software factory in in-the-loop produces/);
+  // A statement with a character the page escapes is unescaped, once.
+  const edited = { ...committed, overview: { ...committed.overview, models: committed.overview.models.map((m) => ({ ...m, label: `${m.label} & <co>` })) } };
+  for (const p of renderPages({ snapshot: edited, unavailable: null, fixture: false, posts: noPosts, site, helpers, paths })) assert.doesNotMatch(p.description, /&amp;|&lt;/, p.path);
+});
+
 test('methodology: every metric definition, note and filter scope from config', () => {
   const { body } = page('methodology/index.html');
   for (const m of metrics.metrics) {

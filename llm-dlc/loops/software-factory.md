@@ -890,6 +890,10 @@ Settled by the author on 2026-11-14:
   with nothing cached, $2,174.98 as recorded, $2,806.76 by the client's count), and a note that the estimate
   runs low. The overview's usage finding says both in passing; the methodology page gives the separate figures
   their values. First load 139.9 KB.
+- **What a link preview says** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md,
+  "What a link preview says". Each page's description starts with the result it leads with, read from its
+  headline, so a shared link or a search result shows "12,681 tool calls and 311 commits without a prompt from a
+  person" and not a sentence about the section. No share image yet.
 - Status: done
 
 ## Loop settings

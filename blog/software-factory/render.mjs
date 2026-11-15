@@ -391,6 +391,8 @@ function overviewPage({ snapshot, examples = null, unavailable, fixture, posts, 
     path: 'index.html',
     title: TITLE,
     description: DESCRIPTION,
+    // What follows the headline in the description, when the page has one.
+    after: 'What the feature loops did in in-the-loop, a project that formally verifies Java code, with every run, example, tool call and line of code under the numbers.',
     app: Boolean(snapshot),
     body: `    <div class="sf-shell" data-sf-page="overview"${shellAttrs(snapshot, paths, e)}>
 ${sectionNav(paths, e, '', Boolean(snapshot))}
@@ -765,6 +767,23 @@ ${requests(e)}
   };
 }
 
+// A page's description is what a link preview and a search result show of it,
+// so it starts with the result the page leads with: the statement in its
+// headline, read from the page as drawn, then what the page holds. A page
+// with no statement (no data, the analysis, the methodology) keeps its own.
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+const plainText = (html) =>
+  html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(?:amp|lt|gt|quot|#39);/g, (m) => ENTITIES[m])
+    .replace(/\s+/g, ' ')
+    .trim();
+function ledByItsResult({ after, ...page }) {
+  const m = page.body.match(/<span class="sf-headline">([\s\S]*?)<\/span>|<h1 id="sf-[a-z]+-title">([\s\S]*?)<\/h1>/);
+  const claim = m ? plainText(m[1] ?? m[2]) : '';
+  return claim ? { ...page, description: `${claim}${/[.!?]$/.test(claim) ? '' : '.'} ${after ?? page.description}` } : page;
+}
+
 export function renderPages(input) {
-  return [overviewPage(input), ...(input.snapshot ? dataPages(input) : []), analysisPage(input), methodologyPage(input)];
+  return [overviewPage(input), ...(input.snapshot ? dataPages(input) : []), analysisPage(input), methodologyPage(input)].map(ledByItsResult);
 }

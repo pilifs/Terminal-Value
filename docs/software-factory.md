@@ -360,6 +360,17 @@ The token colours are the first three of the failure kinds' palette: blue and or
 bar, as they are in the failure stacks, and the purple bar stands alone under its own name. First load is
 139.9 KB of the 150 KB budget.
 
+### What a link preview says
+
+A page's description is what a link preview and a search result show of it. Each was a sentence about what the
+page holds; the overview's was "What the software factory in in-the-loop produces, how its activity and
+efficiency change, and what running it teaches." Now a description starts with the result the page leads with
+(`ledByItsResult` in `render.mjs`): the overview's headline or a data page's `<h1>`, read from the page as drawn
+and unescaped once, then the sentence about the page. The overview has its own sentence to follow a headline
+(`after`). A page with no statement keeps its description: the analysis, the methodology, and an overview with
+no headline or no data. The `<title>` and `og:title` are unchanged, and no page has a share image yet: that
+needs a picture made outside the build, which is the author's call.
+
 ### What the section ships: its scripts and stylesheet without comments
 
 The fifth finding took the overview's first load to 154.1 KB gzip, over the plan's 150 KB
