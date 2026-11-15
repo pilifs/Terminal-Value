@@ -197,8 +197,9 @@ The steps that need an account, and everything else needed to run this, are in t
 ## Runbook
 
 What follows keeps three things apart, as the plan asks: what works locally, what is configured but has never run
-remotely, and what the author must create and run. **Nothing of Milestone 2 has run remotely.** No bucket, token or
-secret was created from this repo, nothing was deployed, and the workflow has never run on GitHub.
+remotely, and what the author must create and run. **The workflow has never run on GitHub, and nothing has been
+published to R2.** On 2026-11-14 and 15 the author set up the buckets and secrets (steps 1 to 3) and deployed the dev
+site with the bindings; the preview bucket was still empty.
 
 ### What works locally
 
@@ -344,15 +345,20 @@ changes every snapshot id (above).
 
 In this order. Each step is the author's, on a machine logged in to Cloudflare or GitHub. None of it is done.
 
-1. **R2 buckets**: `blog/software-factory/ops/setup-r2.sh` (`--dry-run` first, if you like). It creates
+1. **R2 buckets** (done 2026-11-15): `blog/software-factory/ops/setup-r2.sh` (`--dry-run` first, if you like). It creates
    `software-factory-data` and `software-factory-data-preview` in `enam` if missing, and checks each by writing,
    reading back and deleting an object. It also saves the project's settings as
    `terminal-value.pages-config.toml`. The copy saved on 2026-11-14 is already in `ops/`, and `wrangler.toml`
-   builds on it. If the new copy differs, bring the difference into `wrangler.toml`.
-2. **Token**: in the dashboard, an R2 API token with Object Read & Write on those two buckets only.
-3. **Secrets**: store its values as the repository secrets `SOFTWARE_FACTORY_R2_ACCOUNT_ID`,
-   `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY`. `setup-r2.sh --github` asks for
-   them with hidden input and sets them with `gh`.
+   builds on it. If the new copy differs, bring the difference into `wrangler.toml`. Run on 2026-11-15, it found
+   both buckets, created nothing, passed the check on each, and saved settings with the same three entries as the
+   copy in `ops/`.
+2. **Token** (decided 2026-11-15): one R2 API token, with Object Read & Write, for both buckets. There is no token
+   per environment: the publisher's `--destination` picks the bucket, `preview` or `production`, and the workflow
+   passes it, so both are reached with the same credentials. The existing token is kept; don't create another.
+3. **Secrets** (set 2026-11-14): the token's values as the repository secrets `SOFTWARE_FACTORY_R2_ACCOUNT_ID`,
+   `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY`. Don't rerun
+   `setup-r2.sh --github`, which would replace them. The repository's older `CLOUDFLARE_ACCOUNT_ID` and
+   `CLOUDFLARE_API_TOKEN` secrets are not used by this workflow.
 4. **Before any deploy**, of either kind:
    - check that this repo has everything the live site has: `/verify-bytecode/` came in on 2026-11-15 (State at
      Phase 0), and a page added elsewhere since then would be removed by a deploy from here;
