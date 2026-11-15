@@ -934,6 +934,9 @@ Settled by the author on 2026-11-14:
   docs/software-factory.md, same title. "From empty to 167,128 lines of code in 23 days": lines added less lines
   removed in the landing page's five languages (generator 12, `overview.code.repository`, snapshot
   `sf1-9cc38bb0f56b6ea2`). The code page has the count as a tile and a Net column by language.
+- **The usage page's headline in the landing page's words** (2026-11-15, moonshot loop
+  `software-factory-impact`): "For every token written, 156 were read", with the totals in the first sentence.
+  No data changed. docs/software-factory.md, "The usage page leads with a result".
 - Status: done
 
 ## Loop settings

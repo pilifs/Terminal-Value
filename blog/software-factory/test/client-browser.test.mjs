@@ -601,7 +601,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         const u = usageFacts(overviewOf(COMMITTED));
         assert.equal(shown.page, 'usage');
         assert.deepEqual(shown.h1, [usageTitle(overviewOf(COMMITTED))]);
-        assert.match(shown.h1[0], /^[\d.,]+ (billion |million )?tokens read to write [\d.,]+( billion| million)?$/);
+        assert.match(shown.h1[0], /^For every token written, [\d,]+ were read$/);
         assert.equal(shown.rows.length, 2 + (u.uncached !== null) + 1 + (u.reported ? 1 : 0));
         assert.ok(shown.widths.every(Boolean), 'every bar can be seen, however short');
         // Under it, how the sessions lasted: the claim, a bar for each quantity, and the cache events by cause.

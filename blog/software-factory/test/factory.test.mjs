@@ -1042,12 +1042,12 @@ test('usage facts add up what was read and written, by model, and keep the other
   assert.equal(usageFacts(usageOverview({ usage: { columns: usageOverview().usage.columns, rows: [] } })), null);
 });
 
-test('the usage page leads with what was read to write what was written, each on one scale', () => {
+test('the usage page leads with what was read for each token written, in the landing page’s words, each on one scale', () => {
   const html = usageHtml({ overview: usageOverview() });
-  assert.match(html, /<h1 id="sf-usage-title">2,000 tokens read to write 50<\/h1>/);
+  assert.match(html, /<h1 id="sf-usage-title">For every token written, 40 were read<\/h1>/);
   assert.ok(
     html.includes(
-      'Every model call reads its whole context again, so 5 calls took in 40 tokens for each one written. 89.0% of what was read came from cache. At list prices as of Oct 31, 2026 that is an estimated $9.00; the same calls with nothing cached would be priced at $40.00. It is an estimate, not a bill. <a href="/software-factory/methodology/#def-usage_usd">Definition</a>'
+      '5 model calls read 2,000 tokens to write 50: every call reads its whole context again. 89.0% of what was read came from cache. At list prices as of Oct 31, 2026 that is an estimated $9.00; the same calls with nothing cached would be priced at $40.00. It is an estimate, not a bill. <a href="/software-factory/methodology/#def-usage_usd">Definition</a>'
     )
   );
   const tiles = [...html.matchAll(/<div class="sf-figure"><dt>([^<]+)<\/dt><dd><span class="sf-figure-value">([^<]+)<\/span><span class="sf-figure-note">([^<]+)<\/span>/g)].map((m) => m.slice(1));
@@ -1109,7 +1109,7 @@ test('the usage page leads with what was read to write what was written, each on
 test('the usage page shows no figure the snapshot doesn’t have', () => {
   // Before generator 6: the tokens, and the estimate alone, with no group of prices to compare.
   const older = usageHtml({ overview: withoutColumns(usageOverview({ reported: undefined }), 'thinkingTokens', 'uncachedUsd') });
-  assert.match(older, /<h1 id="sf-usage-title">2,000 tokens read to write 50<\/h1>/);
+  assert.match(older, /<h1 id="sf-usage-title">For every token written, 40 were read<\/h1>/);
   assert.match(older, /that is an estimated \$9\.00\. It is an estimate, not a bill\./);
   assert.doesNotMatch(older, /nothing cached|hypothetical|Claude Code|sf-note|List price|thinking/);
   assert.equal(older.match(/class="sf-scale"/g).length, 1);
@@ -1121,7 +1121,13 @@ test('the usage page shows no figure the snapshot doesn’t have', () => {
   // Large numbers are said in words, and no calls at all is said plainly.
   const big = usageOverview();
   big.usage.rows = [[0, 0, 0, 100, 100, 50, 1000, 3_500_000_000, 79_000_000, 23_300_000, 9_000_000, 400]];
-  assert.match(usageHtml({ overview: big }), /<h1 id="sf-usage-title">3\.58 billion tokens read to write 23\.3 million<\/h1>/);
+  assert.match(usageHtml({ overview: big }), /<h1 id="sf-usage-title">For every token written, 154 were read<\/h1>/);
+  assert.match(usageHtml({ overview: big }), /100 model calls read 3\.58 billion tokens to write 23\.3 million: every call reads its whole context again\./);
+  // Where little more was read than written, the two are said plainly and no ratio is claimed.
+  const even = usageOverview();
+  even.usage.rows = [[0, 0, 0, 100, 100, 50, 60, 0, 0, 40, 0, 400]];
+  assert.match(usageHtml({ overview: even }), /<h1 id="sf-usage-title">60 tokens read, 40 written<\/h1>/);
+  assert.match(usageHtml({ overview: even }), /Every model call reads its whole context again, so 100 calls took in 2 tokens for each one written\./);
   const none = usageHtml({ overview: usageOverview({ usage: { columns: usageOverview().usage.columns, rows: [] } }) });
   assert.match(none, /This snapshot has no model calls/);
   assert.doesNotMatch(none, /<h1/);

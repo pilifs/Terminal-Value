@@ -1654,10 +1654,12 @@ export function usageHtml(snapshot) {
     .join('');
 
   return `<p class="sf-eyebrow">Usage</p>
-        <h1 id="sf-usage-title">${e(each !== null && each >= 2 ? `${tokens(u.read)} tokens read to write ${tokens(u.written)}` : `${tokens(u.read)} tokens read, ${tokens(u.written)} written`)}</h1>
-        <p class="sf-section-lede">Every model call reads its whole context again, so ${plural(u.calls, 'call')} took in ${
-          each !== null ? `${count(each)} ${each >= 1.5 ? 'tokens' : 'token'} for each one written` : `${tokens(u.read)} tokens`
-        }. ${e(pct(rate(u.cacheRead, u.read)))} of what was read came from cache.${
+        <h1 id="sf-usage-title">${e(each !== null && each >= 2 ? `For every token written, ${count(each)} were read` : `${tokens(u.read)} tokens read, ${tokens(u.written)} written`)}</h1>
+        <p class="sf-section-lede">${
+          each !== null && each >= 2
+            ? `${plural(u.calls, 'model call')} read ${tokens(u.read)} tokens to write ${tokens(u.written)}: every call reads its whole context again.`
+            : `Every model call reads its whole context again, so ${plural(u.calls, 'call')} took in ${each !== null ? `${count(each)} ${each >= 1.5 ? 'tokens' : 'token'} for each one written` : `${tokens(u.read)} tokens`}.`
+        } ${e(pct(rate(u.cacheRead, u.read)))} of what was read came from cache.${
           priced
             ? ` At list prices${e(asOf)} that is an estimated ${e(usd(u.usd))}${u.uncached !== null ? `; the same calls with nothing cached would be priced at ${e(usd(u.uncached))}` : ''}. It is an estimate, not a bill. ${definition}`
             : ''

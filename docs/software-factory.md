@@ -337,7 +337,11 @@ The usage page was the last one that opened as a dashboard: a heading, "What the
 opens as the others do, with a statement and a figure (`usageHtml` in `factory.js`), and the filters and
 everything they apply to sit under a second heading, "By date, model and effort" (`#by-date`).
 
-- **The claim** is "3.58 billion tokens read to write 23.3 million": input tokens of every kind against output
+- **The claim in the landing page's words.** Since 2026-11-15 the headline is "For every token written, 156 were
+  read", as `/prove-java-change/` says the same fact, and the two totals follow in the first sentence: "24,769
+  model calls read 3.84 billion tokens to write 24.6 million". Where less than twice as much was read as written,
+  no ratio is claimed and the two totals are the headline.
+- **The claim** was "3.58 billion tokens read to write 23.3 million": input tokens of every kind against output
   tokens, from `overview.usage`. The sentence under it gives the ratio (154 read for each one written), the share
   read from cache, the estimate, and the same calls priced with nothing cached.
 - **Four numbers**, all tokens, so they don't repeat the filtered tiles below: read per call, written per call
