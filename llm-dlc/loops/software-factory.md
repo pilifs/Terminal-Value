@@ -876,6 +876,12 @@ Settled by the author on 2026-11-14:
   It took the first load over the 150 KB budget, so the build now ships the section's scripts and stylesheet
   without their full-line comments: 135.7 KB. Open for the author: the manifest's list of source files is 34 KB of
   the first load and grows with every session.
+- **The counterexample itself** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md,
+  "What a verdict rests on" and "The counterexample, in an example's record". The importer reads each example's
+  own `result.json`; a record carries the test task, the first counterexample or the model checker's trace, and
+  the attempt's seconds (generator 5, snapshot `sf1-5959e891382708eb` from the same revision). A picked example
+  shows them as a terminal panel, and the Output finding says 100 of 100 violations come with a counterexample.
+  The result files are one input in the manifest, to keep the first load at 136.7 KB.
 - Status: done
 
 ## Loop settings

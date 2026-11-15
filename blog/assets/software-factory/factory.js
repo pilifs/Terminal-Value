@@ -1328,11 +1328,54 @@ const prose = (text) =>
     .join('');
 const exampleUrl = (x, sha) => (x.path ? `${REPO}/tree/${sha}/${x.path}` : null);
 
+const seconds = (s) => (s >= 100 ? `${count(s)} s` : `${Number(s.toFixed(1))} s`);
+
+/**
+ * What an example's verdict rests on, as its result file has it: the test
+ * task and how it went, then the counterexample (its input, what was expected
+ * and what came back) or the trace, and what the attempt took. Drawn as the
+ * run record is, since it is a tool's output. '' for a record with none.
+ */
+function evidenceHtml(x) {
+  const ev = x.evidence;
+  if (!ev) return '';
+  const passed = typeof x.testsPassed === 'boolean' ? x.testsPassed : ev.tests ? ev.tests.failed.length === 0 : null;
+  const ce = ev.counterexample;
+  const trace = ev.trace;
+  const took = [ev.checker ? e(ev.checker) : null, typeof ev.seconds === 'number' ? e(seconds(ev.seconds)) : null].filter(Boolean);
+  const rows = [
+    ev.tests
+      ? [
+          'tests',
+          `${passed === null ? '' : `<strong class="sf-proof-${passed ? 'passed' : 'failed'}">${passed ? 'passed' : 'failed'}</strong> `}${e(ev.tests.task)}${
+            ev.tests.failed.length ? `<span class="sf-proof-note">${ev.tests.failed.map((t) => e(t)).join('<br>')}</span>` : ''
+          }`,
+        ]
+      : null,
+    ce ? ['input', e(ce.input)] : null,
+    ce && ce.expected !== null ? ['expected', e(ce.expected)] : null,
+    ce && ce.actual !== null ? ['got', e(ce.actual)] : null,
+    trace?.invariant ? ['breaks', e(trace.invariant)] : null,
+    trace ? ['trace', trace.actions.length ? trace.actions.map((a) => e(a)).join(' <span aria-hidden="true">→</span> ') : e(plural(trace.steps, 'step'))] : null,
+    trace ? ['explored', `${plural(trace.steps, 'step')} in the trace${trace.states === null ? '' : `, ${plural(trace.states, 'state')} explored`}`] : null,
+    took.length ? ['verifier', took.join(' · ')] : null,
+  ].filter(Boolean);
+  if (!rows.length) return '';
+  const more = ce && ce.count > 1 ? `<p class="sf-ledger-total">The first of ${count(ce.count)} counterexamples the result records.</p>` : '';
+  return `<div class="sf-ledger sf-proof">
+              <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>example ${e(x.id)}: result.json</code></div>
+              <div class="sf-ledger-body">
+                <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+                ${more}
+              </div>
+            </div>`;
+}
+
 /**
  * One example's record, shown when a reader picks its square: what it is,
- * the verdict, the catalog's paragraph about it and its answers, with links
- * to the example and to the change it verifies. `x` is a record of the
- * examples collection.
+ * the verdict, the catalog's paragraph about it, what the verdict rests on
+ * and the catalog's answers, with links to the example and to the change it
+ * verifies. `x` is a record of the examples collection.
  */
 export function exampleRecordHtml(x, { sha }) {
   const facts = [
@@ -1349,6 +1392,7 @@ export function exampleRecordHtml(x, { sha }) {
             <h3>${e(x.title)}</h3>
             <p class="sf-example-verdict"><span class="sf-swatch sf-verdict-${e(x.verdict ?? 'none')}" aria-hidden="true"></span>${e(x.verdictLabel ?? 'No verdict')}${x.vacuous ? ' <span class="sf-tag">Vacuous</span>' : ''}</p>
             ${x.summary ? `<p class="sf-example-summary">${prose(x.summary)}</p>` : ''}
+            ${evidenceHtml(x)}
             ${facts.length ? `<dl class="sf-example-facts">${facts.map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl>` : ''}
             ${tags.length ? `<p class="sf-example-tags">${tags.map((t) => `<span class="sf-tag">${e(t)}</span>`).join(' ')}</p>` : ''}
             ${links ? `<p class="sf-example-links">${links}</p>` : ''}
@@ -1387,6 +1431,8 @@ function catalogFacts(snapshot, examples) {
     answers,
     said,
     passed,
+    // What the violations come with, when the snapshot counts it: an input, or a trace.
+    shown: answers?.counterexamples && answers.counterexamples.input + answers.counterexamples.trace > 0 ? answers.counterexamples : null,
     rated: severity ? Object.values(severity).reduce((t, v) => t + v, 0) : 0,
     severe: severity ? SEVERE.reduce((t, k) => t + (severity[k] ?? 0), 0) : 0,
     counts,
@@ -1437,16 +1483,18 @@ function outputFinding(snapshot, examples) {
       stock.vacuous ? `: ${plural(stock.vacuous, 'proof')} ${stock.vacuous === 1 ? 'is' : 'are'} recorded as vacuous` : ''
     }. <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a>`,
     facts: [
+      // What a violation comes with leads when the snapshot counts it; the verification jobs stand in when it doesn't.
+      c.shown ? [`${count(c.shown.input + c.shown.trace)} of ${count(c.shown.violations)}`, `violations come with a counterexample: ${count(c.shown.input)} an input, ${count(c.shown.trace)} a trace`] : null,
       c.rated && c.severe ? [`${count(c.severe)} of ${count(c.rated)}`, 'violations the catalog rates high or critical if they shipped unnoticed'] : null,
       libraries ? [count(libraries), `${libraries === 1 ? 'is a change' : 'are changes'} to published libraries${shown.length ? `; ${count(shown.length)} ${shown.length === 1 ? 'has' : 'have'} a result so far` : ''}`] : null,
-      jobs.length ? [`${count(jobsPassed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
+      !c.shown && jobs.length ? [`${count(jobsPassed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
     ],
     href: `${ROUTE}examples/`,
     more: 'The whole catalog, by change, system and defect',
     legend: c.legend,
     chart: catalogHtml(cells),
     caption: `${named ? 'Each square is an example, in the order of the catalog.' : 'Each square is an example, by verdict.'} From <a href="${REPO}/blob/${e(sha)}/examples/README.md">the catalog</a> at this revision.`,
-    after: `${named ? inspectHtml('example', 'Pick a square to read what the example changed and what the verifier found.') : ''}${list}`,
+    after: `${named ? inspectHtml('example', c.shown ? 'Pick a square to read what the example changed and the counterexample the verifier found.' : 'Pick a square to read what the example changed and what the verifier found.') : ''}${list}`,
   });
 }
 
@@ -1459,8 +1507,8 @@ const verdictOf = (x) => (VERDICTS.some((v) => v.key === x.verdict) ? x.verdict 
 
 /**
  * The ways the catalog's page cuts the examples: by verdict, by whether the
- * existing tests passed, by severity, kind of change, system and kind of
- * defect. Each value has a token (`kind:0`) that a square of the grid carries,
+ * existing tests passed, by severity, kind of change, system, kind of defect
+ * and what a counterexample is (an input, or a model checker's trace). Each value has a token (`kind:0`) that a square of the grid carries,
  * so the page's script can narrow the grid without the records, and counts by
  * verdict; `passed` of `said` are the violations whose tests passed, of those
  * that say. A facet no example has a value for is left out.
@@ -1497,6 +1545,10 @@ export function catalogFacets(examples) {
     facet('kind', 'Kind of change', 'Any', (x) => (x.changeKind ? [x.changeKind] : []), { words: (v) => WORDS_OF[v] ?? sentence(v) }),
     facet('system', 'System', 'Any', (x) => (x.system ? [x.system] : []), { group: (x) => (x.origin === LIBRARY ? 'library' : 'constructed') }),
     facet('defect', 'Kind of defect', 'Any', (x) => x.tags?.defect ?? []),
+    facet('shown', 'Counterexample', 'Any', (x) => (x.evidence?.counterexample ? ['input'] : x.evidence?.trace ? ['trace'] : []), {
+      order: ['input', 'trace'],
+      words: (v) => (v === 'input' ? 'An input' : 'A trace'),
+    }),
   ].filter((f) => f.values.length);
 }
 
@@ -1580,7 +1632,15 @@ export function examplesHtml(snapshot, examples = null) {
   const led = c.claim !== c.counts;
   const figures = [
     tile('Examples', count(stock.total), constructed ? `${count(constructed)} constructed for the catalog` : ''),
-    tile('Violations found', count(n('violation')), n('unverifiable') ? `${count(n('unverifiable'))} more unverifiable` : ''),
+    tile(
+      'Violations found',
+      count(n('violation')),
+      c.shown
+        ? `${c.shown.input + c.shown.trace === c.shown.violations ? 'each' : count(c.shown.input + c.shown.trace)} with a counterexample: ${count(c.shown.input)} an input, ${count(c.shown.trace)} a trace`
+        : n('unverifiable')
+          ? `${count(n('unverifiable'))} more unverifiable`
+          : ''
+    ),
     tile('Verified', count(n('verified')), stock.vacuous ? `${count(stock.vacuous)} recorded as vacuous` : ''),
     c.said ? tile('Tests passed on a violation', `${count(c.passed)} of ${count(c.said)}`, 'the module’s own unit tests, on the same patch') : '',
     c.rated ? tile('Rated high or critical', `${count(c.severe)} of ${count(c.rated)}`, 'violations, if they shipped unnoticed') : '',
@@ -1708,7 +1768,7 @@ export function examplesHtml(snapshot, examples = null) {
         <div class="sf-subhead sf-subhead-legend">${c.legend}</div>
         ${catalogHtml(cells)}
         <p class="sf-caption">${source}</p>
-        ${inspectHtml('example', 'Pick a square to read what the example changed and what the verifier found.')}
+        ${inspectHtml('example', c.shown ? 'Pick a square to read what the example changed and the counterexample the verifier found.' : 'Pick a square to read what the example changed and what the verifier found.')}
         ${titles}
         ${
           tables.length

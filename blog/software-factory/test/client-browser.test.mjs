@@ -499,6 +499,15 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         await until(() => page.evaluate(() => Boolean(document.querySelector('.sf-example'))), 'the record of the second example lit');
         now = await state(page);
         assert.deepEqual([now.at, now.on], [`Example 2 of ${caught.length}`, [caught[1]]]);
+        // Its record shows what the verdict rests on, from the example's own result: here, tests that failed.
+        const rests = records.find((x) => x.id === caught[1]).evidence;
+        const panel = await page.evaluate(() => ({
+          rows: [...document.querySelectorAll('.sf-example .sf-proof dt')].map((el) => el.textContent),
+          tests: document.querySelector('.sf-example .sf-proof dd').textContent,
+        }));
+        assert.equal(panel.rows[0], 'tests');
+        assert.ok(panel.rows.includes(rests.counterexample ? 'input' : 'trace'), panel.rows.join(' '));
+        assert.ok(panel.tests.startsWith(`failed ${rests.tests.task}`), panel.tests);
         // A second list narrows further. The pick stays while it is lit and is counted again.
         const system = records.find((x) => x.id === caught[1]).system;
         const both = ids((x) => x.verdict === 'violation' && x.testsPassed === false && x.system === system);
@@ -508,7 +517,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         // Narrowed to where the pick is not: the record closes.
         await page.selectOption('select[name="verdict"]', 'verdict:verified');
         now = await state(page);
-        assert.deepEqual([now.on, now.at], [[], 'Pick a square to read what the example changed and what the verifier found.']);
+        assert.deepEqual([now.on, now.at], [[], 'Pick a square to read what the example changed and the counterexample the verifier found.']);
         assert.equal(await page.evaluate(() => document.querySelector('.sf-example')), null);
         assert.equal(now.lit.length, ids((x) => x.verdict === 'verified' && x.testsPassed === false && x.system === system).length);
         // A square that is not lit can't be picked.

@@ -953,3 +953,87 @@ test('the usage finding says what every session took, as an estimate, and names 
   const free = { ...snap, overview: { ...snap.overview, measures: snap.overview.measures.map((m) => (m.id === 'usage_usd' ? { ...m, value: 0 } : m)) } };
   assert.doesNotMatch(findingsHtml(free), /finding-usage/);
 });
+
+// --- What a verdict rests on -------------------------------------------------------
+
+const proof = (o = {}) => ({ tests: null, counterexample: null, trace: null, seconds: null, checker: null, ...o });
+
+test('an example’s record shows what its verdict rests on: the tests’ task, the counterexample or the trace, and what it took', () => {
+  const sha = 'a'.repeat(40);
+  const rows = (html) => [...html.matchAll(/<div><dt>(\w+)<\/dt><dd>([\s\S]*?)<\/dd><\/div>/g)].filter((m) => !/^[A-Z]/.test(m[1])).map((m) => [m[1], m[2]]);
+  // An input: the task that passed, then the input, what was expected and what came back, all escaped.
+  const input = exampleRecordHtml(
+    catalogExample('013', { evidence: proof({ tests: { task: 'java -ea <Tests>', failed: [] }, counterexample: { input: 'grant(a=0, b="x")', expected: 'false', actual: '<true>', count: 1 }, seconds: 2.94, checker: 'JBMC 6.11.0' }) }),
+    { sha }
+  );
+  assert.match(input, /<div class="sf-ledger sf-proof">\s*<div class="sf-ledger-bar">(<span aria-hidden="true"><\/span>){3}<code>example 013: result\.json<\/code><\/div>/);
+  assert.deepEqual(rows(input), [
+    ['tests', '<strong class="sf-proof-passed">passed</strong> java -ea &lt;Tests&gt;'],
+    ['input', 'grant(a=0, b=&quot;x&quot;)'],
+    ['expected', 'false'],
+    ['got', '&lt;true&gt;'],
+    ['verifier', 'JBMC 6.11.0 · 2.9 s'],
+  ]);
+  assert.doesNotMatch(input, /counterexamples the result records/);
+  inOrderOf(input, ['sf-example-summary', 'sf-proof', 'sf-example-facts']);
+  // Tests that failed are named; more counterexamples than the one shown are counted; a missing side is left out.
+  const failed = exampleRecordHtml(
+    catalogExample('001', { testsPassed: false, evidence: proof({ tests: { task: ':domain:test', failed: ['A.one', 'A.<two>'] }, counterexample: { input: 'decide(X)', expected: null, actual: 'Unchanged', count: 33 } }) }),
+    { sha }
+  );
+  assert.deepEqual(rows(failed), [['tests', '<strong class="sf-proof-failed">failed</strong> :domain:test<span class="sf-proof-note">A.one<br>A.&lt;two&gt;</span>'], ['input', 'decide(X)'], ['got', 'Unchanged']]);
+  assert.match(failed, /<p class="sf-ledger-total">The first of 33 counterexamples the result records\.<\/p>/);
+  // A trace: what it breaks, its actions in order, and how far the checker looked.
+  const trace = exampleRecordHtml(catalogExample('062', { evidence: proof({ tests: { task: 't', failed: [] }, trace: { invariant: 'Election<Safety>', steps: 3, actions: ['Init', 'Time<out>', 'Canvass'], states: 1401 }, seconds: 118.8 }) }), { sha });
+  assert.deepEqual(rows(trace).slice(1), [
+    ['breaks', 'Election&lt;Safety&gt;'],
+    ['trace', 'Init <span aria-hidden="true">→</span> Time&lt;out&gt; <span aria-hidden="true">→</span> Canvass'],
+    ['explored', '3 steps in the trace, 1,401 states explored'],
+    ['verifier', '119 s'],
+  ]);
+  const bare = exampleRecordHtml(catalogExample('063', { evidence: proof({ trace: { invariant: null, steps: 1, actions: [], states: null } }) }), { sha });
+  assert.deepEqual(rows(bare), [['trace', '1 step'], ['explored', '1 step in the trace']]);
+  // A verified change has its tests and its time; a record with no evidence, or none of this in it, has no panel.
+  const verified = exampleRecordHtml(catalogExample('003', { verdict: 'verified', evidence: proof({ tests: { task: 't', failed: [] }, seconds: 0 }) }), { sha });
+  assert.deepEqual(rows(verified), [['tests', '<strong class="sf-proof-passed">passed</strong> t'], ['verifier', '0 s']]);
+  for (const none of [catalogExample('004'), catalogExample('005', { evidence: null }), catalogExample('006', { evidence: proof() })]) assert.doesNotMatch(exampleRecordHtml(none, { sha }), /sf-proof/);
+  // The catalog's answer is what is shown; the result's failures stand in only when the catalog has none.
+  const unsaid = exampleRecordHtml(catalogExample('007', { testsPassed: null, evidence: proof({ tests: { task: 't', failed: ['A.one'] } }) }), { sha });
+  assert.match(unsaid, /<strong class="sf-proof-failed">failed<\/strong> t/);
+});
+
+function inOrderOf(html, parts) {
+  let at = -1;
+  for (const part of parts) {
+    const next = html.indexOf(part, at + 1);
+    assert.ok(next > at, `${part} after the one before it`);
+    at = next;
+  }
+}
+
+test('the finding and the catalog’s page say what the violations come with, when the snapshot counts it', () => {
+  const records = pageExamples().map((x) =>
+    x.id === '001' ? { ...x, evidence: proof({ counterexample: { input: 'f()', expected: '1', actual: '2', count: 1 } }) } : x.id === '002' ? { ...x, evidence: proof({ trace: { invariant: 'Safe', steps: 2, actions: ['Init', 'Next'], states: 5 } }) } : x
+  );
+  const counted = (counterexamples) => pageSnapshot({ catalog: { ...pageSnapshot().overview.catalog, counterexamples, attempts: { timed: 1, medianSeconds: 2 } } });
+  const all = counted({ violations: 2, input: 1, trace: 1 });
+  const finding = findingsHtml(all, { examples: records });
+  assert.match(finding, /<dt>violations come with a counterexample: 1 an input, 1 a trace<\/dt><dd>2 of 2<\/dd>/);
+  assert.doesNotMatch(finding, /verification jobs passed/);
+  assert.match(finding, /Pick a square to read what the example changed and the counterexample the verifier found\./);
+  const page = examplesHtml(all, records);
+  assert.match(page, /<dt>Violations found<\/dt><dd><span class="sf-figure-value">2<\/span><span class="sf-figure-note">each with a counterexample: 1 an input, 1 a trace<\/span>/);
+  // The grid can be narrowed by what the counterexample is, and a square carries it.
+  assert.match(page, /<label>Counterexample <select name="shown" data-sf-facet><option value="">Any<\/option><option value="shown:0">An input \(1\)<\/option><option value="shown:1">A trace \(1\)<\/option><\/select><\/label>/);
+  assert.match(page, /id="example-001"[^>]*data-f="[^"]*shown:0[^"]*"/);
+  assert.match(page, /id="example-002"[^>]*data-f="[^"]*shown:1[^"]*"/);
+  assert.doesNotMatch(page.match(/<span class="sf-cell [^>]*id="example-003"[^>]*>/)[0], /shown:/);
+  // Not every violation has one: the count, not "each".
+  assert.match(examplesHtml(counted({ violations: 2, input: 1, trace: 0 }), records), /<span class="sf-figure-note">1 with a counterexample: 1 an input, 0 a trace<\/span>/);
+  // None counted, or a snapshot from before they were: the finding keeps its third number and neither says a word of it.
+  for (const snap of [counted({ violations: 2, input: 0, trace: 0 }), pageSnapshot()]) {
+    const html = `${findingsHtml(snap, { examples: pageExamples() })}${examplesHtml(snap, pageExamples())}`;
+    assert.doesNotMatch(html, /with a counterexample|come with a counterexample|name="shown"/);
+    assert.match(html, /Pick a square to read what the example changed and what the verifier found\./);
+  }
+});

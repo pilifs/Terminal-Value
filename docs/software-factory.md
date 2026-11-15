@@ -218,6 +218,25 @@ seconds: 47 and 2.9). Both are counted from the records, so a page needs no coll
 - The snapshot was made again from the same source revision (`fbd1fa86`): `sf1-5959e891382708eb`. No other number
   moved.
 
+### The counterexample, in an example's record
+
+With the evidence in the snapshot, a picked example shows what its verdict rests on (`evidenceHtml` in
+`factory.js`), drawn as the run record is, since it is a tool's output:
+
+- **tests**: the task, with "passed" or "failed" before it, and the tests that failed. Whether they passed is the
+  catalog's answer (`testsPassed`); the result's failures stand in only when the catalog has none.
+- **input, expected, got**: the first counterexample. When the result records more, a line under it says how many.
+- **breaks, trace, explored**: for a model checker's result, the invariant, each step's action in order, and the
+  trace's length with the states explored.
+- **verifier**: the checker and the seconds, where recorded.
+
+A row the record doesn't have is left out, and a record with no evidence has no panel.
+
+The Output finding's first number is now "100 of 100 violations come with a counterexample: 64 an input, 36 a
+trace" (`overview.catalog.counterexamples`), in place of the verification jobs that passed, which remain its third
+number for a snapshot without the count. The catalog's page says the same under "Violations found" and has a
+seventh list, "Counterexample": an input, or a trace.
+
 ### The catalog's own page
 
 The Output finding was the only one with no page under it: its link went to a records table on the usage page.
