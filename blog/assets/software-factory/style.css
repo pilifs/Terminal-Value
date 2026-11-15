@@ -1479,6 +1479,12 @@ body.software-factory .sf-ledger-full li + li {
 body.software-factory .sf-ledger-stop {
   color: var(--sf-term-dim);
 }
+body.software-factory .sf-ledger li.sf-ledger-plain {
+  display: block;
+}
+body.software-factory .sf-ledger-plain .sf-ledger-text {
+  white-space: normal;
+}
 body.software-factory .sf-shell .sf-ledger-note {
   margin: 0.6rem 0 0;
   color: var(--sf-muted);

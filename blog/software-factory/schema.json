@@ -332,6 +332,7 @@
                   "toolCalls": { "type": "integer", "minimum": 0 },
                   "usd": { "type": "number", "minimum": 0 },
                   "interjections": { "type": "integer", "minimum": 0 },
+                  "hasRecord": { "type": "boolean", "description": "Whether the loops collection has a record with this id: the run's own run record, or one read from the index of loops. Since generator 11." },
                   "ticks": { "type": "array", "description": "Seconds from the run's start to the end of each cycle that committed.", "items": { "type": "integer", "minimum": 0 } }
                 }
               }
@@ -1313,7 +1314,11 @@
               "ended": { "type": ["string", "null"] },
               "seconds": { "type": ["integer", "null"], "minimum": 0 },
               "agentSeconds": { "type": ["integer", "null"], "minimum": 0 },
-              "outcome": { "enum": ["done", "waiting", "blocked", "attention", "ended", "open"] },
+              "outcome": { "enum": ["done", "waiting", "blocked", "attention", "ended", "open", "unrecorded", "stopped", "interrupted"] },
+              "kind": { "type": "string", "description": "The source's kind of loop, on a record read from its index of loops. Since generator 11." },
+              "source": { "enum": ["transcript", "session"], "description": "On a record read from the source's index of loops, where the index read the run: a session's transcript, or a session of the verification loop. Absent on a record read from the run's own run record. Since generator 11." },
+              "reason": { "type": ["string", "null"], "description": "The index's word on how it read the run's end: typed by hand, no end recorded, summarized." },
+              "interjections": { "type": "integer", "minimum": 0, "description": "Prompts in the run that are not the loop's own, by the index." },
               "limit": { "type": ["integer", "null"], "minimum": 0 },
               "commits": { "type": "integer", "minimum": 0 },
               "calls": { "type": ["integer", "null"], "minimum": 0 },
@@ -1343,14 +1348,15 @@
                   "properties": {
                     "n": { "type": "integer", "minimum": 0 },
                     "at": { "$ref": "#/$defs/instant" },
-                    "change": { "type": "string" },
+                    "change": { "type": ["string", "null"], "description": "The change the cycle committed, the first when it committed several; null for a cycle that ended without a commit." },
+                    "commits": { "type": "integer", "minimum": 0, "description": "The commits the cycle made, on a record read from the index of loops." },
                     "summary": { "type": "string" },
                     "decision": { "enum": ["continue", "stop", null] }
                   }
                 }
               },
-              "recordUrl": { "type": "string" },
-              "summaryUrl": { "type": "string" }
+              "recordUrl": { "type": ["string", "null"], "description": "The run's own run record; null for a run that left none." },
+              "summaryUrl": { "type": ["string", "null"] }
             }
           }
         }

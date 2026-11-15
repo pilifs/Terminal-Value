@@ -670,6 +670,21 @@ export function normalizeSources(raw, config = loadConfig()) {
       if (!isObject(c) || typeof c.run !== 'string' || !isCount(c.commits) || !c.commits || !isInstant(c.ended)) continue;
       (cycleEnds.get(c.run) ?? cycleEnds.set(c.run, []).get(c.run)).push(Date.parse(c.ended));
     }
+    // Every cycle of a run as the index has it, in order: when it ended, the
+    // changes it committed and its commit's summary line. A run that left no
+    // run record is read from these.
+    const cyclesOf = new Map();
+    for (const c of Array.isArray(loopsDoc.cycles) ? loopsDoc.cycles : []) {
+      if (!isObject(c) || typeof c.run !== 'string' || !isCount(c.cycle) || !isInstant(c.ended)) continue;
+      (cyclesOf.get(c.run) ?? cyclesOf.set(c.run, []).get(c.run)).push({
+        n: c.cycle,
+        at: new Date(c.ended).toISOString(),
+        changes: Array.isArray(c.changes) ? c.changes.filter((x) => typeof x === 'string' && x) : [],
+        commits: isCount(c.commits) ? c.commits : 0,
+        summary: strOrNull(c.summary),
+        decision: c.decision === 'continue' || c.decision === 'stop' ? c.decision : null,
+      });
+    }
     const loopRuns = list(LOOPS, loopsDoc, 'runs').map((r, i) => {
       const at = `runs[${i}]`;
       if (!isObject(r) || typeof r.run !== 'string' || !LOOP_NAME.test(r.loop ?? '') || typeof r.kind !== 'string' || !isInstant(r.started)) bad(LOOPS, `${at} lacks a run, loop, kind or start`);
@@ -685,7 +700,13 @@ export function normalizeSources(raw, config = loadConfig()) {
         started: new Date(r.started).toISOString(),
         ended: isInstant(r.ended) ? new Date(r.ended).toISOString() : null,
         outcome: strOrNull(r.outcome),
+        // Why the index has no end for it, or how it read one: 'typed by hand', 'no end recorded', 'summarized'.
+        reason: strOrNull(r.reason),
+        session: strOrNull(r.session_id),
+        model: strOrNull(r.model),
+        effort: strOrNull(r.effort),
         interjections: r.interjections,
+        cycleList: (cyclesOf.get(r.run) ?? []).sort((a, b) => a.n - b.n),
         // Seconds from the run's start to the end of each cycle that committed, in order.
         ticks: (cycleEnds.get(r.run) ?? [])
           .map((ms) => Math.round((ms - Date.parse(r.started)) / 1000))

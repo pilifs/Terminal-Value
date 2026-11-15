@@ -1381,6 +1381,57 @@ test('with the account’s runs the clock has every run of every loop, and the p
   assert.equal((page.match(/class="sf-floor"/g) ?? []).length, 1);
 });
 
+test('a run the loops collection has a record for can be picked, and a record read from the index says what it is', () => {
+  const snap = snapshotOf(run());
+  const withAccount = (runs) => ({ ...snap, overview: { ...snap.overview, loopAccount: accountOf({ runs }) } });
+  // One run still has no record: it is drawn and can't be picked, and the caption counts it.
+  const some = withAccount(accountRuns().map((r) => ({ ...r, hasRecord: r.loop !== 'demo-values' })));
+  const clock = accountClock(some.overview);
+  assert.deepEqual(clock.runs.map((r) => r.id), ['2026-11-01-150000-by-hand', '2026-11-07-040000-demo-heap', null, '2026-11-07-053000-verification']);
+  assert.deepEqual([clock.unrecorded, clock.closed], [3, 1]);
+  assert.match(findingsHtml(some), /1 run in the account left no record of its own to open: /);
+  // Every run has one: each bar can be picked, the quiet ones too, and the caption says where the others' records are from.
+  const all = findingsHtml(withAccount(accountRuns().map((r) => ({ ...r, hasRecord: true }))));
+  assert.equal((all.match(/<span class="sf-run[^"]*" id="run-[^"]+" data-run="/g) ?? []).length, 4);
+  assert.match(all, /<span class="sf-run sf-run-quiet" id="run-2026-11-07-053000-verification" data-run="2026-11-07-053000-verification"/);
+  assert.match(all, /3 runs left no run record: the verification sessions, and the runs from before the script wrote one\. They open with what the source’s index of its loops has\./);
+  assert.doesNotMatch(all, /left no record of (its|their) own to open/);
+
+  // A record read from the index of loops: a run's cycles as the index read them from the session.
+  const base = {
+    id: 'r', loop: 'spring', campaign: 'spring', kind: 'moonshot', source: 'transcript', reason: 'no end recorded', session: 's', model: 'claude-opus-5-5', effort: 'high',
+    started: '2026-11-03T02:00:00.000Z', ended: '2026-11-03T04:00:00.000Z', seconds: 7200, agentSeconds: 7000, outcome: 'unrecorded', limit: null,
+    commits: 4, calls: 50, toolCalls: 80, toolErrors: 1, outputTokens: 1000, usd: 12.5, prompts: null, interjections: 0, codeAdded: null,
+    cycles: [
+      { n: 1, at: '2026-11-03T02:30:00.000Z', change: 'abcd', commits: 3, summary: 'Add <b>', decision: null },
+      { n: 2, at: '2026-11-03T03:00:00.000Z', change: 'efgh', commits: 1, summary: 'Second', decision: 'stop' },
+      { n: 3, at: '2026-11-03T04:00:00.000Z', change: null, commits: 0, summary: '', decision: null },
+    ],
+    recordUrl: null,
+    summaryUrl: 'https://github.com/pilifs/in-the-loop/blob/abc/llm-dlc/traces/s/summary.md',
+  };
+  const html = runRecordHtml(base, { models: snap.overview.models });
+  assert.match(html, /<code>feature loop: spring<\/code>/);
+  assert.match(html, /Opus 5\.5 \(<code>claude-opus-5-5<\/code>\), high effort/);
+  assert.match(html, /cycle 1<\/span><span class="sf-ledger-text">Add &lt;b&gt; <span class="sf-ledger-stop">3 commits<\/span><\/span>/);
+  assert.match(html, /cycle 2<\/span><span class="sf-ledger-text">Second <span class="sf-ledger-stop">decided to stop<\/span><\/span>/);
+  assert.match(html, /cycle 3<\/span><span class="sf-ledger-text"><span class="sf-ledger-stop">ended without a commit<\/span><\/span>/);
+  assert.match(html, /<strong>3 cycles<\/strong> · 4 commits · 80 tool calls · <strong>2 h<\/strong> · \$12\.50 estimated usage<br>0 prompts from a person, start to end · No end recorded/);
+  assert.match(html, /This run left no run record\. Each line is a cycle as the source’s index of its loops read it from the session, by the summary line of its commit\. <a href="https:[^"]+">Session summary<\/a>/);
+  assert.doesNotMatch(html, /Run record<|own commit/);
+  // The index counts the prompts that are not the loop's own; the loop a person ran by hand says so instead.
+  assert.match(runRecordHtml({ ...base, interjections: 2 }), /<br>2 prompts not the loop’s own · No end recorded/);
+  assert.match(runRecordHtml({ ...base, kind: 'moonshot by hand' }), /<br>Each instruction typed by a person, before the script existed · No end recorded/);
+  // A session of the verification loop has no cycles: what it took, and why no line is listed.
+  const session = runRecordHtml({ ...base, loop: 'verification', kind: 'verification loop', source: 'session', outcome: 'ended', cycles: [], summaryUrl: null });
+  assert.match(session, /<code>verification loop<\/code>/);
+  assert.match(session, /<li class="sf-ledger-more sf-ledger-plain"><span class="sf-ledger-text">A session of the verification loop has no cycles: it runs the queued proofs and commits the results\.<\/span><\/li>/);
+  assert.match(session, /<strong>4 commits<\/strong> of results · 80 tool calls · <strong>2 h<\/strong> · \$12\.50 estimated usage<br>0 prompts from a person, start to end · Ended/);
+  assert.match(session, /<p class="sf-ledger-note">This session left no run record\. What it took is from the source’s index of its loops\.<\/p>/);
+  // A campaign's card counts the runs that left a run record, and its list keeps to them.
+  assert.match(campaignRunsHtml([base], 'spring'), /No runs recorded/);
+});
+
 test('the loops page leads with the source’s account: by kind, then every loop, then the runs that left a record', () => {
   const snap = snapshotOf(run());
   const page = loopsHtml({ ...snap, overview: { ...snap.overview, loopAccount: accountOf(), models: [...snap.overview.models, { id: 'claude-new-9', label: 'claude-new-9' }] } });

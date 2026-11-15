@@ -523,14 +523,14 @@ const loopsDoc = () => {
       { loop: 'core-values', category: 'brief', kind: 'brief stream', stream_of: 'core', instruction: 'SECRET INSTRUCTION TEXT', ...group({ runs: 2, sessions: 2, cycles: 2, cycles_committed: 1, commits: 3, api_calls: 20, tool_calls: 40, tool_errors: 2, output_tokens: 2000, usd: 3, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
     ],
     runs: [
-      { run: '2026-11-01-100000-by-hand', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T12:00:00.000Z', outcome: 'unrecorded', interjections: 0, ...usage({ cycles: 3, cycles_committed: 3, commits: 3 }) },
+      { run: '2026-11-01-100000-by-hand', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T12:00:00.000Z', outcome: 'unrecorded', reason: 'typed by hand', session_id: 's-hand', model: 'claude-fable-5-1', effort: 'high', interjections: 0, ...usage({ cycles: 3, cycles_committed: 3, commits: 3 }) },
       { run: '2026-11-02-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: '2026-11-02T11:00:00.000Z', outcome: 'ended', interjections: 2, ...usage({ cycles: 1, cycles_committed: 1, commits: 2, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
       { run: '2026-11-03-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'transcript', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'stopped', interjections: 0, ...usage({ cycles: 1, commits: 1 }) },
     ],
     // The first run's three cycles committed; the second's one made two commits; one cycle made none and one has no end.
     cycles: [
       { run: '2026-11-01-100000-by-hand', cycle: 2, commits: 1, ended: '2026-11-01T11:00:00.000Z' },
-      { run: '2026-11-01-100000-by-hand', cycle: 1, commits: 1, ended: '2026-11-01T10:20:00.000Z' },
+      { run: '2026-11-01-100000-by-hand', cycle: 1, commits: 2, changes: ['aaaa', 'bbbb', 7], summary: 'First', decision: 'continue', ended: '2026-11-01T10:20:00.000Z' },
       { run: '2026-11-01-100000-by-hand', cycle: 3, commits: 1, ended: '2026-11-01T12:00:00.000Z' },
       { run: '2026-11-02-100000-core-values', cycle: 1, commits: 2, ended: '2026-11-02T10:45:00.500Z' },
       { run: '2026-11-03-100000-core-values', cycle: 1, commits: 0, ended: '2026-11-03T10:30:00.000Z' },
@@ -566,10 +566,20 @@ test('the source’s account of its loops is read as it stands, checked to add u
   ]);
   // A run's brief, where it is a stream of one, and when each of its cycles that committed ended, in seconds from its start.
   assert.deepEqual(a.runs.map((r) => [r.streamOf, r.ticks]), [[null, [1200, 3600, 7200]], ['core', [2701]], ['core', []]]);
+  // What a run that left no run record is read from: its session, model and effort, how its end was read, and
+  // every cycle the index has an end for, in order, with the changes it committed and its commit's summary line.
+  assert.deepEqual(a.runs.map((r) => [r.session, r.model, r.effort, r.reason]), [['s-hand', 'claude-fable-5-1', 'high', 'typed by hand'], [null, null, null, null], [null, null, null, null]]);
+  assert.deepEqual(a.runs[0].cycleList, [
+    { n: 1, at: '2026-11-01T10:20:00.000Z', changes: ['aaaa', 'bbbb'], commits: 2, summary: 'First', decision: 'continue' },
+    { n: 2, at: '2026-11-01T11:00:00.000Z', changes: [], commits: 1, summary: null, decision: null },
+    { n: 3, at: '2026-11-01T12:00:00.000Z', changes: [], commits: 1, summary: null, decision: null },
+  ]);
+  // A cycle that made no commit is listed; one with no end is not.
+  assert.deepEqual(a.runs[2].cycleList, [{ n: 1, at: '2026-11-03T10:30:00.000Z', changes: [], commits: 0, summary: null, decision: null }]);
   // A file with no cycles gives no notches, and is still an account.
   const { cycles, ...bare } = loopsDoc();
   write(dir, LOOPS_FILE, bare);
-  assert.deepEqual((await load(dir)).loopAccount.runs.map((r) => r.ticks), [[], [], []]);
+  assert.deepEqual((await load(dir)).loopAccount.runs.map((r) => [r.ticks, r.cycleList]), [[[], []], [[], []], [[], []]]);
   write(dir, LOOPS_FILE, loopsDoc());
   // A loop's instruction is prompt text: it goes no further.
   assert.doesNotMatch(JSON.stringify(n), /SECRET INSTRUCTION TEXT/);

@@ -97,7 +97,8 @@ tell a person's `/compact` from the one `verification-loop.sh` sends, so it coun
 > run and cycle, moonshots and the verification loop included, with time, jobs and cost. That answers this request.
 > The importer reads its totals, categories, loops, runs and the time each cycle committed (`overview.loopAccount`),
 > and the clock of every run is drawn from them. A run's own record, opened on the clock, still comes from the
-> markdown; the index's `cycles` have each cycle's summary and change, so they could replace it for every run.
+> markdown where the run left one. The 59 runs that left none now open from the index's `cycles`, which have
+> each cycle's summary and changes; they could replace the markdown for every run.
 
 **Today.** The importer parses the markdown record: the `Started` header, each `- cycle N, time, change: summary`
 line with its `decided to continue` or `decided to stop`, and the last `Ended` or `Stopped` line. A change to the
@@ -206,5 +207,8 @@ lists hold some of this as prose.
 - **Verdicts by claim in the examples index.** `examples/index.json` gives six examples with results no `verdict`:
   the label records one for each claim ("✗ unbounded on 2.7.17; ✓ bounded on 2.7.18"). The pages read the label's
   marks (✗, ✓, ⚠) to count them. A `verdicts` list on the entry, one per claim, would replace that.
+- **The jobs a verification session ran.** `loops.json` ties a job to the run and cycle that queued it. It doesn't
+  say which session of the verification loop ran it, so a session opened on the clock shows what it took and not
+  which proofs it ran. A `session_id` or the verification run's id on each job would do.
 - **Loops before 2026-11-06.** A one-off backfill of run records from the logs would extend the loops section back
   to the first loop.

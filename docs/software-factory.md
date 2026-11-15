@@ -445,6 +445,38 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### Every run on the clock opens (generator 11)
+
+The clock drew 109 runs and 50 of them opened: the ones that left a run record. The other 59 were dead ends for
+a reader who wanted to look under the headline, and they were every run before Nov 6 and every verification
+session. Now each of the 109 opens.
+
+- **Read from the source's index of loops** (`llm-dlc/traces/loops.json`). The importer takes each run's session,
+  model, effort and the index's word on how it read the run's end, and every cycle the index has an end for: its
+  number, when it ended, the changes it committed and the summary line of its commit (`cycleList`).
+- **In the snapshot** the loops collection has a record for each run that left no run record: 9 runs the index
+  read from a session's transcript, with 94 cycles between them, and 50 sessions of the verification loop. Such a
+  record has `source` (`transcript` or `session`), `kind`, `reason` and `interjections`, a null `recordUrl` and
+  null `prompts`, and a link to the session's summary when the snapshot knows the session. A cycle has the first
+  change it committed and how many commits it made; one that ended without a commit has no change and no summary.
+  Each run of `overview.loopAccount.runs` says `hasRecord`. A run whose session, model or effort the index doesn't
+  say gets no record, and stays drawn and closed.
+- **The record a reader sees** (`runRecordHtml` in `factory.js`) is the same dark panel. A run from the index
+  lists its cycles, marks one that made several commits or none, and says under it that the run left no run
+  record and where the lines are from. The loop a person ran by hand says each instruction was typed. A session
+  of the verification loop says it has no cycles, then what it took: commits of results, tool calls, time and
+  estimated usage.
+- **What it does not show.** Which proofs a verification session ran: the index ties a job to the cycle that
+  queued it, not to the session that ran it. That is a suggestion in
+  [software-factory-upstream.md](./software-factory-upstream.md).
+- **The campaigns** on the loops page are still read from the run records alone, and a campaign's list of runs
+  keeps to them, so a card and its list count the same runs.
+- **On a phone** two short sessions can sit under one another's bar, so a tap reaches only one of them. The
+  Earlier run and Later run buttons step through all 109.
+
+Metric definitions are version 11 (the `loop_account` note says what opens). Snapshot `sf1-aee8dc3acbc90f30`, the
+same revision. The loops file is 169 KB before compression and is loaded only when a reader opens a run.
+
 ### The share image
 
 The author decided on 2026-11-15 that the section gets a link-preview image the way `/prove-java-change/` got
@@ -517,9 +549,9 @@ counts and not the 50 that left a record.
   brief a stream belongs to, or the loop itself), where the source read it from, start, end, outcome, cycles,
   commits, tool calls, estimated usage, typed prompts and ticks. About 38 KB before compression.
 - **Drawn by the same figure** (`floorFigure` in `factory.js`, fed by `accountClock`). A run that left a run record
-  has that record's outcome and id, so it can still be picked and opened. The other 59 are drawn and say what the
-  account has in their tip; the caption says they have no record to open. The pointer is a hand only over a run
-  that opens.
+  has that record's outcome and id, so it can still be picked and opened. The other 59 were drawn and said what
+  the account has in their tip, with no record to open; since generator 11 they open too ("Every run on the clock
+  opens", above). The pointer is a hand only over a run that opens.
 - **The verification loop** takes the first row for the whole clock, in gray: 50 sessions that run the queued
   proofs and commit the results. They have no cycles, so no notches. The legend names the row.
 - **The pace keeps its claim.** "A commit every 13 minutes for 49 hours" is counted over the loops that write

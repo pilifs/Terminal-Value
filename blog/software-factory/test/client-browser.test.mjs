@@ -416,6 +416,24 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
       } finally {
         await visit.context.close();
       }
+      // Every run of the account can be picked, the ones that left no run record too. A session of the
+      // verification loop opens with what it took, and no cycles.
+      const account = overviewOf(COMMITTED).loopAccount.runs;
+      const session = account.find((r) => r.category === 'verification').id;
+      visit = await open(`/software-factory/#run-${session}`, remote);
+      try {
+        await shown(visit.page, 'the record of a verification session');
+        const now = await record(visit.page);
+        assert.deepEqual([now.loop, now.on], ['verification loop', [session]]);
+        const text = await visit.page.evaluate(() => document.querySelector('[data-sf-inspect="run"]').textContent);
+        assert.match(text, /has no cycles: it runs the queued proofs and commits the results\./);
+        assert.match(text, /This session left no run record\./);
+        assert.equal(await visit.page.evaluate(() => document.querySelectorAll('.sf-floor .sf-run[data-run]').length), account.length);
+        assert.ok(account.length > overviewOf(COMMITTED).loops.runs.length);
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
     });
 
     await t.test('an example picked in the catalog shows the catalog’s own record, and can be linked to', async () => {

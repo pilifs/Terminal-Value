@@ -30,6 +30,10 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 11 adds to the loops collection a record for each run of the
+//     account that left no run record, read from the index of loops (its
+//     `source` is transcript or session, its recordUrl null), and to each
+//     run of overview.loopAccount.runs `hasRecord`.
 //   - Version 7 adds overview.loopAccount: the source's own account of its
 //     loops (llm-dlc/traces/loops.json), with its totals, categories and
 //     loops, the prompts typed into a run, and the loop run by hand, apart.
@@ -63,7 +67,9 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '10' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '11' };
+// The outcomes the source's index of loops gives a run it read from a session.
+const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 
 // An example's verdict as the pages count it. The catalog gives most examples
 // one verdict. Where it gives none, the label may still record a result for
@@ -411,6 +417,51 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     { prompts: [], tools: [], sessionCommits: [], runs: [], code: null, ...normalized },
     { config: { ...config, loops: config.loops, code: config.code }, days, day, modelIds, label, area, areaLabel, changeRecords: baseChanges, changeTook: tookOf }
   );
+  // A record for each run of the account that left no run record, from what
+  // the source's index of its loops has: the cycles it read from the session,
+  // by the summary line of each one's commit, or for a verification session
+  // only what the session took. With these every run of the account can be
+  // opened, and each run says whether it has a record. Since generator 11.
+  const recordIds = new Set(factory.runRecords.map((r) => r.id));
+  const knownSessions = new Set(sessions.map((s) => s.id));
+  const isText = (v) => typeof v === 'string' && v !== '';
+  const readable = (x) => isText(x.session) && isText(x.model) && isText(x.effort) && INDEX_OUTCOMES.includes(x.outcome);
+  const accountRecords = (la?.runs ?? [])
+    .filter((x) => !recordIds.has(x.run) && readable(x))
+    .map((x) => ({
+      id: x.run,
+      loop: x.loop,
+      campaign: x.streamOf ?? x.loop,
+      kind: x.kind,
+      source: x.source,
+      reason: x.reason || null,
+      session: x.session,
+      model: x.model,
+      effort: x.effort,
+      started: x.started,
+      ended: x.ended,
+      seconds: x.ended ? Math.max(0, Math.round((Date.parse(x.ended) - Date.parse(x.started)) / 1000)) : null,
+      agentSeconds: x.agentSeconds,
+      outcome: x.outcome,
+      limit: null,
+      commits: x.commits,
+      calls: x.calls,
+      toolCalls: x.toolCalls,
+      toolErrors: x.toolErrors,
+      outputTokens: x.outputTokens,
+      usd: round6(x.usd),
+      prompts: null,
+      interjections: x.interjections,
+      codeAdded: null,
+      cycles: (x.cycleList ?? []).map((c) => ({ n: c.n, at: c.at, change: c.changes[0] ?? null, commits: c.commits, summary: c.summary ?? '', decision: c.decision })),
+      recordUrl: null,
+      summaryUrl: knownSessions.has(x.session) ? source.summaryUrl.replace('{sha}', normalized.source.sha).replace('{session}', x.session) : null,
+    }))
+    .sort((a, b) => byValue(a.started, b.started) || byValue(a.id, b.id));
+  if (loopAccount) {
+    const open = new Set([...recordIds, ...accountRecords.map((r) => r.id)]);
+    for (const r of loopAccount.runs) r.hasRecord = open.has(r.id);
+  }
   const changeRecords = baseChanges.map((c) => {
     const fact = factory.changeFacts.get(c.changeId);
     const took = tookOf.get(c.changeId);
@@ -555,7 +606,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },
     verification: { schema: 'software-factory-verification/v1', snapshotId: id, records: verificationRecords },
     examples: { schema: 'software-factory-examples/v1', snapshotId: id, records: exampleRecords },
-    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: factory.runRecords },
+    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: [...factory.runRecords, ...accountRecords] },
   });
   const placeholder = build(PLACEHOLDER);
   const id = snapshotId({

@@ -616,5 +616,49 @@ test('the source’s account of its loops is carried whole, with typed prompts a
     ['b', 'core-values', 'core', 'record', '2026-11-02T10:00:00.000Z', 1, 2, 1.234568, 2, []],
     ['c', 'core-values', 'core', 'record', '2026-11-03T10:00:00.000Z', 1, 1, 1.234568, 1, []],
   ]);
-  assert.deepEqual(Object.keys(a.runs[0]), ['id', 'loop', 'campaign', 'category', 'kind', 'source', 'started', 'ended', 'outcome', 'cycles', 'commits', 'toolCalls', 'usd', 'interjections', 'ticks']);
+  assert.deepEqual(Object.keys(a.runs[0]), ['id', 'loop', 'campaign', 'category', 'kind', 'source', 'started', 'ended', 'outcome', 'cycles', 'commits', 'toolCalls', 'usd', 'interjections', 'ticks', 'hasRecord']);
+  // None of these runs names its session, so none has a record to open.
+  assert.deepEqual(a.runs.map((r) => r.hasRecord), [false, false, false]);
+});
+
+test('a run that left no run record gets a record from the index of loops, and says it has one', () => {
+  const stat = { cycles: 2, cyclesCommitted: 1, commits: 2, calls: 5, toolCalls: 10, toolErrors: 1, outputTokens: 100, usd: 1.23456789, agentSeconds: 60, busySeconds: 50, modelSeconds: 30, toolSeconds: 25, compactions: 0, peakContextTokens: 9000, jobs: 0, jobsPassed: 0, jobsFailed: 0 };
+  const group = (o = {}) => ({ ...stat, runs: 1, sessions: 1, models: ['claude-fable-5-1'], first: '2026-11-01T10:00:00.000Z', last: '2026-11-01T12:00:00.000Z', medianCycleUsd: null, medianCycleBusySeconds: null, ...o });
+  const read = { session: 's-a', model: 'claude-fable-5-1', effort: 'high', reason: 'typed by hand' };
+  const runs = [
+    // Read from a session's transcript: two cycles, the first of two commits, the second without one.
+    { run: 'a', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', streamOf: null, source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T10:30:00.400Z', outcome: 'unrecorded', interjections: 0, ticks: [600], ...read, ...stat,
+      cycleList: [{ n: 1, at: '2026-11-01T10:10:00.000Z', changes: ['abcd', 'efgh'], commits: 2, summary: 'First', decision: 'continue' }, { n: 2, at: '2026-11-01T10:30:00.000Z', changes: [], commits: 0, summary: null, decision: null }] },
+    // A session of the verification loop: no cycles.
+    { run: 'v', loop: 'verification', kind: 'verification loop', category: 'verification', streamOf: null, source: 'session', started: '2026-11-02T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 0, ticks: [], ...read, session: 's-v', reason: '', ...stat, cycles: 0, cyclesCommitted: 0, cycleList: [] },
+    // One the index doesn't say the model of: nothing is made up for it.
+    { run: 'x', loop: 'by-hand', kind: 'moonshot', category: 'moonshot', streamOf: null, source: 'transcript', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'unrecorded', interjections: 0, ticks: [], ...read, model: null, ...stat, cycles: 0, cyclesCommitted: 0, cycleList: [] },
+    // One with an outcome the index is not known to give.
+    { run: 'y', loop: 'by-hand', kind: 'moonshot', category: 'moonshot', streamOf: null, source: 'transcript', started: '2026-11-04T10:00:00.000Z', ended: null, outcome: 'exploded', interjections: 0, ticks: [], ...read, ...stat, cycles: 0, cyclesCommitted: 0, cycleList: [] },
+  ];
+  const account = {
+    pricingAsOf: '2026-11-15',
+    totals: { loops: 2, ...group({ runs: 4, cycles: 2, commits: 8 }), runsFromRecords: 0, runsFromTranscripts: 3 },
+    categories: [{ category: 'moonshot', loops: 1, ...group({ runs: 3, commits: 6 }) }, { category: 'verification', loops: 1, ...group({ cycles: 0 }) }],
+    loops: [{ loop: 'by-hand', category: 'moonshot', kind: 'moonshot by hand', streamOf: null, ...group({ runs: 3, commits: 6 }) }, { loop: 'verification', category: 'verification', kind: 'verification loop', streamOf: null, ...group({ cycles: 0 }) }],
+    runs,
+  };
+  // The session of the first run is one the snapshot knows, so its summary can be linked.
+  const out = run(norm({ calls: [call('2026-11-01T10:05:00Z', { session: 's-a' })], sessions: [session('s-a')], loopAccount: account }));
+  assert.deepEqual(out.overview.loopAccount.runs.map((r) => [r.id, r.hasRecord]), [['a', true], ['v', true], ['x', false], ['y', false]]);
+  const records = out.details.loops.records;
+  assert.deepEqual(records.map((r) => r.id), ['a', 'v']);
+  assert.deepEqual(out.manifest.collections.find((c) => c.name === 'loops').records, 2);
+  const { summaryUrl, ...a } = records[0];
+  assert.deepEqual(a, {
+    id: 'a', loop: 'by-hand', campaign: 'by-hand', kind: 'moonshot by hand', source: 'transcript', reason: 'typed by hand', session: 's-a', model: 'claude-fable-5-1', effort: 'high',
+    started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T10:30:00.400Z', seconds: 1800, agentSeconds: 60, outcome: 'unrecorded', limit: null,
+    commits: 2, calls: 5, toolCalls: 10, toolErrors: 1, outputTokens: 100, usd: 1.234568, prompts: null, interjections: 0, codeAdded: null,
+    // A cycle is named by the first change it committed; one that committed nothing has none, and no summary.
+    cycles: [{ n: 1, at: '2026-11-01T10:10:00.000Z', change: 'abcd', commits: 2, summary: 'First', decision: 'continue' }, { n: 2, at: '2026-11-01T10:30:00.000Z', change: null, commits: 0, summary: '', decision: null }],
+    recordUrl: null,
+  });
+  assert.match(summaryUrl, /^https:\/\/github\.com\/[^/]+\/[^/]+\/blob\/[0-9a-f]{40}\/.*s-a/);
+  // A session the snapshot doesn't know gets no link; an empty reason is none.
+  assert.deepEqual([records[1].source, records[1].summaryUrl, records[1].reason, records[1].seconds, records[1].cycles], ['session', null, null, null, []]);
 });

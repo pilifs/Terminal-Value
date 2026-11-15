@@ -926,6 +926,10 @@ Settled by the author on 2026-11-14:
   image". `npm run software-factory:cover` writes `blog/covers/software-factory.html` from the committed snapshot
   and renders it to `blog/assets/software-factory/cover.png`; every page of the section names it as `og:image`.
   `test/site-cover.test.mjs` fails while the page or the PNG is of an older snapshot.
+- **Every run on the clock opens** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md,
+  "Every run on the clock opens". The 59 runs that left no run record get a record from the source's index of
+  loops (generator 11, snapshot `sf1-aee8dc3acbc90f30`): 9 runs with their 94 cycles, and 50 verification
+  sessions with what each took. All 109 bars can be picked.
 - Status: done
 
 ## Loop settings

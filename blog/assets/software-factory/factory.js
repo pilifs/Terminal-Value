@@ -371,10 +371,13 @@ export function stretches(loops) {
 const mostAtOnce = (runs) => runs.reduce((most, r) => Math.max(most, runs.filter((q) => q.from <= r.from && r.from < q.to).length), 0);
 
 const VERIFICATION = 'verification';
+const BY_HAND = 'moonshot by hand'; // the source's kind for the loop a person ran, typing each instruction
 /**
  * The source's account of its runs as the floor draws them: every run of
- * every loop. A run that left a run record has that record's outcome and can
- * be picked; the others are drawn and say what the account has. The
+ * every loop. A run that left a run record has that record's outcome. A run
+ * the loops collection has a record for can be picked: since generator 11
+ * that is every run, the ones without a run record from the source's index
+ * of its loops. The
  * verification loop's sessions take the first row, drawn quieter: they run
  * the queued proofs and commit the results, and have no cycles. Null for a
  * snapshot whose account has no runs.
@@ -387,7 +390,8 @@ export function accountClock(overview) {
   const runs = account.runs.map((r) => {
     const record = recorded.get(r.id);
     return {
-      id: record ? r.id : null,
+      // A run can be picked when the loops collection has a record for it.
+      id: record || r.hasRecord ? r.id : null,
       loop: r.loop,
       campaign: r.campaign,
       started: r.started,
@@ -406,7 +410,7 @@ export function accountClock(overview) {
   const campaigns = ids
     .map((id) => ({ id, streams: new Set(runs.filter((r) => r.campaign === id && r.loop !== id).map((r) => r.loop)).size, card: cards.has(id), quiet: !quietFirst(id) }))
     .sort((a, b) => quietFirst(a.id) - quietFirst(b.id));
-  return { runs, campaigns, unrecorded: runs.filter((r) => !r.id).length };
+  return { runs, campaigns, unrecorded: account.runs.filter((r) => !recorded.has(r.id)).length, closed: runs.filter((r) => !r.id).length };
 }
 
 /**
@@ -498,9 +502,12 @@ function floorFigure(loops, { cap = FLOOR_HOURS } = {}) {
   const inspect = inspectHtml('run', 'Pick a run on the clock to read its record, cycle by cycle.');
   // With the account every run is here; without it, the runs that left a record.
   const every = loops.unrecorded === undefined ? 'Every run that left a record' : 'Every run of every loop';
-  const closed = loops.unrecorded
-    ? ` ${plural(loops.unrecorded, 'run')} in the account left no record of ${loops.unrecorded === 1 ? 'its' : 'their'} own to open: ${quiet ? 'the verification sessions, and ' : ''}the runs from before the script wrote one.`
-    : '';
+  const which = `${quiet ? 'the verification sessions, and ' : ''}the runs from before the script wrote one`;
+  const closed = loops.closed
+    ? ` ${plural(loops.closed, 'run')} in the account left no record of ${loops.closed === 1 ? 'its' : 'their'} own to open: ${which}.`
+    : loops.unrecorded
+      ? ` ${plural(loops.unrecorded, 'run')} left no run record: ${which}. ${loops.unrecorded === 1 ? 'It opens' : 'They open'} with what the source’s index of its loops has.`
+      : '';
   return {
     html,
     legend,
@@ -741,7 +748,8 @@ export function loopsHtml(snapshot) {
 
 /** A campaign's runs with their cycles, from the loops collection: drawn when a reader opens it. */
 export function campaignRunsHtml(records, campaignId) {
-  const own = records.filter((r) => r.campaign === campaignId);
+  // The card counts the runs that left a run record, so the list keeps to them.
+  const own = records.filter((r) => r.campaign === campaignId && !r.source);
   if (!own.length) return '<p class="sf-muted">No runs recorded for this campaign.</p>';
   return own
     .map((r) => {
@@ -777,39 +785,62 @@ export function campaignRunsHtml(records, campaignId) {
  * One run's record, shown when a reader picks the run on the floor: every
  * cycle by its own summary, what the run took, and how it ended. `r` is a
  * record of the loops collection; models is overview.models, for the names.
+ *
+ * A run that left no run record has a record read from the source's index of
+ * its loops (r.source): its cycles as the index read them from the session,
+ * or, for a session of the verification loop, only what the session took.
  */
 export function runRecordHtml(r, { models = [] } = {}) {
   const started = Date.parse(r.started);
   const label = models.find((m) => m.id === r.model)?.label;
+  const session = r.source === 'session';
+  const byHand = r.kind === BY_HAND;
   const typed = r.prompts ? r.prompts.person + r.prompts.interrupt : null;
   const lines = r.cycles
     .map(
       (c) =>
-        `<li><span class="sf-ledger-time">${into((Date.parse(c.at) - started) / 1000)}</span><span class="sf-ledger-cycle">cycle ${e(c.n)}</span><span class="sf-ledger-text">${e(c.summary)}${
-          c.decision === 'stop' ? ' <span class="sf-ledger-stop">decided to stop</span>' : ''
-        }</span></li>`
+        `<li><span class="sf-ledger-time">${into((Date.parse(c.at) - started) / 1000)}</span><span class="sf-ledger-cycle">cycle ${e(c.n)}</span><span class="sf-ledger-text">${
+          c.change === null && !c.summary ? '<span class="sf-ledger-stop">ended without a commit</span>' : e(c.summary)
+        }${c.commits > 1 ? ` <span class="sf-ledger-stop">${count(c.commits)} commits</span>` : ''}${c.decision === 'stop' ? ' <span class="sf-ledger-stop">decided to stop</span>' : ''}</span></li>`
     )
     .join('\n              ');
+  const none = session ? 'A session of the verification loop has no cycles: it runs the queued proofs and commits the results.' : 'No cycle committed.';
   const took = [
-    `<strong>${plural(r.cycles.length, 'cycle')}</strong>`,
-    plural(r.commits, 'commit'),
+    session ? null : `<strong>${plural(r.cycles.length, 'cycle')}</strong>`,
+    session ? `<strong>${plural(r.commits, 'commit')}</strong> of results` : plural(r.commits, 'commit'),
     r.toolCalls === null || r.toolCalls === undefined ? null : `${count(r.toolCalls)} tool calls`,
     r.seconds === null ? null : `<strong>${e(span(r.seconds))}</strong>`,
     r.usd === null || r.usd === undefined ? null : `${e(formatValue(r.usd, 'usd'))} estimated usage`,
     r.codeAdded ? `+${count(r.codeAdded)} lines of code` : null,
   ].filter(Boolean);
-  const ended = [typed === null ? null : `${plural(typed, 'prompt')} from a person, start to end`, e(OUTCOMES[r.outcome] ?? r.outcome)].filter(Boolean);
+  // Who typed: a run record counts a person's prompts; the index counts the prompts that are not the loop's own.
+  const who = byHand
+    ? 'Each instruction typed by a person, before the script existed'
+    : typed !== null
+      ? `${plural(typed, 'prompt')} from a person, start to end`
+      : r.interjections === 0
+        ? '0 prompts from a person, start to end'
+        : r.interjections
+          ? `${plural(r.interjections, 'prompt')} not the loop’s own`
+          : null;
+  const ended = [who, e(OUTCOMES[r.outcome] ?? r.outcome)].filter(Boolean);
   const links = `${link(r.recordUrl, 'Run record')}${link(r.summaryUrl, 'Session summary')}`.replace(/^ · /, '');
+  const name = session ? `verification loop${r.loop === VERIFICATION ? '' : `: ${e(r.loop)}`}` : `feature loop: ${e(r.loop)}`;
+  const note = session
+    ? 'This session left no run record. What it took is from the source’s index of its loops.'
+    : r.source
+      ? 'This run left no run record. Each line is a cycle as the source’s index of its loops read it from the session, by the summary line of its commit.'
+      : 'Each line is a cycle, by the summary line of its own commit.';
   return `<div class="sf-ledger sf-ledger-full">
-            <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>feature loop: ${e(r.loop)}</code></div>
+            <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>${name}</code></div>
             <div class="sf-ledger-body">
               <p class="sf-ledger-meta">started ${e(dayYear(r.started))}, ${e(clockWords(torontoClock(started)))} · ${label ? `${e(label)} (<code>${e(r.model)}</code>)` : `<code>${e(r.model)}</code>`}, ${e(r.effort)} effort</p>
               <ol>
-              ${lines || '<li class="sf-ledger-more"><span class="sf-ledger-time"></span><span class="sf-ledger-cycle"></span><span class="sf-ledger-text">No cycle committed.</span></li>'}
+              ${lines || `<li class="sf-ledger-more${session ? ' sf-ledger-plain' : ''}">${session ? '' : '<span class="sf-ledger-time"></span><span class="sf-ledger-cycle"></span>'}<span class="sf-ledger-text">${none}</span></li>`}
               </ol>
               <p class="sf-ledger-total">${took.join(' · ')}<br>${ended.join(' · ')}</p>
             </div>
-            <p class="sf-ledger-note">Each line is a cycle, by the summary line of its own commit.${links ? ` ${links}` : ''}</p>
+            <p class="sf-ledger-note">${note}${links ? ` ${links}` : ''}</p>
           </div>`;
 }
 
