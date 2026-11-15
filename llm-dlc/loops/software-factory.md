@@ -849,6 +849,12 @@ Settled by the author on 2026-11-14:
   took, how it ended, and links to the run record in the source. Two buttons step through all the runs; the address
   keeps the pick as `#run-<id>`. From the `loops` collection the snapshot already has. The overview's opening
   sentence now says what in-the-loop is, from its README: a project that formally verifies Java code.
+- **What the factory made** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, "What
+  the factory made: the example catalog". A second finding, "Output", on the overview: the example catalog as a
+  square per example, coloured by verdict, the changes to published libraries ringed and the five with a result so
+  far listed by name. From `overview.stocks.examples` and the `examples` collection; no change to the contract or
+  the snapshot. Next: carry each example's `path` and `summary` from `examples/index.json` into its record, so a
+  square can link to its example and say what was found.
 - Status: done
 
 ## Loop settings

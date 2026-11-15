@@ -235,17 +235,37 @@ async function start(shell) {
     const hero = section('hero');
     const sections = {
       hero: () => heroHtml(snap, { title: hero.dataset.title, lede: hero.dataset.lede }),
-      findings: () => findingsHtml(snap),
+      findings: () => findingsHtml(snap, { examples: catalog }),
       loops: () => loopsHtml(snap),
       tools: () => toolsHtml(snap),
       code: () => codeHtml(snap),
     };
+    catalog = null;
     for (const [name, html] of Object.entries(sections)) {
       const el = section(name);
       if (el) el.innerHTML = html();
     }
     runs = null;
     readyFactory();
+    nameCatalog(snap);
+  }
+
+  // The overview names its catalog's squares from the examples collection. The
+  // build did that for the snapshot it had; for another, the squares are drawn
+  // by verdict first and named once that snapshot's records are here.
+  let catalog = null;
+  async function nameCatalog(snap) {
+    const findings = section('findings');
+    if (!findings || !snap.manifest.collections.some((c) => c.name === 'examples')) return;
+    try {
+      const file = await loadCollection(snap, 'examples', { fetch: get });
+      if (snap !== current) return;
+      catalog = file.records;
+      findings.innerHTML = findingsHtml(snap, { examples: catalog });
+      readyFactory();
+    } catch {
+      // Unnamed squares are still right; the next snapshot tries again.
+    }
   }
 
   shell.addEventListener('change', (ev) => {

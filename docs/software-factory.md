@@ -111,7 +111,7 @@ The author found the overview too cluttered: at 1280 wide it was 12,750 px tall,
 
 | Page | What is on it |
 | --- | --- |
-| `/software-factory/` | The headline and the longest run's record. Then three findings, one each for the loops, the tools and the code: a claim computed from the data, a sentence, three numbers, one figure and a link. Then where to go next: usage, analysis, methodology |
+| `/software-factory/` | The headline and the longest run's record. Then four findings, one each for the loops, what they made, the tools and the code: a claim computed from the data, a sentence, three numbers, one figure and a link. Then where to go next: usage, analysis, methodology |
 | `/software-factory/loops/` | Everything the feature loops section had, and the "Loops running now" panel |
 | `/software-factory/tools/` | Model performance: tool call success, failures by day, recovery, and the six tables |
 | `/software-factory/code/` | Code: rework by day, what a change took, languages, and loops against the rest |
@@ -130,6 +130,33 @@ How it is put together:
 - **Links between pages are absolute**, from `/software-factory/`. A link to a closed `<details>`, such as
   `usage/#explore-changes`, opens it. A test follows every link between the pages to a page and an id that exist.
 - **Each section's title is the page's `h1`**, and the headings under it moved up a level.
+
+### What the factory made: the example catalog
+
+The overview said how the loops worked and how much code came out, but not what the code does. The second finding,
+"Output", shows the example catalog: 183 code changes, each with the verdict the project's formal verifier gave.
+Its claim is counted from `overview.stocks.examples`: "100 violations found and 55 changes verified, in a catalog of
+183 examples".
+
+- **A square for each example**, in the catalog's order (`catalogHtml` in `figures.js`). A square under the pointer
+  says the example's id, system, title and verdict label. A ringed square is a change to a published library.
+- **Two hues and a gray.** A violation is blue and a verified change green. A third hue for "unverifiable" could not
+  be told from the green by every reader (the palette check failed it in dark mode), so those two squares are the
+  gray of "several verdicts, or none yet", hatched.
+- **The names come from the `examples` collection.** The build reads it with the snapshot (`loadSnapshot` returns
+  `examples`) and `findingsHtml(snapshot, { examples })` names the squares. The browser redraws the findings only for
+  a snapshot other than the one built in; it then draws the squares by verdict from the overview at once, loads that
+  snapshot's own records, and names them. Records whose count doesn't match the overview name nothing.
+- **Library changes listed by name** are those whose verdict label carries one of the catalog's own marks (✓, ✗ or
+  ⚠). Of the 24 library changes at this revision 5 do; the other 19 are entered in the catalog and not run yet, and
+  the finding says "5 have a result so far". This reads a label, since the record has no field for it.
+- **What it doesn't claim.** The sentence under the claim repeats the metric's note: a verified label is not a claim
+  of a current, non-vacuous proof, and it gives the count of proofs recorded as vacuous.
+- **The three numbers** are the library changes, the verification jobs that passed of those completed
+  (`overview.verification`), and the median job.
+- **Still to do.** An example's record has no path, so a square can't link to its example. The source's
+  `examples/index.json` has `path` and a `summary` for each; carrying them needs a new field in the contract and a
+  new snapshot.
 
 ### Every run on one clock
 
@@ -170,7 +197,7 @@ The contract and the snapshot did not change. The filters' link, `?period=…`, 
 
 | Route | What | Made by |
 | --- | --- | --- |
-| `/software-factory/` | Overview: the headline and three findings | `render.mjs` (B) |
+| `/software-factory/` | Overview: the headline and four findings | `render.mjs` (B) |
 | `/software-factory/loops/`, `tools/`, `code/` | The feature loops, model performance and code, in full | `render.mjs` (B), drawn by `factory.js` |
 | `/software-factory/usage/` | Usage, verification, output, breakdowns and the records, with the filters | `render.mjs` (B) |
 | `/software-factory/analysis/` | The author's Software Factory posts | `render.mjs` (B) from `editorial.mjs` (C) |

@@ -47,7 +47,9 @@ const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 
 /**
  * The committed snapshot as { pointer, manifest, overview }, or why there is
- * none. Details stay files for the browser to load when asked.
+ * none. Details stay files for the browser to load when asked, but for the
+ * examples, which the overview names: `examples` is that collection's records,
+ * or null when the snapshot has none.
  */
 export function loadSnapshot(dataDir = DATA_DIR) {
   if (!fs.existsSync(path.join(dataDir, 'latest.json')))
@@ -57,12 +59,15 @@ export function loadSnapshot(dataDir = DATA_DIR) {
     return { snapshot: null, unavailable: `The published data failed validation: ${problems[0]}` };
   const pointer = readJson(path.join(dataDir, 'latest.json'));
   const base = path.join(dataDir, path.dirname(pointer.manifest));
+  const manifest = readJson(path.join(dataDir, pointer.manifest));
+  const catalog = manifest.collections.find((c) => c.name === 'examples');
   return {
     snapshot: {
       pointer,
-      manifest: readJson(path.join(dataDir, pointer.manifest)),
+      manifest,
       overview: readJson(path.join(base, 'overview.json')),
     },
+    examples: catalog ? readJson(path.join(base, catalog.path)).records : null,
     unavailable: null,
   };
 }
@@ -86,7 +91,7 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   }
   const override = includeDrafts ? process.env.SOFTWARE_FACTORY_DATA_DIR : undefined;
   const dataDir = override ? path.resolve(override) : DATA_DIR;
-  const { snapshot, unavailable } = loadSnapshot(dataDir);
+  const { snapshot, examples, unavailable } = loadSnapshot(dataDir);
 
   // The bundled data: the snapshot as committed, outside the Function's /data/ route.
   if (snapshot) fs.cpSync(dataDir, path.join(out, 'static-data'), { recursive: true });
@@ -101,6 +106,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   const selection = selectPosts(posts, { postImage: helpers.postImage });
   const pages = renderPages({
     snapshot,
+    // The records the overview names its catalog's squares from.
+    examples,
     unavailable,
     // The banner speaks of the numbers shown, so it needs a snapshot to show.
     fixture: Boolean(override) && Boolean(snapshot),

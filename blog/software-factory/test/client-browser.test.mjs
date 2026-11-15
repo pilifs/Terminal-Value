@@ -281,7 +281,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
             h1: document.querySelectorAll('h1').length,
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           }));
-          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 3 : 0, h1: 1, overflow: 0 }, pathname);
+          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 4 : 0, h1: 1, overflow: 0 }, pathname);
           // Every run on one clock, on the overview and on the loops page: a run under the pointer says what it was.
           if (name === 'overview' || name === 'loops') {
             const run = page.locator('.sf-floor .sf-run').first();
@@ -311,11 +311,17 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         const shown = await page.evaluate(() => ({
           snapshot: document.querySelector('[data-sf-page]').dataset.snapshot,
           values: Object.fromEntries([...document.querySelectorAll('[data-sf-value]')].map((el) => [el.dataset.sfValue, el.textContent])),
-          // The example has no loops, tools or code: no finding is claimed from the bundled data.
-          findings: document.querySelectorAll('.sf-finding').length,
+          // The example has no loops, tools or code: no finding of theirs is claimed from the bundled data.
+          findings: [...document.querySelectorAll('.sf-finding')].map((el) => el.id),
           headline: document.querySelector('.sf-headline')?.textContent ?? null,
         }));
-        assert.deepEqual(shown, { snapshot: EXAMPLE_ID, values: { usage_usd: all.usage_usd, model_calls: all.model_calls }, findings: 0, headline: null });
+        assert.deepEqual(shown, { snapshot: EXAMPLE_ID, values: { usage_usd: all.usage_usd, model_calls: all.model_calls }, findings: ['finding-output'], headline: null });
+        // Its catalog is that snapshot's too: counted at once, and named when its own records arrive.
+        const catalog = json(EXAMPLE, `${snapDir(EXAMPLE)}details/examples.json`).records;
+        await until(() => page.evaluate(() => document.querySelectorAll('.sf-catalog .sf-cell[data-tip*=" · "]').length > 0), 'the catalog, named');
+        const cells = await page.evaluate(() => [...document.querySelectorAll('.sf-catalog .sf-cell')].map((el) => el.dataset.tip.slice(0, 3)));
+        assert.deepEqual(cells, catalog.map((x) => x.id));
+        assert.match(await page.evaluate(() => document.querySelector('#finding-output h2').textContent), new RegExp(`in a catalog of ${catalog.length} examples$`));
         assert.deepEqual(errors, []);
       } finally {
         await context.close();

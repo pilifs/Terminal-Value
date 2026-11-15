@@ -12,7 +12,7 @@ import { filterScope, renderPages } from '../render.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const EXAMPLE = path.join(HERE, 'fixtures', 'snapshot-example');
-const { snapshot } = loadSnapshot(EXAMPLE);
+const { snapshot, examples } = loadSnapshot(EXAMPLE);
 // The committed snapshot has the loops, tools and code the example lacks: used for structure, never for a number.
 const { snapshot: committed } = loadSnapshot();
 const DATA_PAGES = ['loops/index.html', 'tools/index.html', 'code/index.html', 'usage/index.html'];
@@ -77,11 +77,12 @@ test('freshness comes from the snapshot dates and nothing is called live', () =>
   }
 });
 
-test('the overview is short: the headline, three findings, and where to go next', () => {
+test('the overview is short: the headline, four findings, and where to go next', () => {
   const html = body('index.html', { snapshot: committed });
-  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-tools"', 'id="finding-code"', 'class="sf-more"']);
-  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 3);
-  assert.equal((html.match(/<div class="sf-floor"/g) ?? []).length + (html.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 3, 'one figure to a finding');
+  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'class="sf-more"']);
+  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 4);
+  const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<svg class="sf-chart sf-chart-wide"/g].map((re) => (html.match(re) ?? []).length);
+  assert.deepEqual(figures, [1, 1, 2], 'one figure to a finding');
   // Everything under a finding is on its own page, not folded away on this one.
   assert.doesNotMatch(html, /<table|<details|<form|sf-breakdown|sf-campaign|data-sf-detail|sf-live/);
   for (const sub of ['loops', 'tools', 'code', 'usage', 'methodology']) assert.ok(html.includes(`<a href="/software-factory/${sub}/">`), sub);
@@ -249,4 +250,48 @@ test('ids and paths from data are escaped inside attributes too', () => {
   const html = everyBody({ snapshot: hostile });
   assert.doesNotMatch(html, /" onmouseover=/);
   assert.ok(html.includes('x&quot; onmouseover=&quot;alert(1)'));
+});
+
+test('the overview names its catalog from the examples collection, and counts it without', () => {
+  const stock = snapshot.overview.stocks.examples;
+  // As in the catalog, one library change is entered but not run yet.
+  const first = examples.find((x) => x.origin === 'real-world').id;
+  const records = examples.map((x) => (x.id === first ? { ...x, verdictLabel: 'not run: a catalog entry, no proof verdict' } : x));
+  const libraries = records.filter((x) => x.origin === 'real-world');
+  const cells = (html) => html.match(/<span class="sf-cell [^>]*>/g) ?? [];
+  // With the records: a square for each example in the catalog's order, named for the pointer, the library changes ringed.
+  const named = overview({ examples: records });
+  assert.match(named, /<h2 id="finding-output-title"><a href="\/software-factory\/usage\/#explore-examples">2 violations found and 3 changes verified, in a catalog of 11 examples<\/a><\/h2>/);
+  assert.equal(cells(named).length, stock.total);
+  assert.deepEqual(
+    cells(named).map((c) => c.match(/sf-verdict-(\w+)/)[1]),
+    examples.map((x) => x.verdict ?? 'none')
+  );
+  assert.equal(cells(named).filter((c) => c.includes('sf-cell-ring')).length, libraries.length);
+  assert.ok(cells(named).every((c) => /data-tip="\d+ · /.test(c) && !c.includes('title=')), 'said once, for the pointer');
+  assert.match(named, /data-tip="072 · Quorum: A vote rule[^"]*✓ Verified, vacuously[^"]*\(vacuous\)"/);
+  assert.match(named, /A verified label is not a claim of a current, non-vacuous proof: 2 proofs are recorded as vacuous\./);
+  assert.match(named, /href="\/software-factory\/methodology\/#def-examples_catalog"/);
+  // Only a library change whose label records a result is listed by name.
+  const listed = (named.match(/<div class="sf-catalog-list">[\s\S]*?<\/div>/) ?? [''])[0];
+  const withResult = libraries.filter((x) => /[✓✗⚠]/.test(x.verdictLabel ?? ''));
+  assert.equal(withResult.length, libraries.length - 1);
+  assert.equal((listed.match(/<li>/g) ?? []).length, withResult.length);
+  for (const x of withResult) assert.ok(listed.includes(`<strong>${escapeHtml(x.system)}</strong> ${escapeHtml(x.title)}`), x.id);
+  assert.match(named, new RegExp(`<dt>are changes to published libraries; ${withResult.length} ha(s|ve) a result so far</dt><dd>${libraries.length}</dd>`));
+  // Without them: the same count of squares, by verdict, none named, ringed or listed.
+  const counted = overview();
+  assert.equal(cells(counted).length, stock.total);
+  assert.deepEqual(
+    Object.fromEntries(['violation', 'verified', 'unverifiable', 'none'].map((k) => [k, cells(counted).filter((c) => c.includes(`sf-verdict-${k}`)).length])),
+    { violation: stock.verdict.violation, verified: stock.verdict.verified, unverifiable: stock.verdict.unverifiable, none: stock.verdict.none }
+  );
+  assert.doesNotMatch(counted, /sf-cell-ring|sf-catalog-list|a result so far/);
+  assert.match(counted, /Each square is an example, by verdict\./);
+  // Records that are not this snapshot's catalog name nothing.
+  assert.doesNotMatch(overview({ examples: examples.slice(1) }), /sf-cell-ring|sf-catalog-list/);
+  // The committed snapshot's own records fit it.
+  const { snapshot: s, examples: own } = loadSnapshot();
+  assert.equal(own.length, s.overview.stocks.examples.total);
+  assert.equal(cells(body('index.html', { snapshot: s, examples: own })).length, own.length);
 });

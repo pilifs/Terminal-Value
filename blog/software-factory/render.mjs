@@ -21,7 +21,7 @@
 //     the client script. The static HTML carries meaningful numbers and the
 //     post links without any script.
 //
-// The overview is short on purpose: the headline, three findings with one chart
+// The overview is short on purpose: the headline, four findings with one figure
 // each, and where to go next. Everything under a finding is on its own page.
 //
 // The formatting, the chart and the period measures are browser modules in
@@ -382,14 +382,14 @@ const shellAttrs = (snapshot, paths, e) =>
       : ''
   } data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`;
 
-function overviewPage({ snapshot, unavailable, fixture, posts, helpers, paths }) {
+function overviewPage({ snapshot, examples = null, unavailable, fixture, posts, helpers, paths }) {
   const e = helpers.escapeHtml;
   const formatDate = helpers.formatDate ?? formatDay;
   const hasPosts = Boolean(posts?.featured || posts?.items?.length);
   const parts = snapshot
     ? [
         `      <div class="sf-findings" data-sf-section="findings">
-        ${findingsHtml(snapshot)}
+        ${findingsHtml(snapshot, { examples })}
       </div>`,
         hasPosts ? analysis(posts, { e, formatDate, route: paths.route }) : '',
         more(snapshot, posts, { e, route: paths.route }),

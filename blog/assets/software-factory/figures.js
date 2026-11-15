@@ -226,6 +226,19 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
             </div>`;
 }
 
+/**
+ * A catalog as a grid of squares, one for each entry, in the order given.
+ *   cells: [{ key, tip, ring }]: a cell is sf-verdict-<key>; `ring` marks one out.
+ * A picture of records a table lists elsewhere, so it is hidden from a screen
+ * reader. A cell's words are for the pointer's tooltip only: a title as well
+ * would say every one of them twice in the page.
+ */
+export function catalogHtml(cells) {
+  return `<div class="sf-catalog" aria-hidden="true">${cells
+    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
+    .join('')}</div>`;
+}
+
 const PLOTS = {
   wide: { W: 640, H: 340, PAD: { top: 22, right: 14, bottom: 40, left: 52 }, r: 3.4 },
   compact: { W: 360, H: 330, PAD: { top: 22, right: 10, bottom: 40, left: 44 }, r: 3 },

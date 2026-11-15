@@ -1,5 +1,5 @@
 // The section's leading pieces as HTML strings from a snapshot: the overview's
-// headline and its three findings, and the feature loops, tools and code pages
+// headline and its four findings, and the feature loops, tools and code pages
 // they open. Drawn the same way by the build (render.mjs) and the browser
 // (app.js, when a newer snapshot or a filter changes them). No DOM, no Node APIs.
 //
@@ -7,7 +7,7 @@
 // inside of its section. A snapshot made before these were measured has no
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
-import { columnsSvg, floorHtml, lanesHtml, legendHtml, scatterSvg } from './figures.js';
+import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, scatterSvg } from './figures.js';
 import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
 import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
@@ -1169,8 +1169,83 @@ function codeFinding(overview) {
   });
 }
 
-/** The overview under its headline: one finding each for the loops, the tools and the code. */
-export function findingsHtml(snapshot) {
+// The catalog's verdicts, in the order the legend lists them. An example with
+// no single verdict has several in its label, or none yet.
+const VERDICTS = [
+  { key: 'violation', label: 'Violation found' },
+  { key: 'verified', label: 'Verified' },
+  { key: 'unverifiable', label: 'Unverifiable' },
+  { key: 'none', label: 'Several verdicts, or none yet' },
+];
+const LIBRARY = 'real-world';
+// A label that records a result carries one of the catalog's own marks.
+const hasResult = (x) => /[✓✗⚠]/.test(x.verdictLabel ?? '');
+
+/**
+ * What the factory makes: the example catalog, a square for each example.
+ * `examples` is the records of the examples collection. Without them (a
+ * snapshot whose records aren't loaded yet) the squares are counted from the
+ * overview and none is named.
+ */
+function outputFinding(snapshot, examples) {
+  const { overview, manifest } = snapshot;
+  const stock = overview.stocks?.examples;
+  if (!stock?.total) return '';
+  const n = (key) => stock.verdict?.[key] ?? 0;
+  const libraries = stock.origin?.[LIBRARY] ?? 0;
+  const named = Array.isArray(examples) && examples.length === stock.total ? examples : null;
+  const cells = named
+    ? named.map((x) => ({
+        key: x.verdict ?? 'none',
+        ring: x.origin === LIBRARY,
+        tip: `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${x.verdictLabel ?? 'No verdict'}${x.vacuous ? ' (vacuous)' : ''}`,
+      }))
+    : VERDICTS.flatMap((v) => Array.from({ length: n(v.key) }, () => ({ key: v.key, ring: false, tip: v.label })));
+  const shown = named ? named.filter((x) => x.origin === LIBRARY && hasResult(x)) : [];
+  const list = shown.length
+    ? `<div class="sf-catalog-list">
+              <h3>Changes to published libraries with a result so far</h3>
+              <ul>${shown
+                .slice(0, 6)
+                .map((x) => `<li>${x.system ? `<strong>${e(x.system)}</strong> ` : ''}${e(x.title)} <span class="sf-catalog-verdict">${e(x.verdictLabel)}</span></li>`)
+                .join('')}</ul>
+            </div>`
+    : '';
+  const jobs = overview.verification?.rows ?? [];
+  const passed = jobs.filter((r) => r[1] === 0).length;
+  const median = overview.measures?.find((m) => m.id === 'verification_duration_median');
+  const legend = `<ul class="sf-legend">${VERDICTS.filter((v) => n(v.key))
+    .map((v) => `<li><span class="sf-swatch sf-verdict-${v.key}" aria-hidden="true"></span>${e(v.label)}: ${count(n(v.key))}</li>`)
+    .join('')}${named && libraries ? '<li><span class="sf-swatch sf-verdict-none sf-cell-ring" aria-hidden="true"></span>A change to a published library</li>' : ''}</ul>`;
+  const href = `${ROUTE}usage/#explore-examples`;
+  return finding({
+    id: 'output',
+    eyebrow: 'Output',
+    wide: true,
+    claim: `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`,
+    lede: `Each example is a code change run through the project’s formal verifier, with the verdict it gave. A verified label is not a claim of a current, non-vacuous proof${
+      stock.vacuous ? `: ${plural(stock.vacuous, 'proof')} ${stock.vacuous === 1 ? 'is' : 'are'} recorded as vacuous` : ''
+    }. <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a>`,
+    facts: [
+      libraries ? [count(libraries), `${libraries === 1 ? 'is a change' : 'are changes'} to published libraries${shown.length ? `; ${count(shown.length)} ${shown.length === 1 ? 'has' : 'have'} a result so far` : ''}`] : null,
+      jobs.length ? [`${count(passed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
+      median?.value ? [formatValue(median.value, 'seconds'), 'the median verification job'] : null,
+    ],
+    href,
+    more: 'Every example and its verdict',
+    legend,
+    chart: catalogHtml(cells),
+    caption: `${named ? 'Each square is an example, in the order of the catalog.' : 'Each square is an example, by verdict.'} From <a href="${REPO}/blob/${e(manifest.source.sha)}/examples/README.md">the catalog</a> at this revision.`,
+    after: list,
+  });
+}
+
+/**
+ * The overview under its headline: one finding each for the loops, what they
+ * made, the tools and the code. `examples` names the catalog's squares when
+ * the examples collection is at hand.
+ */
+export function findingsHtml(snapshot, { examples = null } = {}) {
   const { overview } = snapshot;
-  return [loopsFinding(overview), toolsFinding(overview), codeFinding(overview)].filter(Boolean).join('\n        ');
+  return [loopsFinding(overview), outputFinding(snapshot, examples), toolsFinding(overview), codeFinding(overview)].filter(Boolean).join('\n        ');
 }
