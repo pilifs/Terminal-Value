@@ -93,7 +93,14 @@ test('methodology: every metric definition, note and filter scope from config', 
     assert.ok(body.includes(`id="def-${m.id}"`), m.id);
     for (const text of [m.label, m.definition, m.notes, m.coverage]) assert.ok(body.includes(escapeHtml(text)), `${m.id}: ${text}`);
   }
-  for (const s of metrics.separate) assert.ok(body.includes(escapeHtml(s.note)), s.id);
+  // The separate figures: their notes, without pointing at this page for figures no snapshot carries.
+  for (const s of metrics.separate) assert.ok(body.includes(`<strong>${escapeHtml(s.label)}.</strong>`), s.id);
+  assert.ok(body.includes(`${escapeHtml("Claude Code's own figure, where the session recorded one.")}</li>`), 'reported_usd note');
+  assert.doesNotMatch(body, /[Mm]ethodology page only/);
+  assert.match(body, /no published snapshot includes them yet/);
+  // A ratio says what it is a share of.
+  assert.match(body, /id="def-cache_reuse"[\s\S]*?<dt>Unit<\/dt><dd>share of input tokens<\/dd>/);
+  assert.match(body, /id="def-usage_share_by_model"[\s\S]*?<dt>Unit<\/dt><dd>share of estimated usage<\/dd>/);
   assert.match(body, /id="def-changes_recorded"[\s\S]*?Snapshot total at the source revision[\s\S]*?A snapshot total: no filter applies\./);
   assert.match(body, /id="def-verification_completed"[\s\S]*?Follows the date range only; the model and effort filters do not apply\./);
 });
@@ -113,9 +120,9 @@ test('methodology: source, versions, prices, timezone and freshness from the sna
 test('methodology: coverage per dataset, periods by Toronto day and stocks as totals', () => {
   const { body } = page('methodology/index.html');
   const table = body.slice(body.indexOf('id="coverage"'), body.indexOf('id="definitions"'));
-  assert.match(table, /Model usage<\/th><td>Period<\/td><td><time datetime="2026-10-30">Oct 30, 2026<\/time> to <time datetime="2026-11-02">Nov 2, 2026<\/time><\/td><td>4 of 5 sessions with a metrics file<\/td>/);
-  assert.match(table, /Verification results<\/th><td>Period<\/td><td><time datetime="2026-11-07">/);
-  assert.match(table, /Example catalog<\/th><td>Snapshot total<\/td><td>Snapshot total at <code>7384f8c<\/code><\/td><td>7 of 11 examples with a verdict<\/td>/);
+  assert.match(table, /Model usage<\/th><td data-label="Kind">Period<\/td><td data-label="Measured"><time datetime="2026-10-30">Oct 30, 2026<\/time> to <time datetime="2026-11-02">Nov 2, 2026<\/time><\/td><td data-label="Coverage">4 of 5 sessions with a metrics file<\/td>/);
+  assert.match(table, /Verification results<\/th><td data-label="Kind">Period<\/td><td data-label="Measured"><time datetime="2026-11-07">/);
+  assert.match(table, /Example catalog<\/th><td data-label="Kind">Snapshot total<\/td><td data-label="Measured">Snapshot total at <code>7384f8c<\/code><\/td><td data-label="Coverage">7 of 11 examples with a verdict<\/td>/);
 });
 
 test('methodology: the area mapping with its status, and comparison limits', () => {

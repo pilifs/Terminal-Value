@@ -49,7 +49,7 @@ export function chartCaption(metricId, state = DEFAULT_STATE, overview = null) {
   const period = state.period !== 'all' && overview ? `, ${periodText(state, overview).replace(/^Last/, 'last')}` : '';
   const only = applied.length ? `, ${applied.join(', ')} only` : '';
   const not = ignored.length ? ` The ${ignored.join(' and ')} filter${ignored.length > 1 ? 's don’t' : ' doesn’t'} apply to this measure.` : '';
-  return `${METRIC_LABELS[metricId]} per day${period}${only}, in ${UNIT_WORDS[METRICS[metricId].unit]}. Days are calendar days in Toronto; a day the data doesn't cover shows no column.${not}`;
+  return `${METRIC_LABELS[metricId]} per day${period}${only}, in ${UNIT_WORDS[METRICS[metricId].unit]}. Days are calendar days in Toronto. A day whose value is zero has no column; a short mark on the baseline is a day with no value: outside the data, or with nothing to divide.${not}`;
 }
 
 /** The tag before a breakdown's caption: its scope, or the period and filters it follows. */

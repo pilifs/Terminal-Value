@@ -87,6 +87,9 @@ test('each observation links to its breakdown or records', () => {
   const html = overview();
   assert.match(html, /accounts for 69\.9% of estimated usage[\s\S]*?href="#breakdown-usage-by-model"/);
   assert.match(html, /href="#metric-cache_reuse"/);
+  // Each card's definition leads to its full entry on the methodology page.
+  for (const id of ['usage_usd', 'model_calls', 'cache_reuse', 'verification_completed'])
+    assert.ok(html.includes(`<a href="/software-factory/methodology/#def-${id}">Methodology</a>`), id);
   assert.match(html, /href="#explore-verification"/);
   for (const target of ['id="breakdown-usage-by-model"', 'id="metric-cache_reuse"', 'id="explore-verification"']) assert.ok(html.includes(target));
 });

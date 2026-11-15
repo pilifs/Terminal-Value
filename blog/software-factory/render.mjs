@@ -118,7 +118,7 @@ function intro({ snapshot, fixture, e, formatDate }) {
       </header>`;
 }
 
-function metricCard(measure, e) {
+function metricCard(measure, e, route) {
   const m = METRIC[measure.id];
   return `          <article class="sf-metric" id="metric-${e(measure.id)}" data-metric="${e(measure.id)}">
             <h3 class="sf-metric-label">${e(m.label)}</h3>
@@ -131,15 +131,16 @@ function metricCard(measure, e) {
               <p>Coverage counts: ${e(m.coverage)}</p>
               <p>${e(m.notes)}</p>
               <p class="sf-filter-scope">${e(filterScope(measure.id))}</p>
+              <p><a href="${e(route)}methodology/#def-${e(measure.id)}">Methodology</a></p>
             </details>
           </article>`;
 }
 
-function summary(snapshot, e) {
+function summary(snapshot, e, route) {
   const cards = METRIC_CONFIG.summary
     .map((id) => snapshot.overview.measures.find((m) => m.id === id))
     .filter(Boolean)
-    .map((m) => metricCard(m, e))
+    .map((m) => metricCard(m, e, route))
     .join('\n');
   return `      <section class="sf-summary" aria-labelledby="sf-summary-title">
         <h2 id="sf-summary-title" class="sf-visually-hidden">Summary</h2>
@@ -291,7 +292,7 @@ function overviewPage({ snapshot, unavailable, fixture, posts, helpers, paths })
     ? ` data-snapshot="${e(snapshot.manifest.snapshotId)}" data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`
     : ` data-static-data="${e(paths.staticData)}" data-remote-data="${e(paths.remoteData)}"`;
   const parts = snapshot
-    ? [summary(snapshot, e), trendSection(snapshot, e), observations(snapshot), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
+    ? [summary(snapshot, e, paths.route), trendSection(snapshot, e), observations(snapshot), analysis(posts, { e, formatDate, route: paths.route }), output(snapshot, e), explore(snapshot, { e, paths })]
     : [unavailableNotice(unavailable, e), analysis(posts, { e, formatDate, route: paths.route })];
   const footer = footNav(paths, e, '');
   return {
@@ -406,16 +407,16 @@ function datasetCoverage(snapshot, { e, formatDate }) {
             ? `<time datetime="${e(days.first)}">${e(formatDate(days.first))}</time> to <time datetime="${e(days.last)}">${e(formatDate(days.last))}</time>`
             : '<span class="sf-muted">No data</span>';
       const used = METRIC_CONFIG.metrics.filter((m) => METRICS[m.id]?.dataset === d.id).map((m) => e(m.label));
-      return `<tr><th scope="row">${e(DATASET_LABELS[d.id] ?? d.id)}</th><td>${d.kind === 'stock' ? 'Snapshot total' : 'Period'}</td><td>${window}</td><td>${e(
+      return `<tr><th scope="row">${e(DATASET_LABELS[d.id] ?? d.id)}</th><td data-label="Kind">${d.kind === 'stock' ? 'Snapshot total' : 'Period'}</td><td data-label="Measured">${window}</td><td data-label="Coverage">${e(
         formatCoverage(d.coverage)
-      )}</td><td>${used.join(', ')}</td></tr>`;
+      )}</td><td data-label="Metrics">${used.join(', ')}</td></tr>`;
     })
     .join('\n            ');
   return `      <section class="sf-panel sf-coverage-panel" id="coverage" aria-labelledby="sf-coverage-title">
         <h2 id="sf-coverage-title">Coverage by dataset</h2>
         <p class="sf-caption">What each dataset measured. Days outside a period dataset's window are unknown, not zero, and show no value.</p>
         <div class="sf-table-wrap" tabindex="0" role="region" aria-labelledby="sf-coverage-title">
-          <table class="sf-table">
+          <table class="sf-table sf-stack">
             <thead><tr><th scope="col">Dataset</th><th scope="col">Kind</th><th scope="col">Measured (Toronto days)</th><th scope="col">Coverage</th><th scope="col">Metrics</th></tr></thead>
             <tbody>
             ${rows}
@@ -425,13 +426,21 @@ function datasetCoverage(snapshot, { e, formatDate }) {
       </section>`;
 }
 
+// A ratio's words name what it is a share of: cache reuse is a share of input
+// tokens, the model share a share of estimated usage.
+const unitWords = (m) => (m.id === 'usage_share_by_model' ? 'share of estimated usage' : UNIT_WORDS[m.unit] ?? m.unit);
+
+// The separate figures' notes say where each would be shown. No snapshot carries
+// them yet, so the page says that instead of pointing at itself.
+const separateNote = (note) => note.replace(/\s*(?:Shown on the methodology page only|Methodology page only)\.$/, '');
+
 function definitions(e) {
   const items = METRIC_CONFIG.metrics
     .map(
       (m) => `          <article class="sf-method" id="def-${e(m.id)}">
             <h3>${e(m.label)} <code class="sf-muted">${e(m.id)}</code></h3>
             <dl class="sf-facts">
-              <div><dt>Unit</dt><dd>${e(UNIT_WORDS[m.unit] ?? m.unit)}</dd></div>
+              <div><dt>Unit</dt><dd>${e(unitWords(m))}</dd></div>
               <div><dt>Kind</dt><dd>${m.kind === 'stock' ? 'Snapshot total at the source revision' : 'Activity over a period'}</dd></div>
               <div><dt>Filters</dt><dd>${e(filterScope(m.id))}</dd></div>
               <div><dt>Definition</dt><dd>${e(m.definition)}</dd></div>
@@ -441,20 +450,20 @@ function definitions(e) {
           </article>`
     )
     .join('\n');
-  const separate = METRIC_CONFIG.separate.map((s) => `<li><strong>${e(s.label)}.</strong> ${e(s.note)}</li>`).join('');
+  const separate = METRIC_CONFIG.separate.map((s) => `<li><strong>${e(s.label)}.</strong> ${e(separateNote(s.note))}</li>`).join('');
   return `      <section class="sf-panel sf-definitions" id="definitions" aria-labelledby="sf-definitions-title">
         <h2 id="sf-definitions-title">Metric definitions</h2>
         <p class="sf-caption">Version ${e(METRIC_CONFIG.version)} of the definitions. ${e(METRIC_CONFIG.note.split('. ').slice(-1)[0])}</p>
 ${items}
         <h3>Figures kept separate</h3>
-        <p>These are other figures, never added to estimated model usage: they are not parts of one bill.</p>
+        <p>These are other figures, never added to estimated model usage: they are not parts of one bill. Only this page would show them, and no published snapshot includes them yet.</p>
         <ul class="sf-list">${separate}</ul>
       </section>`;
 }
 
 function areasSection(e) {
   const row = (a) =>
-    `<tr><th scope="row">${e(a.label)}</th><td>${e(a.description ?? '')}</td><td>${(a.paths ?? []).map((x) => `<code>${e(x)}</code>`).join(' ') || '<span class="sf-muted">None</span>'}</td><td>${
+    `<tr><th scope="row">${e(a.label)}</th><td data-label="What it covers">${e(a.description ?? '')}</td><td data-label="Paths">${(a.paths ?? []).map((x) => `<code>${e(x)}</code>`).join(' ') || '<span class="sf-muted">None</span>'}</td><td data-label="Campaigns">${
       (a.campaigns ?? []).map((x) => `<code>${e(x)}</code>`).join(' ') || '<span class="sf-muted">None</span>'
     }</td></tr>`;
   return `      <section class="sf-panel sf-areas" id="areas" aria-labelledby="sf-areas-title">
@@ -462,7 +471,7 @@ function areasSection(e) {
         <p><span class="sf-tag">Mapping ${e(AREAS.status)}</span> version ${e(AREAS.version)}. ${e(AREAS.note)}</p>
         <p>${e(AREAS.rule)}</p>
         <div class="sf-table-wrap" tabindex="0" role="region" aria-labelledby="sf-areas-title">
-          <table class="sf-table sf-areas-table">
+          <table class="sf-table sf-areas-table sf-stack">
             <thead><tr><th scope="col">Area</th><th scope="col">What it covers</th><th scope="col">Paths</th><th scope="col">Campaigns</th></tr></thead>
             <tbody>${AREAS.areas.map(row).join('')}${row({ ...AREAS.unassigned, description: 'Anything no rule places. Always shown.' })}</tbody>
           </table>

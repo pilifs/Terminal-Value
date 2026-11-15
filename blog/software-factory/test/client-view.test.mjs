@@ -65,7 +65,7 @@ test('each metric and the chart say which filters apply', () => {
   assert.equal(metricScope({ ...m('changes_recorded'), scope: 'snapshot' }, state, overview), 'Snapshot total · changes');
   assert.equal(
     chartCaption('verification_completed', { ...state, effort: 'high' }, overview),
-    'Completed verification jobs per day, last 30 days (Oct 10 – Nov 8, 2026), in jobs. Days are calendar days in Toronto; a day the data doesn\'t cover shows no column. The model and effort filters don’t apply to this measure.'
+    'Completed verification jobs per day, last 30 days (Oct 10 – Nov 8, 2026), in jobs. Days are calendar days in Toronto. A day whose value is zero has no column; a short mark on the baseline is a day with no value: outside the data, or with nothing to divide. The model and effort filters don’t apply to this measure.'
   );
   assert.match(chartCaption('model_calls', state, overview), /^Model calls per day, last 30 days \(Oct 10 – Nov 8, 2026\), Opus 5\.5 only, in calls\./);
 });

@@ -155,6 +155,8 @@ test('unavailable data: said plainly on the overview and methodology, with no cl
       const html = page(dist, route);
       assert.match(html, /<h2 id="sf-unavailable-title">Data unavailable<\/h2>\s*<p>The published data failed validation: /, route);
       assert.doesNotMatch(html, /\$1,936\.42|<script type="module"/, route);
+      // Not the fixture banner either: the data dir was overridden, but no numbers are shown to label.
+      assert.doesNotMatch(html, /sf-banner/, route);
     }
     assert.ok(!fs.existsSync(path.join(dist, 'software-factory', 'static-data')));
   } finally {

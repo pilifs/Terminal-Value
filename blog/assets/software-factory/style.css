@@ -759,12 +759,47 @@ body.software-factory .sf-foot [aria-current='page'] {
   body.software-factory .sf-panel {
     padding: 1rem;
   }
-  body.software-factory .sf-post,
+  /* Only the featured post keeps a full-width cover; the others a thumbnail. */
+  body.software-factory .sf-post {
+    grid-template-columns: 6rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
   body.software-factory .sf-post-featured {
     grid-template-columns: minmax(0, 1fr);
   }
   body.software-factory .sf-facts > div {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* The methodology's wide text tables: each row becomes a block, each cell
+     labelled with its column, instead of a table to scroll sideways. */
+  body.software-factory .sf-table-wrap > .sf-stack {
+    min-width: 0;
+  }
+  body.software-factory .sf-stack :is(tbody, tr, th, td) {
+    display: block;
+  }
+  body.software-factory .sf-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body.software-factory .sf-stack tr {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--sf-rule);
+  }
+  body.software-factory .sf-stack :is(th, td) {
+    padding: 0.15rem 0;
+    border: 0;
+  }
+  body.software-factory .sf-stack tbody th {
+    font-weight: 600;
+  }
+  body.software-factory .sf-stack td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--sf-muted);
   }
 }
 

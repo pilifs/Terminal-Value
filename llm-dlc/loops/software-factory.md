@@ -399,9 +399,59 @@ Settled by the author on 2026-11-14:
     3 posts. `software-factory:validate`: valid.
   - For M2: the author has already copied in `blog/software-factory/ops/terminal-value.pages-config.toml` (commit
     `d4d33a0`), so `wrangler.toml` builds on it.
-- Next: M1.5, the visual review. Desktop and mobile, light and dark, for the four states: empty (real data),
-  populated (a published copy served from `/tmp`), unavailable and fixture. Use `screenshot.sh` on `PORT=8790`,
-  with the shots in `/tmp`.
+- **M1.5 visual review: done** (cycle 6).
+  - **Shot**: `screenshot.sh` on `PORT=8790`, 64 full-page shots in `/tmp/sf-m15/shots/` (desktop 1280 and mobile
+    390, light and dark), cut into tiles, and every one looked at.
+    - Empty (the drafts build on the committed snapshot): home, overview, analysis, methodology, `reading-the-trace`
+      and the draft.
+    - Populated: a published copy in `/tmp/sf-m15/populated` with two temporary Software Factory posts (one featured)
+      and `reading-the-trace` related. It showed home, overview, analysis, the featured post and
+      `reading-the-trace`.
+    - Unavailable: `SOFTWARE_FACTORY_DATA_DIR` on a copy of `data/` whose `overview.json` no longer matches its
+      manifest. It showed the overview, analysis and methodology.
+    - Fixture: `snapshot-example`, on the overview and methodology.
+  - **Fixed**:
+    - **The fixture banner on unavailable data.** Any `SOFTWARE_FACTORY_DATA_DIR` set the banner. It then said
+      "These numbers come from a small test fixture" over a page that showed no numbers, from data that wasn't the
+      fixture. `index.mjs` now sets it only when the override's snapshot loads. The e2e unavailable test asserts
+      there is no banner, and it fails with the old line.
+    - **Methodology, wrong unit.** The share of usage by model said "share of input tokens", the cache-reuse
+      words. It now says "share of estimated usage".
+    - **Methodology, figures kept separate.** Each of the three said "Shown on the methodology page only", on the
+      methodology page, which shows none of them, because no snapshot carries them. The page drops that sentence
+      and says no published snapshot includes them yet. The notes come from `config/metrics.json`, which is left
+      alone: changing it changes every snapshot id. A later metrics version can reword them.
+    - **Chart caption.** "A day the data doesn't cover shows no column" was the wrong way round. A zero day has
+      no column, and a day with no value has a short mark on the baseline: compare the fixture's Nov 3–8 with the
+      real data's Nov 9–13. The caption now says both (`view.js`, so the static page and the client match).
+    - **The overview's way to the methodology.** It was only in the foot nav, below about 3,400 px of page. Each
+      card's Definition now ends with a link to its entry (`methodology/#def-<id>`).
+    - **Mobile methodology tables.** Coverage by dataset and Areas of work scrolled sideways at 390 px, with
+      coverage and paths off screen. Below 36rem each row now stacks, each cell labelled with its column.
+    - **Mobile analysis list.** Every post had a full-width cover. Now only the featured post does, and the
+      others keep a 6rem thumbnail, as the plan's "restrained cover treatment" asks.
+  - **Looked right, unchanged**:
+    - the aggregate-first order, the green-on-pale palette, and dark mode in both themes;
+    - the populated featured slot, list, byline, "Related background" apart, and the posts' evidence and back
+      links;
+    - the existing articles and home page;
+    - the draft's prompts and its "Draft" tag;
+    - "Data unavailable" with the validation problem.
+  - **Left as findings**:
+    - The fixture's "Examples by system" and "by origin" are in the fixture's order, not by count. The real
+      snapshot is sorted.
+    - The fixture has no "Examples by verdict" breakdown. Both come from Phase 0's example generator, not the
+      renderer.
+  - Checks:
+    - Headless Chromium at 390 and 320 px, light and dark: no horizontal page overflow on any of the 17 page-state
+      pairs, and no script error. The live overview shows the new caption and four methodology links.
+    - The changed views were shot again (`/tmp/sf-m15/shots2/`) and looked at.
+    - 202 of 202 tests pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+- **M1 is done**: every Done-when criterion for M1 holds.
+- Next: M2.1, the Pages Function `functions/software-factory/data/[[path]].js`, tested with a fake binding.
 - Status: working
 
 ## Loop settings

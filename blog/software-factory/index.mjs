@@ -74,7 +74,8 @@ export function loadSnapshot(dataDir = DATA_DIR) {
  * While config/section.json says published: false, a production build gets
  * nothing (and the copied assets are removed); a drafts build gets it all.
  * SOFTWARE_FACTORY_DATA_DIR points a drafts build at another snapshot, such as
- * test/fixtures/snapshot-example, and the pages then say they show a fixture.
+ * test/fixtures/snapshot-example, and the pages then say they show a fixture
+ * (when its data loads: unavailable data shows no numbers to label).
  */
 export function buildSection({ outDir, posts, includeDrafts, site, layout, helpers, published = SECTION.published }) {
   const out = path.join(outDir, ROUTE);
@@ -100,7 +101,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   const pages = renderPages({
     snapshot,
     unavailable,
-    fixture: Boolean(override),
+    // The banner speaks of the numbers shown, so it needs a snapshot to show.
+    fixture: Boolean(override) && Boolean(snapshot),
     posts: selection,
     site,
     helpers,
