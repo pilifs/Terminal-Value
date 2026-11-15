@@ -125,13 +125,15 @@ class MoonshotLoopTest(unittest.TestCase):
         for call in self.calls[1:]:
             self.assertEqual(call["args"][2:4], ["--resume", session])
         for call in self.calls:
-            self.assertNotIn("--model", call["args"])
+            # Fable 5.2 at high effort unless the run says otherwise, on the compact as on the instruction.
+            self.assertEqual(call["args"][4:8], ["--model", "claude-fable-5-2", "--effort", "high"])
             self.assertEqual(call["args"][-5:], ["--permission-mode", "auto", "--output-format", "stream-json", "--verbose"])
         # The record: the instruction, a line per commit, and how it ended.
         record = self.record()
         self.assertIn("> Make the page better.", record)
         self.assertEqual(re.findall(r"^- cycle (\d), .*: (.*)$", record, re.M),
                          [(str(n), f"Work of cycle {n}") for n in (1, 2, 3, 4)])
+        self.assertIn(f"session {session}, claude-fable-5-2 at high effort, compacting above 400000 tokens.", record)
         self.assertRegex(record, rf"Stopped .*: cycle 5 made no commit; session {session} needs attention\.")
         self.assertIn(f"session: {session}", out.splitlines()[-1])
         self.assertEqual(list(Path(self.tmp.name).glob("moonshot-loop.*")), [], "the turn's events are not left behind")
@@ -147,13 +149,13 @@ class MoonshotLoopTest(unittest.TestCase):
         transcripts = Path(self.env["CLAUDE_CONFIG_DIR"]) / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(self.root.resolve()))
         transcripts.mkdir(parents=True)
         (transcripts / f"{SESSION}.jsonl").write_text("{}\n")
-        code, out = self.loop([(True, 150_000), (True, 99_999)], "page", "2", MOONSHOT_SESSION=SESSION, MOONSHOT_MODEL="claude-fable-5-2",
-                              MOONSHOT_EFFORT="high", MOONSHOT_COMPACT_ABOVE="100000")
+        code, out = self.loop([(True, 150_000), (True, 99_999)], "page", "2", MOONSHOT_SESSION=SESSION, MOONSHOT_MODEL="claude-opus-5-5",
+                              MOONSHOT_EFFORT="medium", MOONSHOT_COMPACT_ABOVE="100000")
         self.assertEqual(code, 0, out)
         self.assertEqual(self.prompts(), ["instruction", "compact", "instruction"])
         for call in self.calls:
             # A session that has a transcript is resumed from the first turn.
-            self.assertEqual(call["args"][2:8], ["--resume", SESSION, "--model", "claude-fable-5-2", "--effort", "high"])
+            self.assertEqual(call["args"][2:8], ["--resume", SESSION, "--model", "claude-opus-5-5", "--effort", "medium"])
         # The next run needs no session named: it is the one kept.
         (self.root / "llm-dlc" / "loop-summaries").joinpath(next(p.name for p in (self.root / "llm-dlc/loop-summaries").glob("*.md"))).unlink()
         code, out = self.loop([(False, 1)], "page")

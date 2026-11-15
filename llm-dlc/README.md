@@ -135,8 +135,8 @@ llm-dlc/tools/moonshot-loop.sh software-factory-impact 5     # at most 5 cycles
   The size is the tokens of the main conversation's last request; a size that can't be read counts as too large.
   `MOONSHOT_COMPACT_ABOVE` changes the 400,000.
 - **One session.** Its id is kept in `llm-dlc/loop-summaries/moonshot-NAME.session`, so the same command continues
-  it. The first run starts a fresh session, or continues the one `MOONSHOT_SESSION` names. `MOONSHOT_MODEL` and
-  `MOONSHOT_EFFORT` set the model and effort; without them the session runs on Claude Code's own defaults.
+  it. The first run starts a fresh session, or continues the one `MOONSHOT_SESSION` names. It runs on Fable 5.2
+  (`claude-fable-5-2`) at high effort; `MOONSHOT_MODEL` and `MOONSHOT_EFFORT` change that.
 - **Record.** Each run writes one to `llm-dlc/loop-summaries/`: the instruction, a line per commit, and how it ended.
 - **Limits.** It commits locally and never pushes or deploys. Unlike `feature-loop.sh` it has no memory cap, no
   commands while it runs and no closing summary, and like it no spending limit. Ctrl-C stops it.

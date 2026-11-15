@@ -20,9 +20,9 @@
 #
 # The session is kept in llm-dlc/loop-summaries/moonshot-NAME.session, so running
 # the same command again continues it. The first run starts a fresh session, or
-# continues the one MOONSHOT_SESSION names. MOONSHOT_MODEL and MOONSHOT_EFFORT
-# set the model and effort; without them the session runs on Claude Code's own
-# defaults. MOONSHOT_COMPACT_ABOVE changes the 400,000.
+# continues the one MOONSHOT_SESSION names. The session runs on Fable 5.2
+# (claude-fable-5-2) at high effort; MOONSHOT_MODEL and MOONSHOT_EFFORT change
+# that. MOONSHOT_COMPACT_ABOVE changes the 400,000.
 #
 # Each run appends a line per commit to a record in llm-dlc/loop-summaries/
 # (gitignored). The loop commits locally, never pushes or deploys, has no memory
@@ -33,6 +33,8 @@
 
 set -uo pipefail
 
+MODEL=${MOONSHOT_MODEL:-claude-fable-5-2}
+EFFORT=${MOONSHOT_EFFORT:-high}
 COMPACT_ABOVE=${MOONSHOT_COMPACT_ABOVE:-400000}
 
 usage() {
@@ -96,7 +98,7 @@ SUMMARY=$SUMMARIES/$(date +%F-%H%M%S)-moonshot-$NAME.md
 {
   echo "# Moonshot loop: $NAME"
   echo
-  echo "Started $(date '+%F %T %Z'), ${CYCLES/inf/no limit on} cycles, session $SESSION_ID, compacting above $COMPACT_ABOVE tokens."
+  echo "Started $(date '+%F %T %Z'), ${CYCLES/inf/no limit on} cycles, session $SESSION_ID, $MODEL at $EFFORT effort, compacting above $COMPACT_ABOVE tokens."
   echo
   sed 's/^/> /' <<<"$INSTRUCTION"
   echo
@@ -125,7 +127,7 @@ run_claude() {
   local session=(--resume "$SESSION_ID")
   [[ -n "$FRESH" ]] && session=(--session-id "$SESSION_ID")
   FRESH=
-  claude -p "$1" "${session[@]}" ${MOONSHOT_MODEL:+--model "$MOONSHOT_MODEL"} ${MOONSHOT_EFFORT:+--effort "$MOONSHOT_EFFORT"} \
+  claude -p "$1" "${session[@]}" --model "$MODEL" --effort "$EFFORT" \
     --permission-mode auto --output-format stream-json --verbose </dev/null |
     tee "$STREAM" | show_progress
 }
