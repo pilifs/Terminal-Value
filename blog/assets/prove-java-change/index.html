@@ -45,7 +45,7 @@
           <div>
             <h1>Formally prove any Java change in one command</h1>
             <p class="punch">Find any side effects in your code effortlessly.</p>
-            <p class="lede">Point Claude Code at a pull request or a commit. It works out what the change must keep, proves it from the compiled bytecode, and hands you the input where it breaks. No specification to write.</p>
+            <p class="lede">Point Claude Code at a pull request or a commit. It works out what the change must keep. A model checker then proves it from the compiled bytecode, or hands you the input where it breaks. No specification to write.</p>
 
             <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
             <p class="fine"><a href="#install">Two commands install it.</a> It runs on your machine, and nothing leaves it unless you agree.</p>
@@ -249,6 +249,13 @@ questions for a person: none</pre>
             <li><h3>Report</h3><p>Each claim comes back established, refuted with an input replayed on a JVM, or left open with the reason, under stated bounds. Then it offers to send what it added upstream.</p><p class="you">You decide.</p></li>
           </ol>
           <p class="aside">Step 3 has no acceptance criteria to meet, so the session that started it stays outside as its conductor. When the loop fills 600k tokens of context without a commit, the conductor reads the transcript, the commits and the jobs, and decides whether it is working or stuck.</p>
+          <h3 class="sub">Three answers, and none is the model's opinion</h3>
+          <p class="aside lead">Fable writes the claims and drives the tools. The answer to each claim comes from a model checker.</p>
+          <div class="grid g3">
+            <div class="card verdict verified"><span class="pill verified">Established</span><p>The claim holds for every input within the bounds the report states, not for a sample of them.</p></div>
+            <div class="card verdict violation"><span class="pill violation">Refuted</span><p>A concrete input, shrunk to a small one and run on a real JVM. It is a finding about your change.</p></div>
+            <div class="card verdict unverifiable"><span class="pill unverifiable">Left open</span><p>The tools could not decide, and the report says why. It never counts as a pass.</p></div>
+          </div>
           <div class="actions">
             <a class="btn primary" href="#examples">Browse 183 examples</a>
             <a class="btn" href="https://github.com/pilifs/in-the-loop/blob/main/llm-dlc/runtime.md">What each step stands on</a>
@@ -545,7 +552,6 @@ after:  -2147483648</pre>
           </details>
           <details><summary>How long does a run take, and what does it use?</summary><p>One measured run, example 285: the proof loop took 2 h 59 min, made 481 model calls, wrote 467,660 tokens, and used 7,956 CPU seconds of proof. At API list prices that is $65.63. Your change will differ, so step 2 gives you an estimate in hours and tokens and waits for your answer.</p></details>
           <details><summary>Does anything leave my machine?</summary><p>No. The copy the plugin installs has tracing and publishing switched off, and it never pushes. The one exception is a contribution upstream, as a pull request you agree to first.</p></details>
-          <details><summary>What does "established" mean?</summary><p>The claim holds for every input within the bounds and assumptions the report states, not for a sample of them. A refuted claim comes with an input, run on a real JVM. A claim the tool could not decide is left open and says why.</p></details>
         </div>
       </section>
 

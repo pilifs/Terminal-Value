@@ -873,6 +873,9 @@ summary {
   color: var(--brand-ink);
   font-size: 0.72rem;
 }
+.aside.lead {
+  margin: -0.4rem 0 1rem;
+}
 .aside {
   max-width: 46rem;
   margin-top: 1.25rem;
