@@ -211,6 +211,24 @@ counted from the `examples` collection's records, and the head from `overview.st
   or table for them. For a remote snapshot other than the one built in, the browser draws the page from the
   overview at once and again when that snapshot's records arrive.
 
+### The model performance finding: no long streak, and where failures happened
+
+The third finding on the overview said "98.2% of 24,501 tool calls succeeded" over a chart of failures per day. A
+share that high says little, and the days are on the page under it. The finding now leads with what the same
+counts say about getting stuck: "24,501 tool calls, never more than 4 failures in a row", from `tools.recovery`.
+
+- **When it is claimed.** Only when the longest streak is short against the calls: a thousand calls for each
+  failure in it (`STREAK_PER_CALLS`). Otherwise, and without recovery counts, the claim is the share that
+  succeeded, as before. The share is now the first of the three numbers.
+- **The figure** is the share of tool calls that failed, cut two ways on one scale: by time into a loop run
+  (`tools.byRunHour`) and by context size (`tools.byContext`), each column stacked by how the call failed and with
+  its value written on it (`ratesHtml` in `figures.js`, HTML and CSS). A bucket with no calls has no column. A
+  snapshot without the cuts keeps the chart of days.
+- **What the caption says, and doesn't.** It gives the two ends of each cut. It says the share was "no higher than
+  at the start" only when that is true of both. It says this is where failures happened and not an experiment, and
+  how many runs the latest bucket's calls come from (3 at this revision), counted from `loops.runs`.
+- The tables with the same numbers are on the model performance page, which the figure's label says.
+
 ### Every run on one clock
 
 The loops finding leads the overview with one figure of every finished loop run, and its claim is the pace of the

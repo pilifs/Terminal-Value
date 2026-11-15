@@ -2255,3 +2255,81 @@ body.software-factory .sf-split > span {
   min-width: 2px;
   border-radius: 1px;
 }
+
+/* Rates by bucket: groups of columns on one scale, each with its value
+   written on it, standing on one baseline. */
+body.software-factory .sf-rates {
+  display: flex;
+  gap: 1.75rem;
+  margin-top: 0.75rem;
+}
+body.software-factory .sf-rates-group {
+  min-width: 0;
+}
+body.software-factory .sf-shell .sf-rates-title {
+  margin: 0 0 0.25rem;
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+body.software-factory .sf-rates-plot {
+  display: flex;
+}
+body.software-factory .sf-rate {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
+body.software-factory .sf-rate-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 10.5rem;
+  border-bottom: 1px solid var(--sf-rule-strong);
+}
+body.software-factory .sf-rate-value {
+  margin-bottom: 0.2rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* The tallest column leaves room for its value above it. */
+body.software-factory .sf-rate-bar {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  width: min(2.5rem, 62%);
+  max-height: calc(100% - 1.5rem);
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+}
+body.software-factory .sf-rate-bar > span {
+  min-height: 1px;
+  background: var(--sf-mark);
+}
+body.software-factory .sf-rate-bar > .sf-series-exit { background: var(--sf-c-exit); }
+body.software-factory .sf-rate-bar > .sf-series-rejected { background: var(--sf-c-rejected); }
+body.software-factory .sf-rate-bar > .sf-series-denied { background: var(--sf-c-denied); }
+body.software-factory .sf-rate-bar > .sf-series-other { background: var(--sf-c-other); }
+body.software-factory .sf-rate:hover .sf-rate-bar {
+  filter: brightness(1.12);
+}
+body.software-factory .sf-rate-label {
+  display: block;
+  padding-top: 0.3rem;
+  color: var(--sf-muted);
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-rates {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  body.software-factory .sf-rate-column {
+    height: 8.5rem;
+  }
+}

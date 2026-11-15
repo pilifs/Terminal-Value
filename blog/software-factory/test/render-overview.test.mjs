@@ -81,8 +81,8 @@ test('the overview is short: the headline, four findings, and where to go next',
   const html = body('index.html', { snapshot: committed });
   inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'class="sf-more"']);
   assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 4);
-  const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<svg class="sf-chart sf-chart-wide"/g].map((re) => (html.match(re) ?? []).length);
-  assert.deepEqual(figures, [1, 1, 2], 'one figure to a finding');
+  const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<div class="sf-rates"/g, /<svg class="sf-chart sf-chart-wide"/g].map((re) => (html.match(re) ?? []).length);
+  assert.deepEqual(figures, [1, 1, 1, 1], 'one figure to a finding');
   // Everything under a finding is on its own page, not folded away on this one.
   assert.doesNotMatch(html, /<table|<details|<form|sf-breakdown|sf-campaign|data-sf-detail|sf-live/);
   for (const sub of ['loops', 'tools', 'code', 'usage', 'methodology']) assert.ok(html.includes(`<a href="/software-factory/${sub}/">`), sub);

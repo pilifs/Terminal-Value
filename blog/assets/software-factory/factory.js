@@ -7,7 +7,7 @@
 // inside of its section. A snapshot made before these were measured has no
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
-import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, scatterSvg } from './figures.js';
+import { catalogHtml, columnsSvg, floorHtml, lanesHtml, legendHtml, ratesHtml, scatterSvg } from './figures.js';
 import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
 import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
@@ -1104,41 +1104,85 @@ function loopsFinding(overview) {
   });
 }
 
+// A cut of the tool calls as bars for the overview: the share that failed in
+// each bucket, by how. `short` labels a bar, `long` says it in its tooltip.
+const rateBars = (rows, short, long) =>
+  rows
+    .filter((b) => b.calls)
+    .map((b) => ({
+      label: short(b),
+      value: pct(rate(b.errors, b.calls)),
+      rate: b.errors / b.calls,
+      parts: KINDS.map((k) => b[k.key] ?? 0),
+      tip: `${long(b)}: ${count(b.errors)} of ${count(b.calls)} tool calls failed (${pct(rate(b.errors, b.calls))})`,
+    }));
+const shortHours = (b) => (b.to === null ? `${b.from} h+` : b.from === 0 ? `<${b.to} h` : `${b.from}–${b.to} h`);
+const shortContext = (b) => (b.to === null ? `${b.from / 1000}+` : b.from === 0 ? `<${b.to / 1000}` : `${b.from / 1000}–${b.to / 1000}`);
+const contextWords = (b) => {
+  const k = (n) => `${n / 1000}K`;
+  return b.to === null ? `${k(b.from)} tokens of context and over` : b.from === 0 ? `Under ${k(b.to)} tokens of context` : `${k(b.from)} to ${k(b.to)} tokens of context`;
+};
+// A streak this short against this many calls is worth a claim; in a handful of calls it is not.
+const STREAK_PER_CALLS = 1000;
+
 function toolsFinding(overview) {
-  const { tools } = overview;
+  const { tools, loops } = overview;
   if (!tools || !tools.totals.calls) return '';
   const t = tools.totals;
   const r = tools.recovery?.failures ? tools.recovery : null;
-  const hoursIn = tools.byRunHour?.length > 1 ? [tools.byRunHour[0], tools.byRunHour.at(-1)] : null;
-  const points = toolDays(overview);
+  const longest = r?.streaks.at(-1)?.[0] ?? null;
+  const streaks = r ? r.streaks.reduce((n, [, times]) => n + times, 0) : 0;
+  const alone = r?.streaks.find(([length]) => length === 1)?.[1] ?? 0;
+  const byHour = tools.byRunHour?.length > 1 ? tools.byRunHour.filter((b) => b.calls) : [];
+  const byContext = tools.byContext?.length > 1 ? tools.byContext.filter((b) => b.calls) : [];
+  const groups = [
+    byHour.length > 1 ? { title: 'By time into a loop run', bars: rateBars(byHour, shortHours, (b) => `${hourBucket(b)} into a run`) } : null,
+    byContext.length > 1 ? { title: 'By context size, in thousands of tokens', bars: rateBars(byContext, shortContext, contextWords) } : null,
+  ].filter(Boolean);
+  const share = (b) => e(pct(rate(b.errors, b.calls)));
+  const ends = (rows) => [rows[0], rows.at(-1)];
+  const steady = groups.length > 0 && [byHour, byContext].every((rows) => rows.length < 2 || rate(rows.at(-1).errors, rows.at(-1).calls) <= rate(rows[0].errors, rows[0].calls));
+  const said = [
+    byHour.length > 1 ? (([first, last]) => `${share(last)} from ${plural(last.from, 'hour')} into a run against ${share(first)} in ${first.to === 1 ? 'the first hour' : `the first ${plural(first.to, 'hour')}`}`)(ends(byHour)) : null,
+    byContext.length > 1 ? (([first, last]) => `${share(last)} at ${last.from / 1000}K tokens of context and over against ${share(first)} under ${first.to / 1000}K`)(ends(byContext)) : null,
+  ].filter(Boolean);
+  // The calls late in a run come from the few runs that lasted that long.
+  const late = byHour.length > 1 && loops?.runs ? loops.runs.filter((x) => x.seconds >= byHour.at(-1).from * 3600).length : 0;
+  const points = groups.length ? null : toolDays(overview);
+  const label = groups.map((g) => `${g.title}: ${g.bars.map((b) => `${b.label.replace('<', 'under ')}, ${b.value}`).join('; ')}`).join('. ');
   return finding({
     id: 'tools',
     eyebrow: 'Model performance',
-    claim: `${pct(rate(t.ok, t.calls))} of ${count(t.calls)} tool calls succeeded`,
+    claim:
+      longest !== null && longest * STREAK_PER_CALLS <= t.calls
+        ? `${count(t.calls)} tool calls, never more than ${plural(longest, 'failure')} in a row`
+        : `${pct(rate(t.ok, t.calls))} of ${count(t.calls)} tool calls succeeded`,
     lede: `Of the ${count(t.errors)} that failed, ${count(t.exit)} ${t.exit === 1 ? 'was a command' : 'were commands'} that ran and exited non-zero, which is often the tool working, as when a test fails.${
-      hoursIn
-        ? ` In a run’s first ${hoursIn[0].to === 1 ? 'hour' : plural(hoursIn[0].to, 'hour')}, ${e(pct(rate(hoursIn[0].errors, hoursIn[0].calls)))} of calls failed; ${plural(hoursIn[1].from, 'hour')} in and later, ${e(
-            pct(rate(hoursIn[1].errors, hoursIn[1].calls))
-          )}.`
-        : ''
+      r ? ` ${count(r.nextOk)} of the ${count(r.failures)} were followed by a call that succeeded.` : ''
     }`,
     facts: [
-      r ? [pct(rate(r.nextOk, r.failures)), 'of failures were followed by a call that succeeded'] : [count(t.errors), 'tool calls failed'],
+      [pct(rate(t.ok, t.calls)), 'of tool calls succeeded'],
       [pct(rate(t.rejected, t.calls), 2), 'of calls were refused by the harness'],
-      r?.streaks.length ? [plural(r.streaks.at(-1)[0], 'call'), 'the most failures in a row'] : null,
+      r && streaks ? [`${count(alone)} of ${count(streaks)}`, 'streaks of failures were a single call'] : null,
     ],
     href: `${ROUTE}tools/`,
     more: 'Failures by model, tool and run length',
     legend: legendHtml(KINDS),
-    chart: columnsSvg(points, {
-      id: 'sf-chart-tools',
-      title: 'Share of tool calls that failed per day, all models',
-      series: { up: KINDS },
-      unit: 'ratio',
-      desc: `${points.filter((p) => p.up !== null).length} of ${points.length} days with tool calls.`,
-      table: 'The model performance page lists every day.',
-    }),
-    caption: 'Share of each day’s tool calls that failed, by how.',
+    chart: groups.length
+      ? ratesHtml(groups, { series: KINDS, label: `Share of tool calls that failed. ${label}. The model performance page has these as tables.` })
+      : columnsSvg(points, {
+          id: 'sf-chart-tools',
+          title: 'Share of tool calls that failed per day, all models',
+          series: { up: KINDS },
+          unit: 'ratio',
+          desc: `${points.filter((p) => p.up !== null).length} of ${points.length} days with tool calls.`,
+          table: 'The model performance page lists every day.',
+        }),
+    caption: groups.length
+      ? `Share of tool calls that failed, by how. ${steady ? 'Late in a run or deep in a context it was no higher than at the start' : 'At the ends'}: ${said.join(', and ')}. This says where failures happened and is not an experiment${
+          late ? `: the calls ${plural(byHour.at(-1).from, 'hour')} in come from ${plural(late, 'run')}` : ''
+        }.`
+      : 'Share of each day’s tool calls that failed, by how.',
   });
 }
 

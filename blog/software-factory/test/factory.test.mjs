@@ -500,11 +500,11 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   assert.match(findings, /<a href="\/software-factory\/tools\/">16\.7% of 6 tool calls succeeded<\/a>/);
   assert.match(findings, /Of the 4 that failed, 1 was a command that ran and exited non-zero/);
   assert.match(findings, /<a href="\/software-factory\/code\/">100 lines of code, about 10 output tokens each<\/a>/);
-  // The loops finding carries every run on one clock; the other two a chart of days.
+  // The loops finding carries every run on one clock; the other two a chart.
   assert.equal((findings.match(/<div class="sf-floor"/g) ?? []).length, 1);
   assert.match(findings, /<li style="left:0%;width:[\d.]+%"><a href="\/software-factory\/loops\/#loop-demo"><code>demo<\/code><\/a><\/li>/);
   assert.match(findings, /data-tip="demo-heap, from Nov 6, 11 pm: 1 cycle and 1 commit in 2 h\. Done\."/);
-  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 2, 'one chart each');
+  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length + (findings.match(/<div class="sf-rates"/g) ?? []).length, 2, 'one chart each');
   assert.equal((findings.match(/<ul class="sf-legend[ "]/g) ?? []).length, 3, 'each figure has its legend');
   assert.doesNotMatch(findings, /The table below/, 'the tables are on the pages the findings open');
   assert.match(loops, /<h2>Every run on one clock<\/h2>/, 'and the loops page has the same figure');
@@ -849,4 +849,64 @@ test('the catalog’s page without its records, or without a catalog: what the o
   const none = pageSnapshot();
   none.overview.stocks = { ...none.overview.stocks, examples: { total: 0, origin: {}, verdict: {}, vacuous: 0, freshness: {} } };
   assert.match(examplesHtml(none, []), /<p class="sf-eyebrow">Example catalog<\/p><div class="sf-empty" role="status"><p>This snapshot has no example catalog/);
+});
+
+// --- The model performance finding ------------------------------------------------
+
+test('rates by bucket are columns on one scale, each with its value and its parts', async () => {
+  const { ratesHtml } = await import('../../assets/software-factory/figures.js');
+  const html = ratesHtml(
+    [
+      { title: 'By <time>', bars: [{ label: '<1 h', value: '2.0%', rate: 0.02, parts: [3, 0, 1], tip: 'Under 1 hour: "4" of 200' }, { label: '1 h+', value: '1.0%', rate: 0.01, parts: [0, 2, 0] }] },
+      { title: 'By size', bars: [{ label: '<50', value: '4.0%', rate: 0.04, parts: [1, 1, 2] }] },
+    ],
+    { series: [{ key: 'exit', label: 'Exit' }, { key: 'rejected', label: 'Refused' }, { key: 'other', label: 'Other' }], label: 'Share that "failed"' }
+  );
+  assert.match(html, /^<div class="sf-rates" role="img" aria-label="Share that &quot;failed&quot;">/);
+  assert.deepEqual([...html.matchAll(/<div class="sf-rates-group" style="flex:(\d)"><p class="sf-rates-title">([^<]+)</g)].map((m) => [m[1], m[2]]), [['2', 'By &lt;time&gt;'], ['1', 'By size']]);
+  // One scale across the groups: the tallest column is the whole height, the others in proportion.
+  assert.deepEqual([...html.matchAll(/class="sf-rate-bar" style="height:([\d.]+)%"/g)].map((m) => m[1]), ['50', '25', '100']);
+  // A part with nothing in it draws nothing; the rest are in the series' order, by count.
+  assert.match(html, /<div class="sf-rate" data-tip="Under 1 hour: &quot;4&quot; of 200"><div class="sf-rate-column"><span class="sf-rate-value">2\.0%<\/span><span class="sf-rate-bar" style="height:50%"><span class="sf-series-exit" style="flex:3"><\/span><span class="sf-series-other" style="flex:1"><\/span><\/span><\/div><span class="sf-rate-label">&lt;1 h<\/span><\/div>/);
+  assert.match(html, /<div class="sf-rate"><div class="sf-rate-column"><span class="sf-rate-value">1\.0%<\/span><span class="sf-rate-bar" style="height:25%"><span class="sf-series-rejected" style="flex:2"><\/span><\/span>/);
+});
+
+test('the model performance finding claims a short streak only against many calls, and says where failures happened', () => {
+  const snap = snapshotOf(run());
+  const row = (from, to, calls, errors) => ({ from, to, calls, errors, exit: errors, rejected: 0, denied: 0, other: 0 });
+  const tools = {
+    ...snap.overview.tools,
+    totals: { calls: 5000, errors: 60, exit: 40, rejected: 15, denied: 0, other: 5, ok: 4940, noResult: 0 },
+    recovery: { failures: 60, nextOk: 55, nextFailed: 5, noNext: 0, streaks: [[1, 50], [2, 2], [3, 2]] },
+    byRunHour: [row(0, 1, 2000, 30), row(1, 2, 1000, 12), row(2, 4, 0, 0), row(4, null, 500, 3)],
+    byContext: [row(0, 50000, 1000, 20), row(50000, 100000, 3000, 30), row(100000, null, 1000, 10)],
+  };
+  const loops = { ...snap.overview.loops, runs: [{ ...snap.overview.loops.runs[0], seconds: 5 * 3600 }, { ...snap.overview.loops.runs[0], id: 'short', seconds: 3600 }] };
+  const finding = (over) => {
+    const html = findingsHtml({ ...snap, overview: { ...snap.overview, tools: { ...tools, ...over.tools }, loops: over.loops ?? loops } });
+    return html.slice(html.indexOf('id="finding-tools"'), html.indexOf('id="finding-code"'));
+  };
+  const html = finding({});
+  assert.match(html, /<a href="\/software-factory\/tools\/">5,000 tool calls, never more than 3 failures in a row<\/a>/);
+  assert.match(html, /Of the 60 that failed, 40 were commands that ran and exited non-zero[^<]*55 of the 60 were followed by a call that succeeded\./);
+  assert.match(html, /<dt>of tool calls succeeded<\/dt><dd>98\.8%<\/dd>/);
+  assert.match(html, /<dt>streaks of failures were a single call<\/dt><dd>50 of 54<\/dd>/);
+  // A bucket with no calls has no column; the two cuts share one figure.
+  assert.deepEqual([...html.matchAll(/<span class="sf-rate-label">([^<]+)</g)].map((m) => m[1]), ['&lt;1 h', '1–2 h', '4 h+', '&lt;50', '50–100', '100+']);
+  assert.match(html, /aria-label="Share of tool calls that failed\. By time into a loop run: under 1 h, 1\.5%; 1–2 h, 1\.2%; 4 h\+, 0\.6%\. By context size, in thousands of tokens: under 50, 2\.0%; 50–100, 1\.0%; 100\+, 1\.0%\. The model performance page has these as tables\."/);
+  assert.match(html, /data-tip="4 hours and over into a run: 3 of 500 tool calls failed \(0\.6%\)"/);
+  assert.match(html, /data-tip="50K to 100K tokens of context: 30 of 3,000 tool calls failed \(1\.0%\)"/);
+  assert.match(html, /Late in a run or deep in a context it was no higher than at the start: 0\.6% from 4 hours into a run against 1\.5% in the first hour, and 1\.0% at 100K tokens of context and over against 2\.0% under 50K\. This says where failures happened and is not an experiment: the calls 4 hours in come from 1 run\./);
+  // Where the share did rise, the caption only gives the two ends.
+  const rose = finding({ tools: { byContext: [row(0, 50000, 1000, 10), row(50000, null, 1000, 30)] } });
+  assert.match(rose, /by how\. At the ends: 0\.6% from 4 hours into a run against 1\.5% in the first hour, and 3\.0% at 50K tokens of context and over against 1\.0% under 50K\./);
+  assert.doesNotMatch(rose, /no higher/);
+  // A long streak, or a streak in a handful of calls, is no claim: the finding leads with the share that succeeded.
+  for (const over of [{ tools: { recovery: { ...tools.recovery, streaks: [[1, 40], [6, 1]] } } }, { tools: { totals: { ...tools.totals, calls: 2999 } } }, { tools: { recovery: null } }])
+    assert.match(finding(over), /<a href="\/software-factory\/tools\/">\d+\.\d% of [\d,]+ tool calls succeeded<\/a>/);
+  // A snapshot from before the cuts were counted keeps the chart of days.
+  const older = finding({ tools: { byRunHour: undefined, byContext: [row(0, null, 5000, 60)] } });
+  assert.match(older, /<svg class="sf-chart sf-chart-wide"/);
+  assert.match(older, /Share of each day’s tool calls that failed, by how\./);
+  assert.doesNotMatch(older, /sf-rates/);
 });

@@ -131,6 +131,28 @@ export function legendHtml(series, { flag = null } = {}) {
 }
 
 /**
+ * Rates by bucket, as groups of columns on one scale: a group for each way
+ * the same thing is cut, a column for each bucket, stacked by series.
+ *   groups: [{ title, bars: [{ label, value, rate, parts: [n, ...], tip }] }]:
+ *     `rate` sets a column's height, `value` is that rate in words, written
+ *     over it, and `parts` are counts in the order of `series`.
+ *   series: [{ key, label }]; label says the whole figure for a screen reader.
+ * Every column has its value written on it, so there is no axis to read.
+ */
+export function ratesHtml(groups, { series, label }) {
+  const most = Math.max(0, ...groups.flatMap((g) => g.bars.map((b) => b.rate)));
+  const bar = (b) => {
+    const parts = b.parts.map((n, i) => (n > 0 ? `<span class="sf-series-${e(series[i].key)}" style="flex:${n}"></span>` : '')).join('');
+    return `<div class="sf-rate"${b.tip ? ` data-tip="${e(b.tip)}"` : ''}><div class="sf-rate-column"><span class="sf-rate-value">${e(b.value)}</span><span class="sf-rate-bar" style="height:${
+      most ? fixed((b.rate / most) * 100) : 0
+    }%">${parts}</span></div><span class="sf-rate-label">${e(b.label)}</span></div>`;
+  };
+  return `<div class="sf-rates" role="img" aria-label="${e(label)}">${groups
+    .map((g) => `<div class="sf-rates-group" style="flex:${g.bars.length}"><p class="sf-rates-title">${e(g.title)}</p><div class="sf-rates-plot">${g.bars.map(bar).join('')}</div></div>`)
+    .join('')}</div>`;
+}
+
+/**
  * A campaign's runs as lanes, one per loop, on one clock from the campaign's
  * first start to its last end. A bar is a run; a notch in it is a cycle's
  * commit. lanes: [{ label, runs: [{ from, to, ticks: [ms], tip }] }], times in ms.

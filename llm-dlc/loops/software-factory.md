@@ -865,6 +865,11 @@ Settled by the author on 2026-11-14:
   narrowed by verdict, existing tests, severity, kind of change, system and kind of defect, with a sentence for
   what is lit, every title, and the catalog cut into four tables. From the `examples` collection; no change to the
   contract or the snapshot.
+- **Model performance, as a finding** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "The model performance finding". The overview's third finding leads with "24,501 tool
+  calls, never more than 4 failures in a row" and shows the share that failed by time into a run and by context
+  size, in place of the share that succeeded over a chart of days. From `overview.tools`; no change to the
+  contract or the snapshot.
 - Status: done
 
 ## Loop settings
