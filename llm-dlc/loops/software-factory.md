@@ -803,6 +803,16 @@ Settled by the author on 2026-11-14:
   Also the author's: the Fable 5.1 vs. 5.2 draft's content, evidence and cover, and the template's cover.
 - **Left as findings**: older snapshots stay in R2, since nothing deletes them. The fixture's breakdown order comes
   from Phase 0's generator. A tab opened before the first publish doesn't see it until reload.
+- **After the loop** (2026-11-15, interactive, in session `725e0a62`): the author's `verify-bytecode-page` branch is
+  merged (`/verify-bytecode/`, `_redirects`, `reading-the-trace` moved to `blog/archive/`); the merge's production
+  build equals that branch's (82 files). The first dev deploy ran. Three findings are fixed: an empty bucket now
+  answers 404 with `Software-Factory-Data: none`, so a tab opened before the first publish announces it; the
+  workflow's actions are pinned to commit SHAs; the publisher prunes snapshots a day after they are superseded.
+  The author list above is out of date in three places: the `/verify-bytecode/` source is in; `reading-the-trace` is
+  archived, so which post (if any) gets `related: software-factory` at launch is the author's choice; the actions
+  are pinned. The runbook in docs/software-factory.md is current. Still the author's: the R2 secrets, the push, the
+  first manual run, the schedule, the launch, the Fable draft, and deleting the four stream workspaces
+  (`prune_workspaces.py` reports all four safe).
 - Status: done
 
 ## Loop settings
