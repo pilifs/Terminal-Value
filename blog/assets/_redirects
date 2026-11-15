@@ -1,5 +1,5 @@
-# The skill's one-command installer lives in its repository; the short URL on this site points at it.
+# The installer of the earlier /verify-bytecode skill lives in its repository; the short URLs on this site point at
+# it. That skill's page is gone: /prove-java-change/ replaced it before either reached production, with no redirect.
 /verify-bytecode/install.sh https://raw.githubusercontent.com/pilifs/in-the-loop/main/plugins/jvmcontract/install.sh 302
-# The page's old path. The in-the-loop repository still names it, including in the installer's own usage line.
+# An older path. The in-the-loop repository still names it, including in the installer's own usage line.
 /verify-bytecode-skill/install.sh https://raw.githubusercontent.com/pilifs/in-the-loop/main/plugins/jvmcontract/install.sh 302
-/verify-bytecode-skill/* /verify-bytecode/:splat 301

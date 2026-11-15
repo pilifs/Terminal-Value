@@ -24,7 +24,9 @@ folder already qualifies them.
   `blog/assets/_redirects`, build.mjs's `PAGES`, and `reading-the-trace` moved to `blog/archive/`, which the build
   doesn't publish. With the section unpublished, the merge's production build equals that branch's byte for byte
   (82 files). The same day `reading-the-trace` went back to `blog/posts/` as a draft: readable on the dev site as
-  background for the data, never in production, which it likely never reaches.
+  background for the data, never in production, which it likely never reaches. Later that day the page was rewritten
+  for the `/prove-java-change` plugin and moved to `blog/assets/prove-java-change/`, served at `/prove-java-change/`.
+  The old path was never in production, so it has no redirect.
 - **Upstream baseline.** in-the-loop `origin/main` was `7384f8c23eef441817ddb714c6ef5571cdc138bd`, the brief's
   audited revision. It is public: a refresh fetches by SHA from `raw.githubusercontent.com` with no token. The
   local checkout's HEAD moves while its loops run, so always pin a SHA.
@@ -764,8 +766,9 @@ In this order. Each step is the author's, on a machine logged in to Cloudflare o
    `setup-r2.sh --github`, which would replace them. The repository's older `CLOUDFLARE_ACCOUNT_ID` and
    `CLOUDFLARE_API_TOKEN` secrets are not used by this workflow.
 4. **Before any deploy**, of either kind:
-   - check that this repo has everything the live site has: `/verify-bytecode/` came in on 2026-11-15 (State at
-     Phase 0), and a page added elsewhere since then would be removed by a deploy from here;
+   - check that this repo has everything the live site has: `/verify-bytecode/` came in on 2026-11-15 and is now
+     `/prove-java-change/` (State at Phase 0), and a page added elsewhere since then would be removed by a deploy
+     from here;
    - compare `wrangler.toml` with the project's settings;
    - confirm that the project's production branch is `production`;
    - make sure both buckets exist.

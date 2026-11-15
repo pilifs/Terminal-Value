@@ -38,7 +38,7 @@ const OUT_DIR = path.join(BLOG_DIR, '..', 'dist');
 // Build them first with `npm run build:projects`.
 const PROJECTS = ['terminal-value-pipeline'];
 // Hand-written pages in blog/assets/<path>/index.html, listed in the sitemap.
-const PAGES = ['/verify-bytecode/'];
+const PAGES = ['/prove-java-change/'];
 const PROJECTS_DIR = path.join(BLOG_DIR, '..', 'projects');
 const CODE_LANGS = [
   'js',

@@ -204,7 +204,7 @@ test('existing posts and the project demo are unchanged by the section', { skip 
     assert.deepEqual(files(demo), [...expected.keys()].sort());
     for (const [f, source] of expected) assert.equal(sha(path.join(demo, f)), sha(source), f);
   }
-  // Hand-written pages, such as /verify-bytecode/, and the files beside them: copied as they are.
+  // Hand-written pages, such as /prove-java-change/, and the files beside them: copied as they are.
   const assets = path.join(REPO, 'blog', 'assets');
   const pageDirs = files(assets).filter((f) => handWritten(f) && !f.startsWith('projects')).map(path.dirname);
   assert.ok(pageDirs.length >= 1, 'a hand-written page');

@@ -62,5 +62,5 @@ test('every rule in style.css is scoped under body.software-factory', () => {
 test('style.css has a dark scheme and a phone layout', () => {
   assert.match(css, /@media \(prefers-color-scheme: dark\)/);
   assert.match(css, /@media \(max-width: 36rem\)/);
-  assert.doesNotMatch(css, /verify-bytecode/);
+  assert.doesNotMatch(css, /verify-bytecode|prove-java-change/);
 });

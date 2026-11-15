@@ -16,7 +16,7 @@ export const read = (file) => fs.readFileSync(file, 'utf8');
 
 /**
  * Whether dist's file f is a hand-written page, an HTML file build.mjs copies
- * verbatim from blog/assets/ (such as /verify-bytecode/), which has none of the
+ * verbatim from blog/assets/ (such as /prove-java-change/), which has none of the
  * blog's header or meta tags.
  */
 export const handWritten = (f) => f.endsWith('.html') && fs.existsSync(path.join(REPO, 'blog', 'assets', f));
