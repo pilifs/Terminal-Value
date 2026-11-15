@@ -82,6 +82,43 @@ POST, PUT, PATCH, DELETE, OPTIONS, TRACE, UNKNOWN</span>
         </div>
       </div>
 
+      <section id="what-it-finds">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">What it finds</p>
+            <h2>The tests passed. The behaviour changed.</h2>
+            <p>Three changes from the examples. Each looks harmless in review, and each passed its unit tests. The proof names the side effect, with an input you can run.</p>
+          </div>
+          <div class="grid g3">
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <h3>A refactor that stops sending a Kafka event</h3>
+              <p>The route returns the same total on every request. For an order of 100 items or more, it no longer sends the event.</p>
+              <pre class="witness">POST /quotes: cents=1, quantity=100
+before: returns 90; KafkaTemplate.send(…)
+after:  returns 90; no modeled call</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/193-a-bulk-order-s-quote-event-dropped-in-the-refactor-refuted-on-the-route-s-trace-of-sends/README.md">Read example 193 →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <h3>A cleanup that breaks every quorum</h3>
+              <p><code>n / 2 + 1</code> becomes <code>(n + 1) / 2</code>. They agree on every odd cluster size the tests use. At two nodes, a "majority" is one.</p>
+              <pre class="witness">majority(n=2) returns 1</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/015-rounded-half-is-not-a-majority/README.md">Read example 015 →</a>
+            </article>
+            <article class="card ex">
+              <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Unit tests: passed</span></p>
+              <h3>A codec that loads any class a message names</h3>
+              <p>A convenience for one consumer gives the module reflection. No dependency is vulnerable, so there is no CVE to look up.</p>
+              <pre class="witness">reflection: MessageCodec.decode
+  calls java.lang.Class.forName</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/009-codec-loads-classes-named-by-payload/README.md">Read example 009 →</a>
+            </article>
+          </div>
+          <p class="fine">These are changes written for the project's own example systems, not bugs found in the wild. <a href="#examples">More examples, real libraries among them ↓</a></p>
+        </div>
+      </section>
+
       <section id="install">
         <div class="wrap">
           <div class="head">
@@ -299,12 +336,12 @@ questions for a person: none</pre>
             </article>
             <article class="card ex">
               <p class="ex-tags"><span class="pill violation">Violation</span> <span class="tag">Build comparison</span></p>
-              <h3>A refactor that drops a Kafka event</h3>
-              <p>The route still returns the right total. For bulk orders it no longer sends the event, and the unit tests pass.</p>
-              <pre class="witness">POST /quotes: cents=1, quantity=100
-before: returns 90; KafkaTemplate.send(…)
-after:  returns 90; no modeled call</pre>
-              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/193-a-bulk-order-s-quote-event-dropped-in-the-refactor-refuted-on-the-route-s-trace-of-sends/README.md">Read example 193 →</a>
+              <h3>A retry shortcut that loses a delivery</h3>
+              <p>A client error now answers 200 at once. The answer is the same as before, but the delivery is no longer dead-lettered.</p>
+              <pre class="witness">status=400, idempotent=false, attempts=0
+before: returns 200; KafkaTemplate.send(…)
+after:  returns 200; no modeled call</pre>
+              <a class="more" href="https://github.com/pilifs/in-the-loop/blob/main/examples/171-a-retry-route-that-skips-the-dead-letter-for-a-client-error-loses-the-delivery-without-a-trace/README.md">Read example 171 →</a>
             </article>
             <article class="card ex">
               <p class="ex-tags"><span class="pill violation">Change found</span> <span class="pill verified">Confined</span> <span class="tag">Apache Commons</span></p>

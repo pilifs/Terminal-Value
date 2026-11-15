@@ -640,6 +640,9 @@ th.num {
 .quick + .fine {
   margin-top: 2rem;
 }
+.grid + .fine {
+  margin-top: 1.25rem;
+}
 .fine a {
   white-space: nowrap;
 }
