@@ -853,8 +853,13 @@ Settled by the author on 2026-11-14:
   the factory made: the example catalog". A second finding, "Output", on the overview: the example catalog as a
   square per example, coloured by verdict, the changes to published libraries ringed and the five with a result so
   far listed by name. From `overview.stocks.examples` and the `examples` collection; no change to the contract or
-  the snapshot. Next: carry each example's `path` and `summary` from `examples/index.json` into its record, so a
-  square can link to its example and say what was found.
+  the snapshot.
+- **What an example found** (2026-11-15, moonshot loop `software-factory-impact`): same section of the docs. The
+  snapshot carries each example's `path`, `summary`, source link, severity, kind of change and whether the existing
+  tests passed on the same patch, with counts in `overview.catalog` (generator 4, metric definitions 4). The Output
+  finding's claim is now "The existing tests passed on 92 of the 100 changes where the verifier found a violation",
+  with the sentence that most examples were constructed for the catalog. A square opens its example's record under
+  the grid, with links to the example and the change it verifies; the address keeps the pick as `#example-<id>`.
 - Status: done
 
 ## Loop settings

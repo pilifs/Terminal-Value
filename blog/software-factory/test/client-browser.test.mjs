@@ -364,12 +364,12 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
       const remote = REMOTES['no binding (503)'];
       const record = (page) =>
         page.evaluate(() => ({
-          at: document.querySelector('[data-sf-inspect-at]').textContent,
+          at: document.querySelector('[data-sf-inspect="run"] [data-sf-inspect-at]').textContent,
           loop: document.querySelector('.sf-ledger-full .sf-ledger-bar code')?.textContent ?? null,
           cycles: document.querySelectorAll('.sf-ledger-full li').length,
           on: [...document.querySelectorAll('.sf-run-on')].map((el) => el.dataset.run),
           hash: location.hash,
-          steps: [...document.querySelectorAll('[data-sf-step]')].map((b) => (b.hidden ? null : `${b.textContent}${b.disabled ? ' (off)' : ''}`)),
+          steps: [...document.querySelectorAll('[data-sf-inspect="run"] [data-sf-step]')].map((b) => (b.hidden ? null : `${b.textContent}${b.disabled ? ' (off)' : ''}`)),
         }));
       const shown = (page, what) => until(() => page.evaluate(() => Boolean(document.querySelector('.sf-ledger-full'))), what);
       let visit = await open('/software-factory/', remote);
@@ -408,6 +408,52 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         await shown(visit.page, 'the record of the run in the address');
         const now = await record(visit.page);
         assert.deepEqual([now.on, now.hash], [[third], `#run-${third}`]);
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+    });
+
+    await t.test('an example picked in the catalog shows the catalog’s own record, and can be linked to', async () => {
+      const remote = REMOTES['no binding (503)'];
+      const seen = (page) =>
+        page.evaluate(() => {
+          const box = document.querySelector('[data-sf-inspect="example"]');
+          return {
+            at: box.querySelector('[data-sf-inspect-at]').textContent,
+            title: box.querySelector('.sf-example h3')?.textContent ?? null,
+            on: [...document.querySelectorAll('.sf-cell-on')].map((el) => el.dataset.example),
+            hash: location.hash,
+            run: document.querySelector('[data-sf-inspect="run"] [data-sf-inspect-at]').textContent,
+          };
+        });
+      let visit = await open('/software-factory/', remote);
+      let fifth;
+      try {
+        const cells = await visit.page.evaluate(() => [...document.querySelectorAll('.sf-catalog .sf-cell[data-example]')].map((el) => [el.dataset.example, el.dataset.tip]));
+        fifth = cells[4];
+        await visit.page.click(`[id="example-${fifth[0]}"]`);
+        await until(() => visit.page.evaluate(() => Boolean(document.querySelector('.sf-example'))), 'the record of the example that was clicked');
+        let now = await seen(visit.page);
+        assert.deepEqual([now.at, now.on, now.hash], [`Example 5 of ${cells.length}`, [fifth[0]], `#example-${fifth[0]}`]);
+        assert.ok(fifth[1].includes(now.title), `${fifth[1]} names ${now.title}`);
+        assert.equal(now.run, 'Pick a run on the clock to read its record, cycle by cycle.', 'the clock’s own pick is left alone');
+        // Its links go to the example at the snapshot's revision.
+        const link = await visit.page.evaluate(() => document.querySelector('.sf-example-links a').getAttribute('href'));
+        assert.match(link, new RegExp(`^https://github\\.com/pilifs/in-the-loop/tree/[0-9a-f]{40}/examples/${fifth[0]}-`));
+        await visit.page.click('[data-sf-inspect="example"] [data-sf-step="1"]');
+        await until(() => visit.page.evaluate(() => document.querySelector('[data-sf-inspect="example"] [data-sf-inspect-at]').textContent.startsWith('Example 6 of')), 'the next example');
+        now = await seen(visit.page);
+        assert.deepEqual([now.on, now.hash], [[cells[5][0]], `#example-${cells[5][0]}`]);
+        assert.equal(visit.requests.filter((p) => p.endsWith('/details/examples.json')).length, 1, 'one load for every pick');
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+      visit = await open(`/software-factory/#example-${fifth[0]}`, remote);
+      try {
+        await until(() => visit.page.evaluate(() => Boolean(document.querySelector('.sf-example'))), 'the record of the example in the address');
+        assert.deepEqual((await seen(visit.page)).on, [fifth[0]]);
         assert.deepEqual(visit.errors, []);
       } finally {
         await visit.context.close();

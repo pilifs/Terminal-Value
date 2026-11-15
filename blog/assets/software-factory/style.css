@@ -1325,8 +1325,76 @@ body.software-factory .sf-shell .sf-floor-figure figcaption {
 }
 
 /* A run picked on the floor, and its record under the clock. */
-body.software-factory .sf-floor[data-pick] .sf-run {
+body.software-factory [data-pick] > :is(.sf-run, .sf-cell) {
   cursor: pointer;
+}
+body.software-factory .sf-cell {
+  scroll-margin-top: 9rem;
+}
+body.software-factory .sf-catalog .sf-cell-on {
+  outline: 2px solid var(--sf-text);
+  outline-offset: 2px;
+}
+/* An example's record: the catalog's own words about it. */
+body.software-factory .sf-example {
+  padding: 1.1rem 1.25rem 1.2rem;
+  border: 1px solid var(--sf-rule);
+  border-left: 3px solid var(--sf-rule-strong);
+  border-radius: var(--sf-radius);
+  background: var(--sf-raised);
+}
+body.software-factory .sf-shell .sf-example p {
+  margin: 0;
+}
+body.software-factory .sf-example-kicker {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-shell .sf-example h3 {
+  margin: 0.3rem 0 0.4rem;
+  font-size: 1.1875rem;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+body.software-factory .sf-example-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+body.software-factory .sf-example-verdict .sf-swatch {
+  flex: none;
+  align-self: center;
+}
+body.software-factory .sf-shell .sf-example .sf-example-summary {
+  max-width: 46rem;
+  margin-top: 0.7rem;
+}
+body.software-factory .sf-example-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 2rem;
+  margin: 0.9rem 0 0;
+}
+body.software-factory .sf-example-facts dt {
+  color: var(--sf-muted);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-example-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+body.software-factory .sf-shell .sf-example .sf-example-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.8rem;
+}
+body.software-factory .sf-shell .sf-example .sf-example-links {
+  margin-top: 0.8rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
 /* A link to a run lands with the names over the clock in view. */
 body.software-factory .sf-floor .sf-run {

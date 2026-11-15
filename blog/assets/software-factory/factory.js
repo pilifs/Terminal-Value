@@ -197,6 +197,22 @@ const DRIVERS = [
   { key: 'by-other', label: 'A slash command or another agent' },
 ];
 
+/**
+ * Where a picked record is shown, under the figure it was picked on: what is
+ * picked, the buttons that step to the one before and after, and the record.
+ * Hidden until the page's script is there to fill it. `noun` is what a mark is:
+ * a run, an example.
+ */
+function inspectHtml(noun, hint) {
+  return `<div class="sf-inspect" data-sf-inspect="${e(noun)}" hidden>
+            <div class="sf-inspect-bar">
+              <p class="sf-inspect-at" data-sf-inspect-at role="status">${e(hint)}</p>
+              <p class="sf-inspect-steps"><button type="button" data-sf-step="-1" hidden>Earlier ${e(noun)}</button><button type="button" data-sf-step="1">Show the first ${e(noun)}</button><button type="button" data-sf-step="0" hidden>Close</button></p>
+            </div>
+            <div data-sf-inspect-body></div>
+          </div>`;
+}
+
 const HOUR = 3600e3;
 const PAUSE = 6 * HOUR; // with no loop running for longer than this, the floor's clock is cut
 const FLOOR_HOURS = 120; // the newest stretches the floor shows add up to about this much
@@ -311,14 +327,7 @@ function floorFigure(loops) {
             </ul>`;
   const cut = panels.length > 1 ? ` The clock skips ${panels.length === 2 ? `the ${lull(panels[1].from - panels[0].to)}` : 'each pause of more than six hours'} when no loop ran.` : '';
   const partial = shown.length < all.length ? ` Runs before ${e(dayYear(shown[0].from))} are on the feature loops page.` : '';
-  // Where a picked run's record is shown. Hidden until the page's script is there to fill it.
-  const inspect = `<div class="sf-inspect" data-sf-inspect hidden>
-            <div class="sf-inspect-bar">
-              <p class="sf-inspect-at" data-sf-inspect-at role="status">Pick a run on the clock to read its record, cycle by cycle.</p>
-              <p class="sf-inspect-steps"><button type="button" data-sf-step="-1" hidden>Earlier run</button><button type="button" data-sf-step="1">Show the first run</button><button type="button" data-sf-step="0" hidden>Close</button></p>
-            </div>
-            <div data-sf-inspect-body></div>
-          </div>`;
+  const inspect = inspectHtml('run', 'Pick a run on the clock to read its record, cycle by cycle.');
   return {
     html,
     legend,
@@ -1181,6 +1190,44 @@ const LIBRARY = 'real-world';
 // A label that records a result carries one of the catalog's own marks.
 const hasResult = (x) => /[✓✗⚠]/.test(x.verdictLabel ?? '');
 
+const SEVERE = ['critical', 'high'];
+const WORDS_OF = { 'bug-fix': 'Bug fix', refactor: 'Refactor', feature: 'Feature', cleanup: 'Cleanup', logging: 'Logging', configuration: 'Configuration' };
+const sentence = (word) => (word ? word[0].toUpperCase() + word.slice(1) : word);
+// The catalog writes code in backticks: shown as code, and escaped either way.
+const prose = (text) =>
+  String(text)
+    .split('`')
+    .map((part, i) => (i % 2 ? `<code>${e(part)}</code>` : e(part)))
+    .join('');
+const exampleUrl = (x, sha) => (x.path ? `${REPO}/tree/${sha}/${x.path}` : null);
+
+/**
+ * One example's record, shown when a reader picks its square: what it is,
+ * the verdict, the catalog's paragraph about it and its answers, with links
+ * to the example and to the change it verifies. `x` is a record of the
+ * examples collection.
+ */
+export function exampleRecordHtml(x, { sha }) {
+  const facts = [
+    x.testsPassed === null || x.testsPassed === undefined ? null : ['Existing tests on the same patch', x.testsPassed ? 'Passed' : 'Failed'],
+    x.severity ? ['Severity if it shipped unnoticed', sentence(x.severity)] : null,
+    x.changeKind ? ['Kind of change', WORDS_OF[x.changeKind] ?? sentence(x.changeKind)] : null,
+    x.freshness ? ['Verdict at this revision', sentence(x.freshness)] : null,
+  ].filter(Boolean);
+  const tags = [...(x.tags?.defect ?? []), ...(x.tags?.technique ?? []), ...(x.tags?.domain ?? [])];
+  const url = exampleUrl(x, sha);
+  const links = `${link(url, 'The example, with its evidence')}${link(x.sourceUrl, 'The change it verifies')}`.replace(/^ · /, '');
+  return `<article class="sf-example">
+            <p class="sf-example-kicker"><code>${e(x.id)}</code>${x.system ? ` ${e(x.system)}` : ''} · ${x.origin === LIBRARY ? 'A change to a published library' : 'Constructed for the catalog'}</p>
+            <h3>${e(x.title)}</h3>
+            <p class="sf-example-verdict"><span class="sf-swatch sf-verdict-${e(x.verdict ?? 'none')}" aria-hidden="true"></span>${e(x.verdictLabel ?? 'No verdict')}${x.vacuous ? ' <span class="sf-tag">Vacuous</span>' : ''}</p>
+            ${x.summary ? `<p class="sf-example-summary">${prose(x.summary)}</p>` : ''}
+            ${facts.length ? `<dl class="sf-example-facts">${facts.map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join('')}</dl>` : ''}
+            ${tags.length ? `<p class="sf-example-tags">${tags.map((t) => `<span class="sf-tag">${e(t)}</span>`).join(' ')}</p>` : ''}
+            ${links ? `<p class="sf-example-links">${links}</p>` : ''}
+          </article>`;
+}
+
 /**
  * What the factory makes: the example catalog, a square for each example.
  * `examples` is the records of the examples collection. Without them (a
@@ -1191,29 +1238,41 @@ function outputFinding(snapshot, examples) {
   const { overview, manifest } = snapshot;
   const stock = overview.stocks?.examples;
   if (!stock?.total) return '';
+  const sha = manifest.source.sha;
   const n = (key) => stock.verdict?.[key] ?? 0;
   const libraries = stock.origin?.[LIBRARY] ?? 0;
   const named = Array.isArray(examples) && examples.length === stock.total ? examples : null;
   const cells = named
     ? named.map((x) => ({
+        id: x.id,
         key: x.verdict ?? 'none',
         ring: x.origin === LIBRARY,
         tip: `${x.id} · ${x.system ? `${x.system}: ` : ''}${x.title}. ${x.verdictLabel ?? 'No verdict'}${x.vacuous ? ' (vacuous)' : ''}`,
       }))
     : VERDICTS.flatMap((v) => Array.from({ length: n(v.key) }, () => ({ key: v.key, ring: false, tip: v.label })));
   const shown = named ? named.filter((x) => x.origin === LIBRARY && hasResult(x)) : [];
+  const titled = (x) => (exampleUrl(x, sha) ? `<a href="${e(exampleUrl(x, sha))}">${e(x.title)}</a>` : e(x.title));
   const list = shown.length
     ? `<div class="sf-catalog-list">
               <h3>Changes to published libraries with a result so far</h3>
               <ul>${shown
                 .slice(0, 6)
-                .map((x) => `<li>${x.system ? `<strong>${e(x.system)}</strong> ` : ''}${e(x.title)} <span class="sf-catalog-verdict">${e(x.verdictLabel)}</span></li>`)
+                .map((x) => `<li>${x.system ? `<strong>${e(x.system)}</strong> ` : ''}${titled(x)} <span class="sf-catalog-verdict">${e(x.verdictLabel)}</span></li>`)
                 .join('')}</ul>
             </div>`
     : '';
   const jobs = overview.verification?.rows ?? [];
   const passed = jobs.filter((r) => r[1] === 0).length;
-  const median = overview.measures?.find((m) => m.id === 'verification_duration_median');
+  // The catalog's own answers, when the snapshot counts them: of the changes
+  // where the verifier found a violation, how many the existing tests passed,
+  // and how many it rates severe.
+  const answers = overview.catalog ?? null;
+  const tests = answers?.tests?.violation ?? null;
+  const said = tests ? (tests.passed ?? 0) + (tests.failed ?? 0) : 0;
+  const severity = answers?.severity?.violation ?? null;
+  const rated = severity ? Object.values(severity).reduce((t, v) => t + v, 0) : 0;
+  const severe = severity ? SEVERE.reduce((t, k) => t + (severity[k] ?? 0), 0) : 0;
+  const counts = `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`;
   const legend = `<ul class="sf-legend">${VERDICTS.filter((v) => n(v.key))
     .map((v) => `<li><span class="sf-swatch sf-verdict-${v.key}" aria-hidden="true"></span>${e(v.label)}: ${count(n(v.key))}</li>`)
     .join('')}${named && libraries ? '<li><span class="sf-swatch sf-verdict-none sf-cell-ring" aria-hidden="true"></span>A change to a published library</li>' : ''}</ul>`;
@@ -1222,21 +1281,23 @@ function outputFinding(snapshot, examples) {
     id: 'output',
     eyebrow: 'Output',
     wide: true,
-    claim: `${plural(n('violation'), 'violation')} found and ${plural(n('verified'), 'change')} verified, in a catalog of ${plural(stock.total, 'example')}`,
-    lede: `Each example is a code change run through the project’s formal verifier, with the verdict it gave. A verified label is not a claim of a current, non-vacuous proof${
+    claim: said && tests.passed ? `The existing tests passed on ${count(tests.passed)} of the ${count(said)} changes where the verifier found a violation` : counts,
+    lede: `Each example is a code change run through the project’s formal verifier${said && tests.passed ? `: ${counts}` : ', with the verdict it gave'}. ${
+      said ? 'Most were constructed for the catalog, with the systems and the tests they change. ' : ''
+    }A verified label is not a claim of a current, non-vacuous proof${
       stock.vacuous ? `: ${plural(stock.vacuous, 'proof')} ${stock.vacuous === 1 ? 'is' : 'are'} recorded as vacuous` : ''
     }. <a href="${ROUTE}methodology/#def-examples_catalog">Definition</a>`,
     facts: [
+      rated && severe ? [`${count(severe)} of ${count(rated)}`, 'violations the catalog rates high or critical if they shipped unnoticed'] : null,
       libraries ? [count(libraries), `${libraries === 1 ? 'is a change' : 'are changes'} to published libraries${shown.length ? `; ${count(shown.length)} ${shown.length === 1 ? 'has' : 'have'} a result so far` : ''}`] : null,
       jobs.length ? [`${count(passed)} of ${count(jobs.length)}`, 'verification jobs passed'] : null,
-      median?.value ? [formatValue(median.value, 'seconds'), 'the median verification job'] : null,
     ],
     href,
     more: 'Every example and its verdict',
     legend,
     chart: catalogHtml(cells),
-    caption: `${named ? 'Each square is an example, in the order of the catalog.' : 'Each square is an example, by verdict.'} From <a href="${REPO}/blob/${e(manifest.source.sha)}/examples/README.md">the catalog</a> at this revision.`,
-    after: list,
+    caption: `${named ? 'Each square is an example, in the order of the catalog.' : 'Each square is an example, by verdict.'} From <a href="${REPO}/blob/${e(sha)}/examples/README.md">the catalog</a> at this revision.`,
+    after: `${named ? inspectHtml('example', 'Pick a square to read what the example changed and what the verifier found.') : ''}${list}`,
   });
 }
 

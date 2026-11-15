@@ -135,8 +135,12 @@ How it is put together:
 
 The overview said how the loops worked and how much code came out, but not what the code does. The second finding,
 "Output", shows the example catalog: 183 code changes, each with the verdict the project's formal verifier gave.
-Its claim is counted from `overview.stocks.examples`: "100 violations found and 55 changes verified, in a catalog of
-183 examples".
+Its claim is the catalog's own answer to "would the tests have caught it?", counted in `overview.catalog`: "The
+existing tests passed on 92 of the 100 changes where the verifier found a violation". A snapshot without those
+counts, or with no passing answer, gets the counts of `overview.stocks.examples` as its claim instead: "100
+violations found and 55 changes verified, in a catalog of 183 examples". The sentence under the claim says what an
+example is, gives those counts, and says that most examples were constructed for the catalog, with the systems and
+the tests they change: the claim is about a catalog built to show this, not a field study.
 
 - **A square for each example**, in the catalog's order (`catalogHtml` in `figures.js`). A square under the pointer
   says the example's id, system, title and verdict label. A ringed square is a change to a published library.
@@ -152,8 +156,18 @@ Its claim is counted from `overview.stocks.examples`: "100 violations found and 
   the finding says "5 have a result so far". This reads a label, since the record has no field for it.
 - **What it doesn't claim.** The sentence under the claim repeats the metric's note: a verified label is not a claim
   of a current, non-vacuous proof, and it gives the count of proofs recorded as vacuous.
-- **The three numbers** are the library changes, the verification jobs that passed of those completed
-  (`overview.verification`), and the median job.
+- **The three numbers** are the violations the catalog rates high or critical if they shipped unnoticed
+  (`overview.catalog.severity.violation`), the library changes, and the verification jobs that passed of those
+  completed (`overview.verification`).
+- **A square opens its example's record** under the grid (`exampleRecordHtml` in `factory.js`): the title, the
+  verdict label, the catalog's paragraph about it (its backticks become code), whether the existing tests passed on
+  the same patch, the severity, the kind of change, its tags, and links to the example's folder at the snapshot's
+  revision and to the change it verifies. A field the record doesn't have is left out. Two buttons step through the
+  catalog, and the address keeps the pick as `#example-<id>`. The listed library changes link to their folders too.
+- **One picker for runs and examples.** `inspectHtml(noun, hint)` draws the box and `PICKS` in `app.js` says, per
+  noun, which marks can be picked, which collection has their records and how a record is drawn. The noun is in the
+  box (`data-sf-inspect="run"`) and in the address, so the two picks on the overview don't disturb each other. The
+  `examples` collection is loaded on the first pick, once.
 - **What an example's record carries (generator 4, metric definitions 4).** Besides its title, system and verdict:
   `path` (its folder in the source), `summary` (the catalog's one paragraph about it), `sourceUrl` (the pull request
   or commit it verifies, when published elsewhere), `testsPassed` (the catalog's `existingTestsPassed`: did the

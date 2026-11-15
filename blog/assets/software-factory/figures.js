@@ -228,14 +228,15 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
 
 /**
  * A catalog as a grid of squares, one for each entry, in the order given.
- *   cells: [{ key, tip, ring }]: a cell is sf-verdict-<key>; `ring` marks one out.
+ *   cells: [{ id, key, tip, ring }]: a cell is sf-verdict-<key>; `ring` marks one
+ *     out. With an id a cell can be linked to (#example-<id>) and picked.
  * A picture of records a table lists elsewhere, so it is hidden from a screen
  * reader. A cell's words are for the pointer's tooltip only: a title as well
  * would say every one of them twice in the page.
  */
 export function catalogHtml(cells) {
   return `<div class="sf-catalog" aria-hidden="true">${cells
-    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
+    .map((c) => `<span class="sf-cell sf-verdict-${e(c.key)}${c.ring ? ' sf-cell-ring' : ''}"${c.id ? ` id="example-${e(c.id)}" data-example="${e(c.id)}"` : ''}${c.tip ? ` data-tip="${e(c.tip)}"` : ''}></span>`)
     .join('')}</div>`;
 }
 

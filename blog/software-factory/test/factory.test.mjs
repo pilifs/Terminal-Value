@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, exampleRecordHtml, findingsHtml, heroHtml, loopsHtml, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
@@ -647,7 +647,7 @@ test('a run on the floor can be linked to and picked, and its record is the run�
   // The floor names each run, on the overview and on the loops page; the place for its record waits for the script.
   for (const html of [findingsHtml(snap), loopsHtml(snap)]) {
     assert.match(html, new RegExp(`<span class="sf-run" id="run-${record.id}" data-run="${record.id}" style=`));
-    assert.match(html, /<div class="sf-inspect" data-sf-inspect hidden>/);
+    assert.match(html, /<div class="sf-inspect" data-sf-inspect="run" hidden>/);
     assert.match(html, /<p class="sf-inspect-at" data-sf-inspect-at role="status">Pick a run on the clock to read its record, cycle by cycle\.<\/p>/);
     assert.match(html, /<button type="button" data-sf-step="-1" hidden>Earlier run<\/button><button type="button" data-sf-step="1">Show the first run<\/button><button type="button" data-sf-step="0" hidden>Close<\/button>/);
   }
@@ -665,4 +665,74 @@ test('a run on the floor can be linked to and picked, and its record is the run�
   assert.match(bare, /No cycle committed\./);
   assert.match(bare, /<strong>0 cycles<\/strong> · 1 commit · 6 tool calls · <strong>2 h<\/strong><br>Blocked on a person/);
   assert.match(runRecordHtml({ ...record, cycles: [{ ...record.cycles[0], decision: 'stop' }] }), /<span class="sf-ledger-stop">decided to stop<\/span>/);
+});
+
+// --- The catalog: what the factory made --------------------------------------
+
+const catalogExample = (id, o = {}) => ({
+  id, title: `Title ${id}`, origin: 'constructed', system: 'Quorum', verdict: 'violation', verdictLabel: '✗ Violation: counterexample found', vacuous: false,
+  freshness: 'current', tags: { domain: ['consensus'], defect: ['stale-messages'], technique: [] },
+  path: `examples/${id}-slug`, summary: 'Every unit test passes. The prover finds `vote(a, b)` & more.', sourceUrl: null, testsPassed: true, severity: 'critical', changeKind: 'refactor', ...o,
+});
+
+test('the output finding claims what the catalog says of its own violations, and falls back to counts', () => {
+  const snap = snapshotOf(run());
+  const records = [
+    catalogExample('001'),
+    catalogExample('002', { testsPassed: false, severity: 'low' }),
+    catalogExample('003', { verdict: 'verified', verdictLabel: '✓ Verified', severity: 'none' }),
+    catalogExample('004', { origin: 'real-world', system: 'A <b>Library</b>', verdict: null, verdictLabel: '✗ the bug found; ✓ confined', testsPassed: null, sourceUrl: 'https://example.invalid/pull/4' }),
+    catalogExample('005', { origin: 'real-world', verdict: null, verdictLabel: 'not run: a catalog entry', testsPassed: null, path: null }),
+  ];
+  const stocks = { ...snap.overview.stocks, examples: { total: 5, origin: { constructed: 3, 'real-world': 2 }, verdict: { violation: 2, verified: 1, none: 2 }, vacuous: 0, freshness: { current: 5 } } };
+  const catalog = { coverage: { included: 3, total: 5, missing: 2 }, tests: { violation: { passed: 1, failed: 1 }, verified: { passed: 1 } }, severity: { violation: { critical: 1, low: 1 }, verified: { none: 1 }, none: { critical: 2 } } };
+  const sha = snap.manifest.source.sha;
+  const output = (overview, examples = records) => {
+    const html = findingsHtml({ ...snap, overview: { ...snap.overview, ...overview } }, { examples });
+    return html.slice(html.indexOf('id="finding-output"'), html.indexOf('id="finding-tools"'));
+  };
+  const html = output({ stocks, catalog });
+  assert.match(html, />The existing tests passed on 1 of the 2 changes where the verifier found a violation<\/a><\/h2>/);
+  assert.match(html, /formal verifier: 2 violations found and 1 change verified, in a catalog of 5 examples\. Most were constructed for the catalog, with the systems and the tests they change\. A verified label is not a claim of a current, non-vacuous proof\./);
+  assert.match(html, /<dt>violations the catalog rates high or critical if they shipped unnoticed<\/dt><dd>1 of 2<\/dd>/);
+  assert.match(html, /<dt>are changes to published libraries; 1 has a result so far<\/dt><dd>2<\/dd>/);
+  // A square can be linked to and picked; a listed library change links its example at the snapshot's revision.
+  assert.match(html, /<span class="sf-cell sf-verdict-violation" id="example-001" data-example="001" data-tip="001 · Quorum: Title 001\. /);
+  assert.match(html, /<div class="sf-inspect" data-sf-inspect="example" hidden>/);
+  assert.match(html, /<button type="button" data-sf-step="1">Show the first example<\/button>/);
+  assert.ok(html.includes(`<li><strong>A &lt;b&gt;Library&lt;/b&gt;</strong> <a href="https://github.com/pilifs/in-the-loop/tree/${sha}/examples/004-slug">Title 004</a> <span class="sf-catalog-verdict">✗ the bug found; ✓ confined</span></li>`));
+  assert.equal((html.match(/<li><strong>/g) ?? []).length, 1, 'the one that was not run is not listed');
+  // No answers counted (an older snapshot), or none that passed: the claim counts verdicts and says no more.
+  for (const older of [output({ stocks }), output({ stocks, catalog: { ...catalog, tests: { violation: { failed: 2 } } } })]) {
+    assert.match(older, />2 violations found and 1 change verified, in a catalog of 5 examples<\/a><\/h2>/);
+    assert.doesNotMatch(older, /existing tests passed/);
+  }
+  assert.doesNotMatch(output({ stocks }), /rates high or critical|Most were constructed/);
+  // Without the records nothing can be picked.
+  assert.doesNotMatch(output({ stocks, catalog }, null), /data-sf-inspect="example"|data-example/);
+});
+
+test('an example’s record is the catalog’s own words, escaped, with links only where there is somewhere to go', () => {
+  const sha = 'a'.repeat(40);
+  const html = exampleRecordHtml(catalogExample('013', { title: 'A "longest log" <rule>', vacuous: true }), { sha });
+  assert.match(html, /<p class="sf-example-kicker"><code>013<\/code> Quorum · Constructed for the catalog<\/p>/);
+  assert.match(html, /<h3>A &quot;longest log&quot; &lt;rule&gt;<\/h3>/);
+  assert.match(html, /<span class="sf-swatch sf-verdict-violation" aria-hidden="true"><\/span>✗ Violation: counterexample found <span class="sf-tag">Vacuous<\/span>/);
+  assert.match(html, /<p class="sf-example-summary">Every unit test passes\. The prover finds <code>vote\(a, b\)<\/code> &amp; more\.<\/p>/, 'the catalog’s backticks are code');
+  assert.match(html, /<dt>Existing tests on the same patch<\/dt><dd>Passed<\/dd>/);
+  assert.match(html, /<dt>Severity if it shipped unnoticed<\/dt><dd>Critical<\/dd>/);
+  assert.match(html, /<dt>Kind of change<\/dt><dd>Refactor<\/dd>/);
+  assert.match(html, /<span class="sf-tag">stale-messages<\/span> <span class="sf-tag">consensus<\/span>/);
+  assert.ok(html.includes(`<a href="https://github.com/pilifs/in-the-loop/tree/${sha}/examples/013-slug">The example, with its evidence</a>`));
+  assert.doesNotMatch(html, /The change it verifies/);
+  const library = exampleRecordHtml(catalogExample('105', { origin: 'real-world', verdict: null, testsPassed: false, sourceUrl: 'https://example.invalid/pull/1', changeKind: 'bug-fix' }), { sha });
+  assert.match(library, /· A change to a published library<\/p>/);
+  assert.match(library, /sf-verdict-none/);
+  assert.match(library, /<dd>Failed<\/dd>/);
+  assert.match(library, /<dd>Bug fix<\/dd>/);
+  assert.match(library, /<a href="https:\/\/example\.invalid\/pull\/1">The change it verifies<\/a>/);
+  // A record from before these were carried, and a link that isn't https: nothing is made up, nothing is followed.
+  const bare = exampleRecordHtml({ id: '1', title: 'T', origin: 'constructed', system: null, verdict: 'verified', verdictLabel: null, vacuous: null, freshness: null, tags: { domain: [], defect: [], technique: [] }, sourceUrl: 'javascript:alert(1)' }, { sha });
+  assert.match(bare, /No verdict/);
+  assert.doesNotMatch(bare, /<dl|<a |sf-example-summary|sf-example-tags|javascript:/);
 });
