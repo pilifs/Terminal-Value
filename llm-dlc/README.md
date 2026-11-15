@@ -125,6 +125,13 @@ llm-dlc/tools/moonshot-loop.sh software-factory-impact       # llm-dlc/moonshots
 llm-dlc/tools/moonshot-loop.sh software-factory-impact 5     # at most 5 cycles
 ```
 
+The moonshots here:
+
+| Moonshot | Goal | Start it with |
+| --- | --- | --- |
+| [`software-factory-impact`](moonshots/software-factory-impact.md) | The Software Factory page's impact | a fresh session |
+| [`prove-java-change-landing`](moonshots/prove-java-change-landing.md) | The `/prove-java-change/` landing page, in `blog/assets/prove-java-change/` | `MOONSHOT_SESSION=ID`, the session that wrote the page: its instruction says "continue" and "the other project" (in-the-loop, read-only), which a fresh session would not know |
+
 - **The instruction** is the whole of `llm-dlc/moonshots/NAME.md`, word for word. The loop adds one paragraph after
   it: take one improvement, verify it, commit it with `sync.py`, never push or deploy, and end without a commit when
   the author is needed.
