@@ -191,7 +191,9 @@ function layout({
       image
         ? `<meta property="og:image" content="${SITE.url}${image.url}">
     <meta property="og:image:width" content="${image.width}">
-    <meta property="og:image:height" content="${image.height}">
+    <meta property="og:image:height" content="${image.height}">${
+      image.alt ? `\n    <meta property="og:image:alt" content="${escapeHtml(image.alt)}">` : ''
+    }
     <meta name="twitter:card" content="summary_large_image">`
         : ''
     }

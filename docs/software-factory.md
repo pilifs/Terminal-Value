@@ -370,8 +370,8 @@ efficiency change, and what running it teaches." Now a description starts with t
 (`ledByItsResult` in `render.mjs`): the overview's headline or a data page's `<h1>`, read from the page as drawn
 and unescaped once, then the sentence about the page. The overview has its own sentence to follow a headline
 (`after`). A page with no statement keeps its description: the analysis, the methodology, and an overview with
-no headline or no data. The `<title>` and `og:title` are unchanged, and no page has a share image yet: that
-needs a picture made outside the build, which is the author's call.
+no headline or no data. The `<title>` and `og:title` are unchanged. The share image came later: see "The share
+image", below.
 
 ### One revision with the landing page (2026-11-15)
 
@@ -444,6 +444,34 @@ script left records, read from their sessions' prompts. It is the answer to requ
 
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
+
+### The share image
+
+The author decided on 2026-11-15 that the section gets a link-preview image the way `/prove-java-change/` got
+its own: a page in `blog/covers/` rendered to a committed 1200x630 PNG, with a test that flags a card made from
+an older snapshot.
+
+- **What it shows:** the overview's headline, "590 of 742 commits were made inside a loop run", the counts and
+  days under it, and every run of every loop as a bar on one clock. The bars are the account's 109 runs, in
+  stretches cut where no loop ran for six hours (`stretches` in `factory.js`, as on the pages). A mark on a bar is
+  a cycle that ended in a commit, 344 of them. The verification loop's sessions take the first row, drawn dimmer.
+- **Where it differs from the landing page's.** That page's cover is written by hand. This one is written by
+  `blog/software-factory/cover.mjs` from the committed snapshot, so its numbers are the overview's. Don't edit
+  `blog/covers/software-factory.html`: change `cover.mjs` and run the command.
+- **The command:** `npm run software-factory:cover` writes the page, renders it with the headless Chromium that
+  `llm-dlc/tools/screenshot.sh --setup` installs, and writes `blog/assets/software-factory/cover.png`. It stamps
+  the PNG with a text chunk: the page's sha256 and the snapshot's id. Run it after every refresh that is
+  committed, and commit both files with the snapshot.
+- **The test** (`test/site-cover.test.mjs`) needs no browser. The page in `blog/covers/` must be what `cover.mjs`
+  writes from the committed snapshot, byte for byte, and the PNG's stamp must name that page. A refresh that
+  changes the snapshot fails both until the command has run. It also checks the headline against the overview's,
+  and counts the bars and marks against the account.
+- **In the pages:** every page of the section names `/software-factory/cover.png` as its `og:image`, with its
+  size and an alt text, and `twitter:card` as `summary_large_image` (`buildSection` in `index.mjs`; `layout` in
+  `build.mjs` now takes an image's `alt`). A build that shows another snapshot, with
+  `SOFTWARE_FACTORY_DATA_DIR`, names no image. The PNG is 80 KB and is no part of a page's load.
+- **What it can't follow.** The card is of the committed snapshot. Once the pages read newer data from R2, the
+  numbers on a page can be newer than the card's until the next committed refresh.
 
 ### How the sessions lasted: a sixth finding (generator 10)
 
@@ -615,6 +643,7 @@ The contract and the snapshot did not change. The filters' link, `?period=…`, 
 | `/software-factory/analysis/` | The author's Software Factory posts | `render.mjs` (B) from `editorial.mjs` (C) |
 | `/software-factory/methodology/` | Definitions, coverage, provenance, freshness, limits | `render.mjs` (B) from `config/metrics.json` |
 | `/software-factory/style.css`, `app.js` | Browser files | `blog/assets/software-factory/` (B) |
+| `/software-factory/cover.png` | The link-preview image, 1200x630 | `cover.mjs`, rendered by `npm run software-factory:cover` |
 | `/software-factory/measures.js` | Period measures in the browser | `measures.mjs` (A), copied by `index.mjs` |
 | `/software-factory/static-data/latest.json` | Pointer to the bundled snapshot | `data/` (A's refresh), copied by `index.mjs` |
 | `/software-factory/static-data/snapshots/<id>/…` | The bundled snapshot: `manifest.json`, `overview.json`, `details/*.json` | as above |
@@ -628,6 +657,7 @@ blog/posts.mjs                    parsePost, loadPosts (drafts left out before r
 blog/software-factory/
   index.mjs                       buildSection: the build seam (coordinator)
   cli.mjs                         refresh, validate and publish commands (coordinator)
+  cover.mjs                       the link-preview image: writes blog/covers/software-factory.html and the PNG
   publish.mjs                     the publisher to R2 (coordinator)
   ops/                            setup-r2.sh and the saved Pages settings (coordinator)
   site.mjs  site.css              the section's entry in the site header and home page (coordinator)
@@ -730,6 +760,7 @@ NODE_PATH=/tmp/pw/node_modules node --test blog/software-factory/test/client-bro
                                      # without Playwright (npm i --prefix /tmp/pw playwright@1.64.1)
 npm run software-factory:refresh -- --sha <sha> [--checkout ../in-the-loop]
 npm run software-factory:validate    # the committed snapshot
+npm run software-factory:cover       # the link-preview image again, after a refresh that is committed
 npm run build && npm run build:drafts
 PORT=8791 npm run dev                # a second preview beside another on 8788
 llm-dlc/tools/screenshot.sh http://localhost:8791/software-factory/ /tmp/sf/overview   # 4 shots: desktop/mobile x light/dark
@@ -797,7 +828,9 @@ Everything here runs without an account, credentials or network, apart from the 
   reads a local clone and never writes to it. Without `--checkout` it reads GitHub, and the snapshot then has no
   code section. It writes into `blog/software-factory/data/`, the committed
   snapshot, and prunes the snapshots there that neither the pointer nor a post's evidence names. Commit the result
-  only as a change of its own. `npm run software-factory:validate` checks what is there.
+  only as a change of its own. `npm run software-factory:validate` checks what is there. Then run
+  `npm run software-factory:cover` and commit the two files it writes with the snapshot: the link-preview image
+  is drawn from the committed snapshot, and a test fails while it is of an older one.
 - **The function, with Wrangler Pages local development.** It needs no account. Run it from a copy, so wrangler's
   `.wrangler/` state stays out of the repo. `wrangler.toml` supplies the binding and the variable, and local R2
   starts empty, so load the committed snapshot into it first:

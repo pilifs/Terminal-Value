@@ -15,6 +15,7 @@
     "test:software-factory": "node --test 'blog/software-factory/test/*.test.mjs'",
     "software-factory:refresh": "node blog/software-factory/cli.mjs refresh",
     "software-factory:validate": "node blog/software-factory/cli.mjs validate",
+    "software-factory:cover": "node blog/software-factory/cover.mjs",
     "software-factory:publish": "node blog/software-factory/cli.mjs publish",
     "deploy": "npm run build:projects && node blog/build.mjs && wrangler pages deploy dist --project-name=terminal-value --branch=production",
     "deploy:dev": "node blog/build.mjs --drafts && wrangler pages deploy dist --project-name=terminal-value --branch=dev"

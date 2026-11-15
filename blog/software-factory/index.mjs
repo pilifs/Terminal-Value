@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { COVER, coverAlt } from './cover.mjs';
 import { selectPosts } from './editorial.mjs';
 import { kindOf, withoutComments } from './lighten.mjs';
 import { renderPages } from './render.mjs';
@@ -129,6 +130,10 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
     helpers,
     paths: { route: `/${ROUTE}/`, staticData: `/${ROUTE}/static-data/`, remoteData: `/${ROUTE}/data/` },
   });
+  // The link-preview image is of the committed snapshot (cover.mjs), so pages
+  // that show another snapshot don't name it.
+  const cover = !override && snapshot && fs.existsSync(path.join(out, path.basename(COVER.png))) ? coverAlt(snapshot) : null;
+  const image = cover ? { url: COVER.url, width: COVER.width, height: COVER.height, alt: cover } : undefined;
   for (const page of pages) {
     const file = path.join(out, page.path);
     const app = hasApp && Boolean(page.app);
@@ -139,6 +144,7 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
         title: page.title,
         description: page.description,
         canonical: `/${ROUTE}/${page.path.replace(/index\.html$/, '')}`,
+        image,
         body: page.body,
         pageClass: ROUTE,
         styles: fs.existsSync(path.join(out, 'style.css')) ? STYLES : [],

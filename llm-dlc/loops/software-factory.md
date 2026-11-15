@@ -922,6 +922,10 @@ Settled by the author on 2026-11-14:
   cause are read from the rollup (generator 10, `overview.endurance`, snapshot `sf1-dc701302bcf135a5`). The
   overview's sixth finding is "Sessions compacted their context 392 times and kept working"; the usage page has
   the numbers, the shares and the table of cache events under it.
+- **The share image** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, "The share
+  image". `npm run software-factory:cover` writes `blog/covers/software-factory.html` from the committed snapshot
+  and renders it to `blog/assets/software-factory/cover.png`; every page of the section names it as `og:image`.
+  `test/site-cover.test.mjs` fails while the page or the PNG is of an older snapshot.
 - Status: done
 
 ## Loop settings
