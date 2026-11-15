@@ -520,6 +520,7 @@ details > .limits {
 }
 details > p,
 details > .fine {
+  max-width: 48rem;
   margin: 0 0 1rem;
   color: var(--muted);
 }

@@ -525,6 +525,8 @@ after:  -2147483648</pre>
             <p class="kicker">Before you run it</p>
             <h2>Questions</h2>
           </div>
+          <details open><summary>Why not a code review, or more tests?</summary><p>Tests check the inputs someone thought of: of the 100 changes the examples refute, 92 had passed their unit tests. A review, by a person or a model, is an opinion about the source. Here the model only prepares the question. The answer comes from a model checker run on the compiled bytecode, over every input within the stated bounds. A refuted claim comes with the input that breaks it, and that input is then run on a real JVM.</p></details>
+          <details><summary>The model writes the claims. Who checks them?</summary><p>You do, before any proof runs. Much of a claim is not the model's to invent: a regression claim is the previous version's own behaviour, and a contract is read from the types and the bytecode. Where the change's intent is needed, the plugin drafts it, shows you each claim in plain words, and waits. After that, the proof loop may not change a claim to fit a result. A proof that covers no input is reported as vacuous, never as a plain pass.</p></details>
           <details id="requirements" open><summary>What does it need?</summary>
             <ul class="limits">
               <li><a href="https://code.claude.com">Claude Code</a>, on Fable 5.2 at high effort</li>
