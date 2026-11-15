@@ -1168,6 +1168,27 @@ function codeDays(code) {
   return { points, blamed };
 }
 
+/**
+ * The lines of code in the repository as /prove-java-change/ counts them:
+ * added less removed over the languages the snapshot names, from the first
+ * day with a commit to the last. Null for a snapshot without the figure.
+ */
+export function repositoryFacts(code) {
+  const r = code?.repository;
+  if (!r || r.lines <= 0 || !code.days.length) return null;
+  const names = r.languages.map((id) => code.languages.find((l) => l.id === id)?.label ?? id);
+  const said = (list) => (list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : (list[0] ?? ''));
+  return {
+    lines: r.lines,
+    languages: r.languages,
+    names: said(names),
+    // The languages counted as code and left out of this count.
+    others: said(code.languages.filter((l) => !r.languages.includes(l.id)).map((l) => l.label)),
+    claim: `From empty to ${count(r.lines)} lines of code in ${plural(code.days.length, 'day')}`,
+    range: code.days.length > 1 ? `${formatDay(code.days[0], { year: false })} to ${formatDay(code.days.at(-1))}` : formatDay(code.days[0]),
+  };
+}
+
 export function codeHtml(snapshot) {
   const { code } = snapshot.overview;
   if (!code)
@@ -1188,28 +1209,39 @@ export function codeHtml(snapshot) {
   const firstHalf = written.slice(0, Math.ceil(written.length / 2));
   const share = (list) => rate(list.reduce((t, p) => t + p.kept, 0), list.reduce((t, p) => t + p.added, 0));
   const most = Math.max(1, ...code.languages.map((l) => l.added));
+  const repo = repositoryFacts(code);
+  // With the repository's count, each language also says added less removed, what that count adds up, in place of the share bar.
   const languageRows = code.languages
     .map(
       (l) =>
-        `<tr><th scope="row">${e(l.label)}</th><td>${count(l.added)}<span class="sf-share" aria-hidden="true"><span style="width:${((l.added / most) * 100).toFixed(1)}%"></span></span></td><td>${count(l.removed)}</td><td>${count(
-          l.inTree
-        )}</td><td>${e(pct(rate(l.inTree, l.added)))}</td></tr>`
+        `<tr><th scope="row">${e(l.label)}</th><td>${count(l.added)}${
+          repo ? '' : `<span class="sf-share" aria-hidden="true"><span style="width:${((l.added / most) * 100).toFixed(1)}%"></span></span>`
+        }</td><td>${count(l.removed)}</td>${repo ? `<td>${count(l.added - l.removed)}</td>` : ''}<td>${count(l.inTree)}</td><td>${e(pct(rate(l.inTree, l.added)))}</td></tr>`
     )
     .join('');
   const other = [code.docs, code.data]
     .map((p) => `<tr><th scope="row">${e(p.label)}</th><td>${count(p.added)}</td><td>${count(p.removed)}</td><td>${count(p.inTree)}</td><td>${e(pct(rate(p.inTree, p.added)))}</td></tr>`)
     .join('');
   return `<p class="sf-eyebrow">Code</p>
-        <h1 id="sf-code-title">${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each</h1>
-        <p class="sf-section-lede">Counted from git, not from what the agents report: lines added in ${e(
-          code.languages
-            .slice(0, 3)
-            .map((l) => l.label)
-            .join(', ')
-        )} and ${plural(Math.max(0, code.languages.length - 3), 'other language')} across ${plural(code.commits, 'commit')}. ${e(pct(code.retained))} of those lines are still in the tree. The token figure is an upper bound: the same tokens also wrote ${count(
+        <h1 id="sf-code-title">${repo ? e(repo.claim) : `${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each`}</h1>
+        <p class="sf-section-lede">${
+          repo
+            ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files, ${e(repo.range)}, counted from git and not from what the agents report. In all, ${count(
+                code.totals.added
+              )} lines of code were added in ${plural(code.languages.length, 'language')} across ${plural(code.commits, 'commit')}, about ${count(code.tokensPerLine)} output tokens for each, and ${e(
+                pct(code.retained)
+              )} of those lines are still in the tree.`
+            : `Counted from git, not from what the agents report: lines added in ${e(
+                code.languages
+                  .slice(0, 3)
+                  .map((l) => l.label)
+                  .join(', ')
+              )} and ${plural(Math.max(0, code.languages.length - 3), 'other language')} across ${plural(code.commits, 'commit')}. ${e(pct(code.retained))} of those lines are still in the tree.`
+        } The token figure is an upper bound: the same tokens also wrote ${count(
           code.docs.added
         )} lines of docs and briefs, every commit message and every command.</p>
         <dl class="sf-figures">${[
+          repo ? tile('Lines of code in the repository', count(repo.lines), `added less removed, in ${plural(repo.languages.length, 'language')}`) : '',
           tile('Lines of code added', count(code.totals.added), `${count(code.totals.removed)} removed`),
           tile('Still in the tree', pct(code.retained), `${count(code.totals.inTree)} lines at <code>${e(sha.slice(0, 7))}</code>`),
           tile('Output tokens per line', count(code.tokensPerLine), `${count(code.outputTokens)} output tokens in all`),
@@ -1239,8 +1271,10 @@ export function codeHtml(snapshot) {
         <div class="sf-breakdowns sf-code-tables">
           <section class="sf-breakdown" id="code-by-language" aria-labelledby="code-by-language-title">
             <h3 id="code-by-language-title">By language</h3>
-            <p class="sf-caption"><span class="sf-tag">All time</span> A file's language is its extension. In the tree is the count at <a href="${REPO}/tree/${e(sha)}"><code>${e(sha.slice(0, 7))}</code></a>.</p>
-            <table class="sf-table"><thead><tr><th scope="col">Language</th><th scope="col">Added</th><th scope="col">Removed</th><th scope="col">In the tree</th><th scope="col">Still there</th></tr></thead><tbody>${languageRows}</tbody></table>
+            <p class="sf-caption"><span class="sf-tag">All time</span> A file's language is its extension. In the tree is the count at <a href="${REPO}/tree/${e(sha)}"><code>${e(sha.slice(0, 7))}</code></a>.${
+              repo ? ` Net is added less removed. Over ${e(repo.names)} it is the ${count(repo.lines)} lines of code in the repository${repo.others ? `; ${e(repo.others)} are not in that count` : ''}.` : ''
+            }</p>
+            <table class="sf-table"><thead><tr><th scope="col">Language</th><th scope="col">Added</th><th scope="col">Removed</th>${repo ? '<th scope="col">Net</th>' : ''}<th scope="col">In the tree</th><th scope="col">Still there</th></tr></thead><tbody>${languageRows}</tbody></table>
           </section>
           <section class="sf-breakdown" id="code-not-code" aria-labelledby="code-not-code-title">
             <h3 id="code-not-code-title">Counted apart, not as code</h3>
@@ -1444,18 +1478,26 @@ function codeFinding(overview) {
   const { points, blamed } = codeDays(code);
   const inLoops = loops?.totals.codeAdded ? loops.totals : null;
   const outside = inLoops ? code.totals.added - inLoops.codeAdded : 0;
+  const byLoop =
+    inLoops && outside > 0 ? [count(inLoops.outputTokens / inLoops.codeAdded), count((code.outputTokens - inLoops.outputTokens) / outside)] : null;
+  // With the repository's count the finding leads with it, as the landing page does; what a line took follows.
+  const repo = repositoryFacts(code);
   return finding({
     id: 'code',
     eyebrow: 'Code',
-    claim: `${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each`,
-    lede: `Counted from git, not from what the agents report.${
-      inLoops && outside > 0
-        ? ` A line took ${count(inLoops.outputTokens / inLoops.codeAdded)} output tokens inside a loop run and ${count((code.outputTokens - inLoops.outputTokens) / outside)} outside one.`
-        : ''
-    }`,
+    claim: repo ? repo.claim : `${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each`,
+    lede: repo
+      ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files, counted from git and not from what the agents report. In all, ${count(
+          code.totals.added
+        )} lines of code were added, about ${count(code.tokensPerLine)} output tokens for each${byLoop ? `: ${byLoop[0]} inside a loop run and ${byLoop[1]} outside one` : ''}.`
+      : `Counted from git, not from what the agents report.${byLoop ? ` A line took ${byLoop[0]} output tokens inside a loop run and ${byLoop[1]} outside one.` : ''}`,
     facts: [
       [pct(code.retained), 'of the lines added are still in the tree'],
-      code.perChange?.median ? [count(code.perChange.median), 'output tokens per line for the middle change'] : [count(code.commits), 'commits counted'],
+      repo
+        ? [count(code.tokensPerLine), `output tokens for each line added${code.perChange?.median ? `; ${count(code.perChange.median)} for the middle change` : ''}`]
+        : code.perChange?.median
+          ? [count(code.perChange.median), 'output tokens per line for the middle change']
+          : [count(code.commits), 'commits counted'],
       [formatValue(code.usdPerLine * 1000, 'usd'), 'estimated usage per 1,000 lines'],
     ],
     href: `${ROUTE}code/`,

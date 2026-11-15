@@ -452,6 +452,11 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       .filter((l) => l.added || l.inTree)
       .sort((a, b) => b.added - a.added || (a.id < b.id ? -1 : 1));
     const totals = languages.reduce((t, l) => ({ added: t.added + l.added, removed: t.removed + l.removed, inTree: t.inTree + l.inTree }), { added: 0, removed: 0, inTree: 0 });
+    // The lines of code in the repository as the landing page counts them: added
+    // less removed, over the languages config/code.json names for it. Null
+    // when it names none, or none of them has a line.
+    const counted = languages.filter((l) => (config.code.repository?.languages ?? []).includes(l.id));
+    const repository = counted.length ? { lines: counted.reduce((t, l) => t + l.added - l.removed, 0), languages: counted.map((l) => l.id) } : null;
     const joined = git.commits.filter((c) => c.changeId && change.has(c.changeId)).length;
     // What each change took, where the rollup says: the spread behind the average.
     const edges = config.code.perLineBuckets ?? [0];
@@ -507,6 +512,7 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       coverage: { included: joined, total: git.commits.length, missing: git.commits.length - joined, note: 'commits whose change id the traces record' },
       commits: git.commits.length,
       languages,
+      repository,
       docs: part('docs', config.code.docs.label),
       data: part('data', config.code.data.label),
       totals,

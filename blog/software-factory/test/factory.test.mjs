@@ -318,6 +318,9 @@ test('code: lines by language from git, what is still in the tree, and tokens pe
   const c = overview.code;
   assert.deepEqual(c.totals, { added: 100, removed: 15, inTree: 85 });
   assert.deepEqual(c.languages.map((l) => [l.id, l.added, l.removed, l.inTree]), [['rust', 90, 10, 80], ['python', 10, 5, 5]]);
+  // The lines of code in the repository, as the landing page counts them: added less removed over the languages
+  // config/code.json names for it. Here both languages are among them: 80 and 5.
+  assert.deepEqual(c.repository, { lines: 85, languages: ['rust', 'python'] });
   assert.deepEqual([c.docs.added, c.data.added], [40, 1000], 'docs and data are counted apart, never as code');
   assert.equal(c.retained, 0.85);
   assert.equal(c.tokensPerLine, 10, '1,000 output tokens over 100 lines of code');
@@ -488,8 +491,21 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   assert.match(tools, /16\.7% of 6 tool calls succeeded/);
   assert.match(tools, /<code class="sf-muted">claude-sonnet-5-5<\/code>/, 'raw model ids beside the names');
   const code = codeHtml(snap);
-  assert.match(code, /100 lines of code, about 10 output tokens each/);
-  assert.match(code, /85\.0%/);
+  // The code page leads with the code in the repository, as the landing page counts it: added less removed.
+  assert.match(code, /<h1 id="sf-code-title">From empty to 85 lines of code in 3 days<\/h1>/);
+  assert.match(code, /lines added less lines removed in Rust and Python files, Nov 6 to Nov 8, 2026, counted from git and not from what the agents report\. In all, 100 lines of code were added in 2 languages across 2 commits, about 10 output tokens for each, and 85\.0% of those lines are still in the tree\./);
+  assert.match(code, /<dt>Lines of code in the repository<\/dt><dd><span class="sf-figure-value">85<\/span><span class="sf-figure-note">added less removed, in 2 languages<\/span>/);
+  // Each language says its own added less removed, which the count adds up.
+  assert.match(code, /Net is added less removed\. Over Rust and Python it is the 85 lines of code in the repository\.<\/p>/);
+  assert.match(code, /<th scope="col">Removed<\/th><th scope="col">Net<\/th><th scope="col">In the tree<\/th>/);
+  assert.match(code, /<tr><th scope="row">Rust<\/th><td>90<\/td><td>10<\/td><td>80<\/td><td>80<\/td><td>88\.9%<\/td><\/tr>/);
+  // A snapshot from before the count keeps what it could say: the lines added, with a bar for each language's share.
+  const before = { ...snap, overview: { ...snap.overview, code: { ...snap.overview.code, repository: undefined } } };
+  assert.match(codeHtml(before), /<h1 id="sf-code-title">100 lines of code, about 10 output tokens each<\/h1>/);
+  assert.match(codeHtml(before), /<tr><th scope="row">Rust<\/th><td>90<span class="sf-share" aria-hidden="true">/);
+  assert.doesNotMatch(codeHtml(before), /Lines of code in the repository|>Net</);
+  assert.match(findingsHtml(before), /<a href="\/software-factory\/code\/">100 lines of code, about 10 output tokens each<\/a>/);
+  assert.match(findingsHtml(before), /<p class="sf-finding-lede">Counted from git, not from what the agents report\./);
   // Described, never explained or ranked; and nothing is called live.
   // The overview's findings: a claim from the data, three numbers, one chart and a link, per section.
   const findings = findingsHtml(snap);
@@ -500,7 +516,9 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   assert.match(findings, /<dt>the longest run nobody typed into<\/dt><dd>2 h<\/dd>/);
   assert.match(findings, /<a href="\/software-factory\/tools\/">16\.7% of 6 tool calls succeeded<\/a>/);
   assert.match(findings, /Of the 4 that failed, 1 was a command that ran and exited non-zero/);
-  assert.match(findings, /<a href="\/software-factory\/code\/">100 lines of code, about 10 output tokens each<\/a>/);
+  assert.match(findings, /<a href="\/software-factory\/code\/">From empty to 85 lines of code in 3 days<\/a>/);
+  assert.match(findings, /That is the code in the repository at this revision: lines added less lines removed in Rust and Python files, counted from git and not from what the agents report\. In all, 100 lines of code were added, about 10 output tokens for each/);
+  assert.match(findings, /<dt>output tokens for each line added; 10 for the middle change<\/dt><dd>10<\/dd>/);
   // The loops finding carries every run on one clock; the other two a chart.
   assert.equal((findings.match(/<div class="sf-floor"/g) ?? []).length, 1);
   assert.match(findings, /<li style="left:0%;width:[\d.]+%"><a href="\/software-factory\/loops\/#loop-demo"><code>demo<\/code><\/a><\/li>/);

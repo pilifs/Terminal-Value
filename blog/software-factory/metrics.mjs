@@ -30,6 +30,9 @@
 //     their finishedAt); the jobs without one are counted in coverage.
 //   - Also exported for tests and refresh: localDay, dayStart, nextDay,
 //     areaOf, collectionFiles.
+//   - Version 12 adds overview.code.repository: the lines of code in the
+//     repository as the landing page counts them (added less removed, in the
+//     languages config/code.json names).
 //   - Version 11 adds to the loops collection a record for each run of the
 //     account that left no run record, read from the index of loops (its
 //     `source` is transcript or session, its recordUrl null), and to each
@@ -67,7 +70,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '11' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '12' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 

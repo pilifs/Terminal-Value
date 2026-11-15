@@ -930,6 +930,10 @@ Settled by the author on 2026-11-14:
   "Every run on the clock opens". The 59 runs that left no run record get a record from the source's index of
   loops (generator 11, snapshot `sf1-aee8dc3acbc90f30`): 9 runs with their 94 cycles, and 50 verification
   sessions with what each took. All 109 bars can be picked.
+- **The code finding leads with the landing page's count** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, same title. "From empty to 167,128 lines of code in 23 days": lines added less lines
+  removed in the landing page's five languages (generator 12, `overview.code.repository`, snapshot
+  `sf1-9cc38bb0f56b6ea2`). The code page has the count as a tile and a Net column by language.
 - Status: done
 
 ## Loop settings

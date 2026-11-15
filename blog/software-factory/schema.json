@@ -1202,6 +1202,16 @@
             }
           }
         },
+        "repository": {
+          "description": "The lines of code in the repository as /prove-java-change/ counts them: lines added less lines removed, over the languages config/code.json names for it (the ids listed, largest first). Null when it names none. Since generator 12.",
+          "type": ["object", "null"],
+          "required": ["lines", "languages"],
+          "additionalProperties": false,
+          "properties": {
+            "lines": { "type": "integer" },
+            "languages": { "type": "array", "items": { "type": "string" } }
+          }
+        },
         "docs": {
           "type": "object",
           "required": ["id", "label", "added", "removed", "inTree"],

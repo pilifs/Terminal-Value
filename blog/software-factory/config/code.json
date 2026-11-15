@@ -10,6 +10,10 @@
     { "id": "contract", "label": "Contracts", "extensions": ["contract"] },
     { "id": "javascript", "label": "JavaScript", "extensions": ["js", "mjs", "ts"] }
   ],
+  "repository": {
+    "languages": ["rust", "python", "java", "shell", "tla"],
+    "note": "The lines of code in the repository, as /prove-java-change/ counts them: lines added less lines removed in these languages' files, over the same git history."
+  },
   "docs": { "label": "Docs and briefs", "extensions": ["md"] },
   "data": { "label": "Data and generated files" },
   "contextBuckets": [0, 50000, 100000, 150000, 200000, 300000],

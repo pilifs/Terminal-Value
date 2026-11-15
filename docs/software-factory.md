@@ -396,7 +396,8 @@ What does not agree yet, and why:
 - **Examples with a verdict.** 163 there, and 157 of 183 here until generator 8: an example with several verdicts
   in its label counted as having none. Now 163 here too: see "The landing page's verdict words and count" below.
 - **Lines of code.** 167,128 there is lines added less lines removed in five languages; 181,451 here is lines added
-  in seven. The parts agree: added less removed for Rust, Python, Java, shell and TLA+ come to 167,128.
+  in seven. The parts agree: added less removed for Rust, Python, Java, shell and TLA+ come to 167,128. Since
+  generator 12 the code finding leads with 167,128 ("The code finding leads with the landing page's count", below).
 - **Verdict words.** Refuted, Established and Left open there; Violation found, Verified and Unverifiable here
   until generator 8. The author decided these pages take the landing page's words, and they now do.
 - **Fable 5.2.** The data now has calls by `claude-fable-5-2`. `config/models.json` and a contract test say no id
@@ -444,6 +445,33 @@ script left records, read from their sessions' prompts. It is the answer to requ
 
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
+
+### The code finding leads with the landing page's count (generator 12)
+
+`/prove-java-change/` says "The repository went from empty to 167,128 lines of code in 14 working days". The
+overview's code finding said "181,451 lines of code, about 136 output tokens each". Both were right and a reader
+moving between the pages saw two totals for the code.
+
+- **The count.** 167,128 is lines added less lines removed in Rust, Python, Java, shell and TLA+ files. The
+  snapshot's own per-language numbers give it exactly: 91,049, 45,879, 22,763, 4,209 and 3,228, the landing
+  page's five. 181,451 is every line of code added, in seven languages (contracts and JavaScript too), with lines
+  later rewritten counted.
+- **In the config:** `config/code.json` has `repository.languages`, the five ids. **In the snapshot:**
+  `overview.code.repository` is `{ lines, languages }`, null when the config names none.
+- **The finding** is now "From empty to 167,128 lines of code in 23 days" (`repositoryFacts` in `factory.js`).
+  The lede says what the count is, then that 181,451 lines were added, at about 136 output tokens each. The
+  middle number is tokens per line added, with the middle change beside it.
+- **The code page** has the same headline, a first tile "Lines of code in the repository", and a Net column in
+  the table by language, so each of the landing page's five numbers can be found. The share bar in that table
+  made room for it.
+- **23 days, not 14 working days.** 23 is the days from the first commit to the last, Oct 24 to Nov 15. The
+  landing page's 14 counts days with a commit by each commit's author date on its own clock. This page's days
+  are committer dates on Toronto's clock, and by those 13 days have a commit. So the number of working days is
+  not said here, and the two pages' lines per day are not the same split of the same total.
+- **A snapshot without the figure** keeps the old headline and table.
+
+Metric definitions are version 12 (`code_lines` says what the repository's count is). Snapshot
+`sf1-9cc38bb0f56b6ea2`, the same revision; the share image was rendered again from it.
 
 ### Every run on the clock opens (generator 11)
 
