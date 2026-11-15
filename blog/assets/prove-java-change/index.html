@@ -40,20 +40,14 @@
           <div>
             <h1>Formally prove any Java change in one command</h1>
             <p class="punch">Find any side effects in your code effortlessly.</p>
-            <p class="lede">Point Claude Code at a pull request or a commit. It states what the change must do and must keep, proves each claim from the compiled bytecode in an unattended loop, and shows you an input wherever a claim fails. You write no specification.</p>
+            <p class="lede">Point Claude Code at a pull request or a commit. It works out what the change must keep, proves it from the compiled bytecode, and hands you the input where it breaks. No specification to write.</p>
 
-            <div class="install" id="install">
-              <p class="install-label">Install the plugin</p>
-              <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
-              <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
-              <p class="install-label">Then, in Claude Code</p>
-              <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
-            </div>
-            <p class="fine">Runs on Fable 5.2 at high effort, on <a href="#requirements">Linux with 8 GB of memory or more</a>. Nothing leaves your machine unless you agree to send a contribution back.</p>
+            <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
+            <p class="fine"><a href="#install">Two commands install it.</a> It runs on your machine, and nothing leaves it unless you agree.</p>
 
             <div class="actions">
-              <a class="btn primary" href="#how-it-works">See how it works</a>
-              <a class="btn" href="#examples">Browse the examples</a>
+              <a class="btn primary" href="#install">Try it in three steps</a>
+              <a class="btn" href="#how-it-works">See how it works</a>
             </div>
           </div>
 
@@ -87,6 +81,33 @@ POST, PUT, PATCH, DELETE, OPTIONS, TRACE, UNKNOWN</span>
           </ul>
         </div>
       </div>
+
+      <section id="install">
+        <div class="wrap">
+          <div class="head">
+            <p class="kicker">Try it</p>
+            <h2>Your first proof in three steps</h2>
+          </div>
+          <ol class="quick">
+            <li>
+              <h3>Install the plugin</h3>
+              <p>Two commands, in a terminal.</p>
+              <div class="cmd"><code>claude plugin marketplace add pilifs/in-the-loop</code><button type="button" class="copy">Copy</button></div>
+              <div class="cmd"><code>claude plugin install in-the-loop@in-the-loop</code><button type="button" class="copy">Copy</button></div>
+            </li>
+            <li>
+              <h3>Point it at a change</h3>
+              <p>In Claude Code, give it a public pull request or commit. Say what you want proved, or let it work that out.</p>
+              <div class="cmd"><code class="slash">/in-the-loop:prove-java-change &lt;pull request or commit&gt;</code><button type="button" class="copy">Copy</button></div>
+            </li>
+            <li>
+              <h3>Confirm twice, then leave it</h3>
+              <p>It checks your machine and asks once. It shows you the claims and an estimate in hours and tokens, and asks again. Then it proves them unattended and reports.</p>
+            </li>
+          </ol>
+          <p class="fine">It needs Linux, 8 GB of memory or more, and Fable 5.2 at high effort. <a href="#requirements">Everything it needs →</a></p>
+        </div>
+      </section>
 
       <section id="under-the-hood">
         <div class="wrap">
@@ -160,7 +181,7 @@ questions for a person: none</pre>
         </div>
       </section>
 
-      <section id="how-it-works" class="alt">
+      <section id="how-it-works">
         <div class="wrap">
           <div class="head">
             <p class="kicker">How it works</p>
@@ -239,7 +260,7 @@ questions for a person: none</pre>
         </div>
       </section>
 
-      <section id="examples" class="alt">
+      <section id="examples">
         <div class="wrap">
           <div class="head">
             <p class="kicker">Examples</p>
@@ -410,7 +431,7 @@ after:  -2147483648</pre>
         </div>
       </section>
 
-      <section id="evals" class="alt">
+      <section id="evals">
         <div class="wrap">
           <div class="head">
             <p class="kicker">A note on evals</p>
@@ -456,7 +477,7 @@ after:  -2147483648</pre>
         </div>
       </section>
 
-      <section id="faq" class="alt">
+      <section id="faq">
         <div class="wrap">
           <div class="head">
             <p class="kicker">Before you run it</p>

@@ -333,11 +333,16 @@ h1 {
 }
 
 /* Sections */
+/* Sections alternate by position: --here is a section's own background, --there the other one. */
 section {
+  --here: var(--bg);
+  --there: var(--surface);
   padding: 5rem 0;
+  background: var(--here);
 }
-section.alt {
-  background: var(--surface);
+main > section:nth-of-type(even) {
+  --here: var(--surface);
+  --there: var(--bg);
 }
 .head {
   max-width: 42rem;
@@ -592,6 +597,53 @@ th.num {
   text-align: right;
 }
 
+/* Quick start */
+.quick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  counter-reset: q;
+  max-width: 46rem;
+}
+.quick > li {
+  position: relative;
+  padding-left: 3.25rem;
+  counter-increment: q;
+}
+.quick > li::before {
+  content: counter(q);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.quick p {
+  margin: 0.2rem 0 0.7rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.quick li p:last-child {
+  margin-bottom: 0;
+}
+.quick .cmd + .cmd {
+  margin-top: 0.5rem;
+}
+.quick + .fine {
+  margin-top: 2rem;
+}
+.fine a {
+  white-space: nowrap;
+}
+
 /* Limits */
 .limits li {
   padding: 0.7rem 0;
@@ -613,19 +665,9 @@ summary {
   cursor: pointer;
 }
 
-/* Hero: install commands and the caption under a terminal */
-.install {
-  display: grid;
-  gap: 0.5rem;
-}
-.install-label {
-  margin-top: 0.35rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-.install-label:first-child {
-  margin-top: 0;
+/* The hero's one command, and the caption under a terminal */
+.hero .cmd {
+  max-width: 34rem;
 }
 .term figcaption {
   padding: 0.75rem 1.2rem 0.9rem;
@@ -771,7 +813,7 @@ summary {
   bottom: 0;
   left: 50%;
   padding: 0 0.8rem;
-  background: var(--surface);
+  background: var(--here);
   color: var(--brand);
   font-size: 0.85rem;
   font-weight: 600;
@@ -888,7 +930,7 @@ summary {
 .cats li {
   padding: 1.1rem 1.2rem;
   border-top: 2px solid var(--brand);
-  background: var(--bg);
+  background: var(--there);
 }
 .cats b {
   display: block;
@@ -1269,6 +1311,13 @@ td code {
   }
   .tiles b {
     font-size: 1.35rem;
+  }
+  .quick > li {
+    padding-left: 0;
+  }
+  .quick > li::before {
+    position: static;
+    margin-bottom: 0.6rem;
   }
   .foot-cols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
