@@ -197,9 +197,11 @@ The steps that need an account, and everything else needed to run this, are in t
 ## Runbook
 
 What follows keeps three things apart, as the plan asks: what works locally, what is configured but has never run
-remotely, and what the author must create and run. **The workflow has never run on GitHub, and nothing has been
-published to R2.** On 2026-11-14 and 15 the author set up the buckets and secrets (steps 1 to 3) and deployed the dev
-site with the bindings; the preview bucket was still empty.
+remotely, and what the author must create and run. On 2026-11-14 and 15 the author set up the buckets and secrets
+(steps 1 to 3), deployed the dev site with the bindings, and pushed (step 5). **The first remote run** (step 6) was
+on 2026-11-15, by hand to preview, run `43718952743`: `new-snapshot` `sf1-da7bddeff100f650` of in-the-loop at
+`fbd1fa86`, after which the dev site served it under `/software-factory/data/` with the headers below. Production
+has never been published to, and the schedule is off.
 
 ### What works locally
 
