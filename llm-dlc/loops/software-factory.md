@@ -832,6 +832,12 @@ Settled by the author on 2026-11-14:
   once in a total, so the headline is 311 commits, not 320. Generator and metric definitions 3; the committed
   snapshot is `sf1-69af3d419ef2c8fd`, still of in-the-loop `fbd1fa86`. Still the author's: the push, so the
   workflow publishes a generator 3 snapshot to R2.
+- **A short overview** (2026-11-15, interactive, the author found the overview too cluttered):
+  docs/software-factory.md, "A short overview, and a page for each section". The overview is the headline and three
+  findings, each a claim, three numbers, one chart and a link; the loops, the tools, the code and the usage panels
+  each have their own page (`loops/`, `tools/`, `code/`, `usage/`) under one navigation row. At 1280 wide the
+  overview went from 12,750 px to 2,300 px. No change to the contract or the snapshot. `app.js` runs on every page
+  of numbers; the filters live on the usage page.
 - Status: done
 
 ## Loop settings

@@ -93,7 +93,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   fs.mkdirSync(out, { recursive: true });
   fs.copyFileSync(path.join(HERE, 'measures.mjs'), path.join(out, 'measures.js'));
 
-  // The client module runs only on the overview, and only with a snapshot to load.
+  // The client module runs on the pages that show the snapshot's numbers
+  // (page.app), and only with a snapshot to load.
   const hasApp = Boolean(snapshot) && fs.existsSync(path.join(out, APP));
   const preloads = hasApp ? moduleGraph(out).map((file) => `/${ROUTE}/${file}`) : [];
 
@@ -112,7 +113,7 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   });
   for (const page of pages) {
     const file = path.join(out, page.path);
-    const overview = hasApp && page.path === 'index.html';
+    const app = hasApp && Boolean(page.app);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(
       file,
@@ -123,8 +124,8 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
         body: page.body,
         pageClass: ROUTE,
         styles: fs.existsSync(path.join(out, 'style.css')) ? STYLES : [],
-        scripts: overview ? [`/${ROUTE}/${APP}`] : [],
-        preloads: overview ? preloads : [],
+        scripts: app ? [`/${ROUTE}/${APP}`] : [],
+        preloads: app ? preloads : [],
       })
     );
   }

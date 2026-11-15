@@ -1,5 +1,6 @@
-// The overview page in headless Chromium, on a first visit with filters set,
-// while /software-factory/data/ fails in each way it can. A drafts build of a
+// The usage page in headless Chromium, on a first visit with filters set,
+// while /software-factory/data/ fails in each way it can; then the overview
+// and the other pages of numbers, which run the same client without filters. A drafts build of a
 // temporary copy is served the way Pages serves it: static files, and the
 // remote route through the real Pages Function
 // (functions/software-factory/data/[[path]].js) on a fake bucket. The page must
@@ -170,7 +171,7 @@ async function until(fn, what, ms = 15_000) {
 /** What the page shows once the client has drawn the view. */
 const readPage = (page) =>
   page.evaluate(() => {
-    const shell = document.querySelector('[data-sf-page="overview"]');
+    const shell = document.querySelector('[data-sf-page]');
     const cards = Object.fromEntries([...document.querySelectorAll('[data-metric]')].map((c) => [c.dataset.metric, c.querySelector('[data-value]').textContent]));
     const value = (name) => document.querySelector(`[data-sf-filters] select[name="${name}"]`)?.value;
     return {
@@ -178,14 +179,14 @@ const readPage = (page) =>
       search: location.search,
       cards,
       controls: { period: value('period'), model: value('model'), effort: value('effort'), measure: document.querySelector('input[name="measure"]:checked')?.value },
-      status: document.querySelector('[data-sf-static]').textContent,
+      status: document.querySelector('[data-sf-static]')?.textContent ?? '',
       announcement: document.querySelector('.sf-update [data-text]')?.textContent ?? '',
       refreshShown: document.querySelector('[data-sf-refresh]')?.hidden === false,
     };
   });
 const ready = (page) => page.evaluate(() => document.querySelector('[data-sf-filters]')?.hidden === false);
 
-test('the overview in headless Chromium: first visit with filters, against each kind of remote failure', { skip, timeout: 240_000 }, async (t) => {
+test('the pages of numbers in headless Chromium: first visit with filters, against each kind of remote failure', { skip, timeout: 240_000 }, async (t) => {
   const dist = buildCopy({ published: false, drafts: true });
   const { server, state, origin } = await startServer(dist);
   let browser;
@@ -211,8 +212,24 @@ test('the overview in headless Chromium: first visit with filters, against each 
     page.on('pageerror', (err) => errors.push(err.message));
     page.on('console', (msg) => msg.type() === 'error' && !/Failed to load resource/.test(msg.text()) && errors.push(msg.text()));
     page.on('request', (req) => requests.push(new URL(req.url()).pathname));
-    await page.goto(`${origin}/software-factory/${SEARCH}`);
+    await page.goto(`${origin}/software-factory/usage/${SEARCH}`);
     await until(() => ready(page), 'the filters');
+    return { context, page, errors, requests };
+  }
+
+  /** Opens a page that has no filters, and waits until the client has settled on a snapshot. */
+  async function open(pathname, remote) {
+    state.remote = remote;
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = [];
+    const requests = [];
+    page.on('pageerror', (err) => errors.push(err.message));
+    page.on('console', (msg) => msg.type() === 'error' && !/Failed to load resource/.test(msg.text()) && errors.push(msg.text()));
+    page.on('request', (req) => requests.push(new URL(req.url()).pathname));
+    await page.goto(`${origin}${pathname}`);
+    // The tooltip is the last thing the client adds before it draws.
+    await until(() => page.evaluate(() => Boolean(document.querySelector('.sf-tip')) && !document.querySelector('[data-tip] > title')), `the client on ${pathname}`);
     return { context, page, errors, requests };
   }
 
@@ -251,6 +268,76 @@ test('the overview in headless Chromium: first visit with filters, against each 
         }
       });
     }
+
+    await t.test('the overview and the pages under it: the bundled snapshot as built, nothing added to the address', async () => {
+      for (const [pathname, name] of [['/software-factory/', 'overview'], ['/software-factory/loops/', 'loops'], ['/software-factory/tools/', 'tools'], ['/software-factory/code/', 'code']]) {
+        const { context, page, errors } = await open(pathname, REMOTES['no binding (503)']);
+        try {
+          const shown = await page.evaluate(() => ({
+            page: document.querySelector('[data-sf-page]').dataset.sfPage,
+            snapshot: document.querySelector('[data-sf-page]').dataset.snapshot,
+            url: location.pathname + location.search + location.hash,
+            findings: document.querySelectorAll('.sf-finding').length,
+            h1: document.querySelectorAll('h1').length,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }));
+          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 3 : 0, h1: 1, overflow: 0 }, pathname);
+          assert.deepEqual(errors, [], pathname);
+        } finally {
+          await context.close();
+        }
+      }
+    });
+
+    await t.test('the overview on a different remote snapshot: every number on it is that snapshot’s', async () => {
+      const { context, page, errors } = await open('/software-factory/', REMOTES['the Function, with a different snapshot']);
+      try {
+        const all = Object.fromEntries(overviewOf(EXAMPLE).measures.map((m) => [m.id, formatValue(m.value, m.unit)]));
+        const shown = await page.evaluate(() => ({
+          snapshot: document.querySelector('[data-sf-page]').dataset.snapshot,
+          values: Object.fromEntries([...document.querySelectorAll('[data-sf-value]')].map((el) => [el.dataset.sfValue, el.textContent])),
+          // The example has no loops, tools or code: no finding is claimed from the bundled data.
+          findings: document.querySelectorAll('.sf-finding').length,
+          headline: document.querySelector('.sf-headline')?.textContent ?? null,
+        }));
+        assert.deepEqual(shown, { snapshot: EXAMPLE_ID, values: { usage_usd: all.usage_usd, model_calls: all.model_calls }, findings: 0, headline: null });
+        assert.deepEqual(errors, []);
+      } finally {
+        await context.close();
+      }
+    });
+
+    await t.test('records load where a reader opens them: a campaign’s runs, every change as a dot, and a link from another page', async () => {
+      const remote = REMOTES['no binding (503)'];
+      let visit = await open('/software-factory/loops/', remote);
+      try {
+        await visit.page.click('[data-sf-campaign] > summary');
+        await until(() => visit.page.evaluate(() => document.querySelectorAll('[data-sf-campaign][open] .sf-run-detail').length > 0), 'a campaign’s runs');
+        assert.equal(visit.requests.filter((p) => p.endsWith('/details/loops.json')).length, 1);
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+      visit = await open('/software-factory/code/', remote);
+      try {
+        await visit.page.click('[data-sf-change-plot] > summary');
+        await until(() => visit.page.evaluate(() => document.querySelectorAll('[data-sf-change-plot] .sf-chart-wide .sf-dot').length > 100), 'the dots');
+        // The page's own link to the records opens them on the usage page.
+        const href = await visit.page.evaluate(() => document.querySelector('a[href$="usage/#explore-changes"]').getAttribute('href'));
+        assert.equal(href, '/software-factory/usage/#explore-changes');
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+      visit = await open('/software-factory/usage/#explore-changes', remote);
+      try {
+        await until(() => visit.page.evaluate(() => document.querySelector('[data-sf-detail="changes"]').dataset.loaded === 'yes'), 'the changes, opened by the link');
+        assert.equal(await visit.page.evaluate(() => location.hash), '#explore-changes');
+        assert.deepEqual(visit.errors, []);
+      } finally {
+        await visit.context.close();
+      }
+    });
 
     await t.test('a remote that never answers: the bundled snapshot after the timeout', async () => {
       const { context, page, errors } = await visit({ hang: true });

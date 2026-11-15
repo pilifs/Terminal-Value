@@ -1,7 +1,9 @@
-// The Software Factory overview in the browser. The static page already has
-// the all-time numbers; this adds the date range, model and effort filters and
-// the chart's measure (kept in the URL), checks for newer data while the tab is
-// visible, and loads the deeper exploration's records when a reader opens one.
+// The Software Factory pages that show a snapshot's numbers, in the browser:
+// the overview and the feature loops, model performance, code and usage pages.
+// The static page already has the all-time numbers. This checks for newer data
+// while the tab is visible and loads a page's records when a reader opens them;
+// on the usage page it adds the date range, model and effort filters and the
+// chart's measure (kept in the URL). Each part runs where its elements are.
 // The logic is in the pure modules beside it (state, snapshot, poll, view,
 // details, measures-local, and stream A's measures); this file only reads and
 // writes the page.
@@ -13,7 +15,7 @@
 
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
 import { computeMeasures, series } from './measures.js';
@@ -72,19 +74,22 @@ async function start(shell) {
   let etag = pollBase === (first.source === 'remote' ? remote : bundled) ? first.etag : null;
   const detailLoads = new Map();
 
-  // Controls ---------------------------------------------------------------
+  // Controls: the usage page's filters and its chart's measure ----------------
   const form = $('[data-sf-filters]');
   const measure = $('[data-sf-measure]');
-  form.innerHTML =
-    `<label>Date range <select name="period">${PERIODS.map((p) => `<option value="${p}">${PERIOD_LABELS[p]}</option>`).join('')}</select></label>` +
-    `<label>Model <select name="model"></select></label>` +
-    `<label>Effort <select name="effort"></select></label>` +
-    `<a class="sf-view-link" href="" data-sf-link>Link to this view</a>`;
+  const filtered = Boolean(form && measure && status);
+  if (filtered)
+    form.innerHTML =
+      `<label>Date range <select name="period">${PERIODS.map((p) => `<option value="${p}">${PERIOD_LABELS[p]}</option>`).join('')}</select></label>` +
+      `<label>Model <select name="model"></select></label>` +
+      `<label>Effort <select name="effort"></select></label>` +
+      `<a class="sf-view-link" href="" data-sf-link>Link to this view</a>`;
   const select = (name) => form.querySelector(`select[name="${name}"]`);
-  const link = form.querySelector('[data-sf-link]');
-  status.setAttribute('aria-live', 'polite');
+  const link = form?.querySelector('[data-sf-link]');
+  status?.setAttribute('aria-live', 'polite');
 
   function fillOptions() {
+    if (!filtered) return;
     const ov = current.overview;
     select('model').innerHTML =
       `<option value="">All models</option>` + ov.models.map((m) => `<option value="${e(m.id)}">${e(m.label)}</option>`).join('');
@@ -93,6 +98,7 @@ async function start(shell) {
   }
 
   function syncControls() {
+    if (!filtered) return;
     select('period').value = state.period;
     select('model').value = state.model ?? '';
     select('effort').value = state.effort ?? '';
@@ -108,23 +114,26 @@ async function start(shell) {
     renderView();
   }
 
-  form.addEventListener('submit', (ev) => ev.preventDefault());
-  form.addEventListener('change', () =>
-    update({ ...state, period: select('period').value, model: select('model').value || null, effort: select('effort').value || null })
-  );
-  measure.addEventListener('change', (ev) => {
-    if (ev.target.name === 'measure') update({ ...state, measure: ev.target.value });
-  });
-  window.addEventListener('popstate', () => {
-    const next = fitState(parseState(location.search), current.overview);
-    if (sameState(next, state)) return;
-    state = next;
-    syncControls();
-    renderView();
-  });
+  if (filtered) {
+    form.addEventListener('submit', (ev) => ev.preventDefault());
+    form.addEventListener('change', () =>
+      update({ ...state, period: select('period').value, model: select('model').value || null, effort: select('effort').value || null })
+    );
+    measure.addEventListener('change', (ev) => {
+      if (ev.target.name === 'measure') update({ ...state, measure: ev.target.value });
+    });
+    window.addEventListener('popstate', () => {
+      const next = fitState(parseState(location.search), current.overview);
+      if (sameState(next, state)) return;
+      state = next;
+      syncControls();
+      renderView();
+    });
+  }
 
   // Drawing ----------------------------------------------------------------
   function renderView() {
+    if (!filtered) return;
     const ov = current.overview;
     const opts = queryOptions(state, ov);
     status.textContent = describeState(state, ov);
@@ -172,8 +181,14 @@ async function start(shell) {
     current = snap;
     shell.dataset.snapshot = snap.manifest.snapshotId;
     $('[data-sf-freshness]').innerHTML = freshnessHtml(snap);
-    $('[data-sf-insights]').innerHTML = insightItems(ov.insights);
+    const insights = $('[data-sf-insights]');
+    if (insights) insights.innerHTML = insightItems(ov.insights);
     drawFactory(snap);
+    // The overview's all-time values, by metric.
+    for (const el of $$('[data-sf-value]')) {
+      const m = ov.measures.find((x) => x.id === el.dataset.sfValue);
+      if (m) el.textContent = formatValue(m.value, m.unit);
+    }
     const texts = stockTexts(ov.stocks);
     for (const tile of $$('[data-stock]')) {
       const t = texts[tile.dataset.stock];
@@ -182,7 +197,8 @@ async function start(shell) {
       $('[data-coverage]', tile).textContent = t.note;
       for (const code of tile.querySelectorAll('.sf-metric-scope code')) code.textContent = shortSha(snap.manifest.source.sha);
     }
-    $('[data-sf-source]').innerHTML = exploreSourceHtml(snap.manifest);
+    const source = $('[data-sf-source]');
+    if (source) source.innerHTML = exploreSourceHtml(snap.manifest);
     for (const d of $$('[data-sf-detail]')) {
       const c = snap.manifest.collections.find((x) => x.name === d.dataset.sfDetail);
       $('[data-count]', d).textContent = (c?.records ?? 0).toLocaleString('en-US');
@@ -194,15 +210,15 @@ async function start(shell) {
     const fitted = fitState(state, ov);
     if (!sameState(fitted, state)) {
       state = fitted;
-      history.replaceState(null, '', viewUrl(state));
+      if (filtered) history.replaceState(null, '', viewUrl(state));
     }
     syncControls();
   }
 
   // The leading sections -------------------------------------------------------
-  // Drawn whole from a snapshot, as the build drew them: the headline, the
-  // loops, the tools and the code. A snapshot from before they were measured
-  // says so in each section.
+  // Drawn whole from a snapshot, as the build drew them: the overview's headline
+  // and findings, and the loops, tools and code pages. A snapshot from before
+  // they were measured says so in each section.
   let runs = null; // the loops collection of the snapshot on screen, once asked for
   const section = (name) => $(`[data-sf-section="${name}"]`);
 
@@ -218,6 +234,7 @@ async function start(shell) {
     const hero = section('hero');
     const sections = {
       hero: () => heroHtml(snap, { title: hero.dataset.title, lede: hero.dataset.lede }),
+      findings: () => findingsHtml(snap),
       loops: () => loopsHtml(snap),
       tools: () => toolsHtml(snap),
       code: () => codeHtml(snap),
@@ -356,6 +373,26 @@ async function start(shell) {
       if (d.open && !d.dataset.loaded) loadDetail(d);
     });
 
+  // A link to a closed <details>, or to something inside one, opens it: other
+  // pages point at the records here (usage/#explore-changes).
+  function openTarget() {
+    let target = null;
+    try {
+      target = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    } catch {
+      return;
+    }
+    if (!target || !shell.contains(target)) return;
+    let opened = false;
+    for (let el = target; el && el !== shell; el = el.parentElement)
+      if (el.tagName === 'DETAILS' && !el.open) {
+        el.open = true;
+        opened = true;
+      }
+    if (opened) target.scrollIntoView();
+  }
+  window.addEventListener('hashchange', openTarget);
+
   // New data ----------------------------------------------------------------
   const notice = document.createElement('div');
   notice.className = 'sf-update';
@@ -407,13 +444,18 @@ async function start(shell) {
   // Start -------------------------------------------------------------------
   fillOptions();
   syncControls();
-  form.hidden = false;
-  measure.hidden = false;
+  if (filtered) {
+    form.hidden = false;
+    measure.hidden = false;
+  }
   if (current.manifest.snapshotId !== shell.dataset.snapshot) showSnapshot(current);
   else readyFactory();
   renderView();
-  const canonical = viewUrl(state);
-  if (`${location.pathname}${location.search}${location.hash}` !== canonical) history.replaceState(null, '', canonical);
+  if (filtered) {
+    const canonical = viewUrl(state);
+    if (`${location.pathname}${location.search}${location.hash}` !== canonical) history.replaceState(null, '', canonical);
+  }
+  openTarget();
 
   createPoller({
     check,
@@ -422,5 +464,5 @@ async function start(shell) {
   }).start();
 }
 
-const shell = document.querySelector('[data-sf-page="overview"][data-snapshot]');
+const shell = document.querySelector('[data-sf-page][data-snapshot]');
 if (shell) start(shell);

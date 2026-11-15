@@ -39,7 +39,7 @@ test('moduleGraph follows static imports once each, in the order first met', () 
   }
 });
 
-test('the overview preloads every module of the client, and only the overview runs it', { skip }, () => {
+test('the pages that show numbers preload every module of the client, and only they run it', { skip }, () => {
   const dist = buildCopy({ published: false, drafts: true });
   const section = path.join(dist, 'software-factory');
   const overview = read(path.join(section, 'index.html'));
@@ -50,6 +50,11 @@ test('the overview preloads every module of the client, and only the overview ru
   // left to a round trip after app.js arrives.
   const modules = fs.readdirSync(section).filter((f) => f.endsWith('.js') && f !== 'app.js');
   assert.deepEqual([...preloads].sort(), modules.map((f) => `/software-factory/${f}`).sort());
+  for (const page of ['loops', 'tools', 'code', 'usage']) {
+    const html = read(path.join(section, page, 'index.html'));
+    assert.deepEqual(scriptsOf(html), ['/software-factory/app.js'], page);
+    assert.deepEqual(preloadsOf(html), preloads, page);
+  }
   for (const page of ['analysis', 'methodology']) {
     const html = read(path.join(section, page, 'index.html'));
     assert.deepEqual(scriptsOf(html), [], page);

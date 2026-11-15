@@ -65,6 +65,10 @@ test('a published section is listed in the sitemap and llms.txt', () => {
   const result = buildSection({ outDir: tmp(), posts: [], includeDrafts: false, site, layout, helpers, published: true });
   assert.deepEqual(result.sitemap, [
     '/software-factory/',
+    '/software-factory/loops/',
+    '/software-factory/tools/',
+    '/software-factory/code/',
+    '/software-factory/usage/',
     '/software-factory/analysis/',
     '/software-factory/methodology/',
   ]);

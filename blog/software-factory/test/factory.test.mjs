@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, heroHtml, loopsHtml, runningHtml, span, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, span, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
 import { aggregate } from '../metrics.mjs';
@@ -464,6 +464,7 @@ test('a snapshot made before these were read has no such fields, and each sectio
   assert.deepEqual(validate('overview', old), []);
   const snap = snapshotOf({ manifest, overview: old });
   for (const html of [loopsHtml(snap), toolsHtml(snap), codeHtml(snap)]) assert.match(html, /class="sf-empty"/);
+  assert.equal(findingsHtml(snap), '', 'and the overview has no finding to claim');
 });
 
 // --- Drawing -----------------------------------------------------------------
@@ -473,10 +474,11 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   const snap = snapshotOf(out);
   const hero = heroHtml(snap, { title: 'Software Factory', lede: 'x' });
   assert.match(hero, /<h1><span class="sf-eyebrow">Software Factory<\/span> <span class="sf-headline">6 tool calls and 1 commit without a prompt from a person<\/span><\/h1>/);
-  assert.match(hero, /2 h<\/a><\/dd>/, 'the longest run');
+  assert.doesNotMatch(hero, /sf-strip|sf-button/, 'the headline and the run record, nothing else');
   const loops = loopsHtml(snap);
+  assert.match(loops, /<h1 id="sf-loops-title">/, 'each section leads its own page');
   assert.match(loops, /Coverage: 1 of 1 runs whose session has a prompts table/);
-  assert.match(loops, /href="methodology\/#def-loop_person_prompts"/);
+  assert.match(loops, /href="\/software-factory\/methodology\/#def-loop_person_prompts"/);
   assert.match(loops, /<svg class="sf-chart sf-chart-wide"[^>]*role="img"/);
   assert.match(loops, /<details class="sf-data-table">/);
   assert.match(loops, /data-sf-campaign="demo"/);
@@ -487,7 +489,19 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   assert.match(code, /100 lines of code, about 10 output tokens each/);
   assert.match(code, /85\.0%/);
   // Described, never explained or ranked; and nothing is called live.
-  const text = [hero, loops, tools, code, runningHtml()].join(' ').replace(/<[^>]+>/g, ' ');
+  // The overview's findings: a claim from the data, three numbers, one chart and a link, per section.
+  const findings = findingsHtml(snap);
+  assert.equal((findings.match(/<article class="sf-panel sf-finding"/g) ?? []).length, 3);
+  assert.match(findings, /<h2 id="finding-loops-title"><a href="\/software-factory\/loops\/">50% of all tool calls were set off by the loop’s own prompt<\/a><\/h2>/);
+  assert.match(findings, /<dt>the longest run nobody typed into<\/dt><dd>2 h<\/dd>/);
+  assert.match(findings, /<a href="\/software-factory\/tools\/">16\.7% of 6 tool calls succeeded<\/a>/);
+  assert.match(findings, /Of the 4 that failed, 1 was a command that ran and exited non-zero/);
+  assert.match(findings, /<a href="\/software-factory\/code\/">100 lines of code, about 10 output tokens each<\/a>/);
+  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length, 3, 'one chart each');
+  assert.equal((findings.match(/<ul class="sf-legend">/g) ?? []).length, 3, 'each chart has its legend');
+  assert.doesNotMatch(findings, /The table below/, 'the tables are on the pages the findings open');
+  assert.match(findings, /The feature loops page lists every day\./);
+  const text = [hero, findings, loops, tools, code, runningHtml()].join(' ').replace(/<[^>]+>/g, ' ');
   assert.doesNotMatch(text, /\blive\b|\bbetter than\b|\bbecause\b/i);
   assert.match(runningHtml(), /Not connected yet/);
   assert.doesNotMatch(runningHtml(), /sf-example/);

@@ -41,12 +41,14 @@ function page(file, input = {}) {
   return found;
 }
 
-test('three pages, each with a title and description', () => {
+test('seven pages, each with a title and description', () => {
   const pages = renderPages({ snapshot, unavailable: null, fixture: false, posts: noPosts, site, helpers, paths });
   assert.deepEqual(
     pages.map((p) => p.path),
-    ['index.html', 'analysis/index.html', 'methodology/index.html']
+    ['index.html', 'loops/index.html', 'tools/index.html', 'code/index.html', 'usage/index.html', 'analysis/index.html', 'methodology/index.html']
   );
+  assert.equal(new Set(pages.map((p) => p.title)).size, pages.length, 'each its own title');
+  assert.equal(new Set(pages.map((p) => p.description)).size, pages.length, 'each its own description');
   for (const p of pages) {
     assert.ok(p.title.includes('Software Factory'), p.path);
     assert.ok(p.description.length > 20, p.path);

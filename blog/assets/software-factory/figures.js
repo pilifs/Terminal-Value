@@ -31,13 +31,14 @@ function segment(x, y, w, h, round, down) {
  *     whose `up` is null has no value (a short mark, never a zero column).
  *   series: { up: [{ key, label }], down: [{ key, label }] }
  *   unit: 'ratio' for shares (ticks as %), else a count; title names the chart.
- * Returns the wide and the compact <svg>; a table beside them is the text equivalent.
+ * Returns the wide and the compact <svg>; a table is the text equivalent, and
+ * `table` says where it is when it isn't under the chart.
  */
-export function columnsSvg(points, { id, title, series, unit = 'count', desc = '', slim = false }) {
-  return ['wide', 'compact'].map((shape) => columnsShape(points, { id: shape === 'wide' ? id : `${id}-compact`, title, series, unit, desc, shape, slim })).join('');
+export function columnsSvg(points, { id, title, series, unit = 'count', desc = '', slim = false, table = 'The table below lists every day.' }) {
+  return ['wide', 'compact'].map((shape) => columnsShape(points, { id: shape === 'wide' ? id : `${id}-compact`, title, series, unit, desc, shape, slim, table })).join('');
 }
 
-function columnsShape(points, { id, title, series, unit, desc, shape, slim }) {
+function columnsShape(points, { id, title, series, unit, desc, shape, slim, table }) {
   const { W, labels, ...size } = SHAPES[shape];
   // A slim chart sits under a taller one on the same days. A flagged point
   // (point.flag) gets a diamond in a band above the plot.
@@ -108,7 +109,7 @@ function columnsShape(points, { id, title, series, unit, desc, shape, slim }) {
 
   return (
     `<svg class="sf-chart sf-chart-${shape}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc">` +
-    `<title id="${id}-title">${e(title)}</title><desc id="${id}-desc">${e(desc)} The table below lists every day.</desc>` +
+    `<title id="${id}-title">${e(title)}</title><desc id="${id}-desc">${e(desc)} ${e(table)}</desc>` +
     grid +
     `<line class="sf-axis" x1="${PAD.left}" x2="${W - PAD.right}" y1="${fixed(base)}" y2="${fixed(base)}"/>` +
     marks +

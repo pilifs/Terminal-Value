@@ -104,11 +104,43 @@ The contract stays additive: `overview.loops.drive` and `.scripts`, `overview.to
 change record. The generator and the metric definitions are version 3. Blame adds about six seconds to a refresh
 from a checkout.
 
+### A short overview, and a page for each section
+
+The author found the overview too cluttered: at 1280 wide it was 12,750 px tall, with every figure on it. It is now
+2,300 px, and its HTML is 10 KB gzipped, down from 33.
+
+| Page | What is on it |
+| --- | --- |
+| `/software-factory/` | The headline and the longest run's record. Then three findings, one each for the loops, the tools and the code: a claim computed from the data, a sentence, three numbers, one chart and a link. Then where to go next: usage, analysis, methodology |
+| `/software-factory/loops/` | Everything the feature loops section had, and the "Loops running now" panel |
+| `/software-factory/tools/` | Model performance: tool call success, failures by day, recovery, and the six tables |
+| `/software-factory/code/` | Code: rework by day, what a change took, languages, and loops against the rest |
+| `/software-factory/usage/` | The filters, the four usage tiles, the trend, observations, output and breakdowns, and the records |
+
+How it is put together:
+
+- **One navigation row** at the top of every page of the section, the current page marked. It replaces the jump
+  links, the breadcrumb and the foot navigation.
+- **A finding and its page draw from the same code.** `findingsHtml` in `factory.js` uses the chart data its page
+  uses. A finding's chart has no table under it, so its description names the page that has one.
+- **No snapshot, no data pages.** `renderPages` then returns the overview, analysis and methodology only, and the
+  navigation lists only those.
+- **`app.js` runs on every page of numbers.** A page says so with `app: true`, an optional field `index.mjs` reads.
+  Each part of the script runs where its elements are: the filters and the address's query only on the usage page.
+- **Links between pages are absolute**, from `/software-factory/`. A link to a closed `<details>`, such as
+  `usage/#explore-changes`, opens it. A test follows every link between the pages to a page and an id that exist.
+- **Each section's title is the page's `h1`**, and the headings under it moved up a level.
+
+The contract and the snapshot did not change. The filters' link, `?period=…`, now belongs to
+`/software-factory/usage/`. The section isn't published, so no public link moved.
+
 ## Routes and files
 
 | Route | What | Made by |
 | --- | --- | --- |
-| `/software-factory/` | Overview | `render.mjs` (B) |
+| `/software-factory/` | Overview: the headline and three findings | `render.mjs` (B) |
+| `/software-factory/loops/`, `tools/`, `code/` | The feature loops, model performance and code, in full | `render.mjs` (B), drawn by `factory.js` |
+| `/software-factory/usage/` | Usage, verification, output, breakdowns and the records, with the filters | `render.mjs` (B) |
 | `/software-factory/analysis/` | The author's Software Factory posts | `render.mjs` (B) from `editorial.mjs` (C) |
 | `/software-factory/methodology/` | Definitions, coverage, provenance, freshness, limits | `render.mjs` (B) from `config/metrics.json` |
 | `/software-factory/style.css`, `app.js` | Browser files | `blog/assets/software-factory/` (B) |

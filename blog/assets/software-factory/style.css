@@ -114,13 +114,6 @@ body.software-factory .sf-coverage {
 body.software-factory .sf-intro {
   margin: 0 0 1.5rem;
 }
-body.software-factory .sf-crumb {
-  margin: 0 0 0.25rem;
-  font-size: 0.875rem;
-}
-body.software-factory .sf-crumb a {
-  text-decoration: none;
-}
 body.software-factory .sf-intro h1 {
   margin: 0 0 0.5rem;
   font-size: 2rem;
@@ -723,15 +716,35 @@ body.software-factory .sf-unavailable p:last-child {
   color: var(--sf-muted);
 }
 
-/* Section navigation at the foot of each page */
-body.software-factory .sf-foot {
-  margin: 2rem 0 0;
+/* The section's navigation: one row under the site header, on every page.
+   The current page is bold and underlined, not only coloured. On a narrow
+   screen the row scrolls sideways inside itself. */
+body.software-factory .sf-nav {
+  display: flex;
+  gap: 0 1.5rem;
+  margin: -1rem 0 1.75rem;
+  border-bottom: 1px solid var(--sf-rule);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+body.software-factory .sf-shell .sf-nav a {
+  padding: 0.5rem 0 0.55rem;
+  border-bottom: 2px solid transparent;
   color: var(--sf-muted);
   font-size: 0.9375rem;
+  text-decoration: none;
 }
-body.software-factory .sf-foot [aria-current='page'] {
+body.software-factory .sf-shell .sf-nav a:hover {
+  color: var(--sf-text);
+}
+body.software-factory .sf-shell .sf-nav a[aria-current='page'] {
+  border-bottom-color: var(--sf-accent);
   color: var(--sf-text);
   font-weight: 600;
+}
+body.software-factory .sf-nav a:focus-visible {
+  outline-offset: -2px;
 }
 
 /* Tablet: two metrics a row. */
@@ -891,34 +904,6 @@ body.software-factory .sf-hero .sf-lede {
   max-width: 36rem;
   font-size: 1.0625rem;
 }
-body.software-factory .sf-hero-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 1.25rem 0 0;
-}
-body.software-factory .sf-shell a.sf-button {
-  display: inline-block;
-  padding: 0.6rem 1.1rem;
-  border: 1px solid var(--sf-accent);
-  border-radius: var(--sf-radius);
-  background: var(--sf-accent);
-  color: var(--sf-surface);
-  font-weight: 600;
-  text-decoration: none;
-}
-body.software-factory .sf-shell a.sf-button:hover {
-  filter: brightness(1.08);
-}
-body.software-factory .sf-shell a.sf-button-quiet {
-  border-color: var(--sf-rule-strong);
-  background: var(--sf-surface);
-  color: var(--sf-text);
-}
-body.software-factory .sf-shell a.sf-button-quiet:hover {
-  border-color: var(--sf-accent);
-  filter: none;
-}
 
 /* The run record: dark in both schemes, as a terminal is. */
 body.software-factory .sf-ledger {
@@ -1005,84 +990,185 @@ body.software-factory .sf-ledger-total strong {
   font-weight: 600;
 }
 body.software-factory .sf-ledger figcaption {
-  margin-top: 0.6rem;
+  max-width: none;
+  margin: 0.6rem 0 0;
   color: var(--sf-muted);
   font-size: 0.8125rem;
 }
 
-/* The strip under the headline: each number opens its section. */
-body.software-factory .sf-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+/* What a page of numbers says first: a fixture, how fresh, newer data waiting. */
+body.software-factory .sf-intro > .sf-freshness {
   margin: 0;
-  border: 1px solid var(--sf-rule);
-  border-radius: var(--sf-radius);
-  background: var(--sf-surface);
-  overflow: hidden;
 }
-body.software-factory .sf-strip > div {
+body.software-factory .sf-page-notes {
+  margin: -0.75rem 0 1.25rem;
+}
+body.software-factory .sf-page-notes > .sf-freshness {
+  margin: 0;
+}
+body.software-factory .sf-page-notes > .sf-banner {
+  margin: 0 0 0.75rem;
+}
+body.software-factory .sf-notice:not(:empty) {
+  margin-top: 0.75rem;
+}
+
+/* The overview's findings: a claim and three numbers beside the chart that
+   carries them. One column under 60rem, the chart under the text. */
+body.software-factory .sf-findings {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+body.software-factory .sf-finding {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 1.5rem 3rem;
+  align-items: center;
+  margin: 0;
+  padding: 2rem;
+}
+body.software-factory .sf-shell .sf-finding h2 {
+  margin: 0 0 0.6rem;
+  font-size: clamp(1.375rem, 2.3vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+body.software-factory .sf-shell :is(.sf-finding, .sf-more-card) h2 a {
+  color: var(--sf-text);
+  text-decoration: none;
+}
+body.software-factory .sf-shell :is(.sf-finding, .sf-more-card) h2 a:hover {
+  color: var(--sf-accent);
+}
+body.software-factory .sf-finding-lede {
+  color: var(--sf-muted);
+}
+body.software-factory .sf-finding-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1.1rem;
+}
+body.software-factory :is(.sf-finding-facts, .sf-more-facts) > div {
   display: flex;
   flex-direction: column-reverse;
   justify-content: flex-end;
   gap: 0.15rem;
-  padding: 1rem 1.25rem 1.1rem;
-  box-shadow: 1px 0 0 var(--sf-rule), 0 1px 0 var(--sf-rule);
 }
-body.software-factory .sf-strip dt {
+body.software-factory .sf-finding-facts > div {
+  padding-top: 0.6rem;
+  border-top: 2px solid var(--sf-rule-strong);
+}
+body.software-factory :is(.sf-finding-facts, .sf-more-facts) dt {
   color: var(--sf-muted);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.35;
 }
-body.software-factory .sf-strip dd {
+body.software-factory :is(.sf-finding-facts, .sf-more-facts) dd {
   margin: 0;
-  font-family: var(--sf-mono);
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.15;
+  font-size: 1.375rem;
+  font-weight: 650;
+  line-height: 1.2;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-body.software-factory .sf-strip dd a {
-  color: var(--sf-text);
+body.software-factory .sf-shell .sf-finding-more {
+  margin: 0;
+  font-weight: 600;
+}
+body.software-factory .sf-shell .sf-finding-more a {
   text-decoration: none;
 }
-body.software-factory .sf-strip dd a:hover {
-  color: var(--sf-accent);
+body.software-factory .sf-shell .sf-finding-more a:hover {
+  text-decoration: underline;
 }
-body.software-factory .sf-intro > .sf-freshness {
-  margin: 0.9rem 0 0;
+body.software-factory .sf-finding-more a::after {
+  content: '\00a0\2192';
 }
-body.software-factory .sf-jump {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 1rem 0 0;
+body.software-factory .sf-finding-chart {
+  min-width: 0;
+  margin: 0;
 }
-body.software-factory .sf-shell .sf-jump a {
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--sf-rule-strong);
-  border-radius: 999px;
-  background: var(--sf-surface);
-  color: var(--sf-text);
-  font-size: 0.875rem;
-  text-decoration: none;
+body.software-factory .sf-finding-chart .sf-chart-wrap {
+  margin: 0.6rem 0 0.4rem;
 }
-body.software-factory .sf-shell .sf-jump a:hover {
-  border-color: var(--sf-accent);
-  color: var(--sf-accent);
+body.software-factory .sf-shell .sf-finding-chart figcaption {
+  max-width: none;
+  margin: 0;
+}
+/* Beside its text the chart is about 600px wide, so its ticks need no scaling up. */
+@media (min-width: 60.0625rem) {
+  body.software-factory .sf-finding .sf-chart .sf-tick {
+    font-size: 12px;
+  }
+}
+@media (max-width: 60rem) {
+  body.software-factory .sf-finding {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1.5rem;
+  }
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-finding {
+    padding: 1.25rem 1rem;
+  }
+  body.software-factory :is(.sf-finding-facts, .sf-more-facts) dd {
+    font-size: 1.0625rem;
+  }
+  body.software-factory .sf-finding-facts {
+    gap: 0.75rem;
+  }
 }
 
-/* A leading section: a statement, its figures, then the evidence under it. */
+/* Where the overview sends a reader next. */
+body.software-factory .sf-more {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+body.software-factory .sf-more-card {
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--sf-rule);
+  border-radius: var(--sf-radius);
+  background: var(--sf-raised);
+}
+body.software-factory .sf-shell .sf-more-card h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.0625rem;
+}
+body.software-factory .sf-more-card p {
+  color: var(--sf-muted);
+  font-size: 0.9375rem;
+}
+body.software-factory .sf-more-card .sf-empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+body.software-factory .sf-more-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  margin: 0 0 0.9rem;
+}
+
+/* A leading section on its own page: a statement, its figures, then the evidence under it. */
 body.software-factory .sf-feature {
-  margin-top: 1.5rem;
+  margin-top: 0;
   padding: 1.75rem 2rem 2rem;
   scroll-margin-top: 1rem;
 }
-body.software-factory .sf-shell .sf-feature h2 {
+body.software-factory .sf-shell .sf-feature h1 {
   max-width: 48rem;
   margin: 0 0 0.6rem;
-  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
+  font-size: clamp(1.5rem, 2.8vw, 2.125rem);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
@@ -1130,7 +1216,7 @@ body.software-factory .sf-subhead {
   padding-top: 1.25rem;
   border-top: 1px solid var(--sf-rule);
 }
-body.software-factory .sf-shell .sf-subhead h3 {
+body.software-factory .sf-shell .sf-subhead h2 {
   margin: 0;
   font-size: 1.0625rem;
 }
@@ -1246,11 +1332,11 @@ body.software-factory .sf-campaign header {
   justify-content: space-between;
   gap: 0.25rem 1rem;
 }
-body.software-factory .sf-shell .sf-campaign h4 {
+body.software-factory .sf-shell .sf-campaign h3 {
   margin: 0;
   font-size: 1.0625rem;
 }
-body.software-factory .sf-campaign h4 code {
+body.software-factory .sf-campaign h3 code {
   background: none;
   padding: 0;
   font-size: inherit;
@@ -1391,6 +1477,10 @@ body.software-factory .sf-note {
   border-radius: var(--sf-radius);
   background: var(--sf-raised);
 }
+body.software-factory .sf-shell :is(.sf-live, .sf-note) h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
 body.software-factory .sf-live p,
 body.software-factory .sf-note p {
   max-width: 52rem;
@@ -1411,14 +1501,19 @@ body.software-factory .sf-live-preview .sf-example {
   color: var(--sf-text);
 }
 
-/* The usage panels' head: the filters sit with what they filter. */
+/* The usage page's head: the filters sit with what they filter. */
 body.software-factory .sf-usage-head {
-  margin: 2.5rem 0 1rem;
+  margin: 0 0 1rem;
   scroll-margin-top: 1rem;
 }
-body.software-factory .sf-shell .sf-usage-head h2 {
-  font-size: 1.375rem;
+body.software-factory .sf-shell .sf-usage-head h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 2.8vw, 2.125rem);
   font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+body.software-factory .sf-page-intro h1 {
   letter-spacing: -0.02em;
 }
 body.software-factory .sf-usage-head .sf-controls {
@@ -1434,12 +1529,6 @@ body.software-factory .sf-usage-head .sf-controls {
 @media (max-width: 36rem) {
   body.software-factory .sf-feature {
     padding: 1.25rem 1rem 1.5rem;
-  }
-  body.software-factory .sf-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  body.software-factory .sf-strip dd {
-    font-size: 1.375rem;
   }
   body.software-factory .sf-ledger li {
     grid-template-columns: 2.9rem minmax(0, 1fr);
