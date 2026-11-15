@@ -20,7 +20,7 @@ const { overview, manifest } = snapshot;
 const config = JSON.parse(fs.readFileSync(path.join(HERE, '..', 'config', 'metrics.json'), 'utf8'));
 
 test('the metric table agrees with config/metrics.json', () => {
-  assert.equal(config.version, '3');
+  assert.equal(config.version, '4');
   for (const m of config.metrics) {
     assert.equal(METRICS[m.id]?.unit, m.unit, m.id);
     assert.deepEqual(METRICS[m.id].filters, m.filters, m.id);

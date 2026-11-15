@@ -267,6 +267,31 @@ test('partial coverage is counted, never filled in', () => {
   assert.deepEqual(out.overview.stocks.examples, { total: 2, origin: { constructed: 2 }, verdict: { verified: 1, none: 1 }, vacuous: 0, freshness: { current: 1, absent: 1 } });
 });
 
+test('the catalog’s answers are counted by verdict, and an example with none is in neither count', () => {
+  const out = run(
+    norm({
+      examples: [
+        example('a', { verdict: 'violation', testsPassed: true, severity: 'critical', path: 'examples/a', summary: 'Found.', sourceUrl: 'https://example.invalid/1', changeKind: 'refactor' }),
+        example('b', { verdict: 'violation', testsPassed: true, severity: 'high' }),
+        example('c', { verdict: 'violation', testsPassed: false, severity: 'high' }),
+        example('d', { verdict: 'verified', testsPassed: true, severity: 'none' }),
+        example('e', { verdict: null, testsPassed: null, severity: 'low' }),
+        example('f', { verdict: 'verified' }),
+      ],
+    })
+  );
+  assert.deepEqual(out.overview.catalog, {
+    coverage: { included: 4, total: 6, missing: 2, note: 'examples whose entry says whether the existing tests passed' },
+    tests: { violation: { passed: 2, failed: 1 }, verified: { passed: 1 } },
+    severity: { violation: { critical: 1, high: 2 }, verified: { none: 1 }, none: { low: 1 } },
+  });
+  const [a, , , , , f] = out.details.examples.records;
+  assert.deepEqual([a.path, a.summary, a.sourceUrl, a.testsPassed, a.severity, a.changeKind], ['examples/a', 'Found.', 'https://example.invalid/1', true, 'critical', 'refactor']);
+  assert.deepEqual([f.path, f.summary, f.sourceUrl, f.testsPassed, f.severity, f.changeKind], [null, null, null, null, null, null]);
+  // No examples: an empty count, never a missing one, and still valid.
+  assert.deepEqual(run(norm()).overview.catalog, { coverage: { included: 0, total: 0, missing: 0, note: 'examples whose entry says whether the existing tests passed' }, tests: {}, severity: {} });
+});
+
 test('days are half-open Toronto days from UTC instants, with no gaps', () => {
   const out = run(
     norm({

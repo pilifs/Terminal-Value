@@ -119,8 +119,9 @@ test('no prose field reaches a normalized record', async () => {
   const job = json(dir, `verification/jobs/${jobFile}`);
   Object.assign(job, { description: MARK, steps: [{ run: MARK }], outputs: [MARK], requires: [MARK] });
   write(dir, `verification/jobs/${jobFile}`, job);
+  // An example's working notes stay out. Its summary, the catalog's own paragraph about it, is selected (below).
   const examples = json(dir, 'examples/index.json');
-  Object.assign(examples.examples[0], { summary: MARK, notes: MARK, approaches: [MARK] });
+  Object.assign(examples.examples[0], { notes: [MARK], approaches: [MARK], symbol: MARK, target: { family: MARK } });
   write(dir, 'examples/index.json', examples);
 
   const n = await load(dir);
@@ -292,4 +293,25 @@ test('a GitHub server error is a network failure, a 404 on a required file is mi
   const raw = await readSources({ sha: SHA, fetchImpl: fakeGitHub(UPSTREAM, { status: { 'examples/index.json': 404 } }).fetchImpl });
   const m = await failure(Promise.resolve().then(() => normalizeSources(raw)));
   assert.deepEqual([m.code, m.path], ['missing', 'examples/index.json']);
+});
+
+test('an example keeps the catalog’s own answers: where it is, what it says, and whether the tests passed', async () => {
+  const { dir } = materialize('stale-source');
+  const index = json(dir, 'examples/index.json');
+  const [a, b, c] = index.examples;
+  Object.assign(a, { path: 'examples/105-pow', summary: 'What was found.', source: 'https://example.invalid/pull/1', existingTestsPassed: true, severity: 'high', changeKind: 'bug-fix' });
+  // A path that leaves the examples folder, a link that isn't https and an answer that isn't yes or no are not kept.
+  Object.assign(b, { path: '../secrets', summary: 7, source: 'javascript:alert(1)', existingTestsPassed: 'yes', severity: null });
+  for (const key of ['path', 'summary', 'source', 'existingTestsPassed', 'severity', 'changeKind']) delete c[key];
+  write(dir, 'examples/index.json', index);
+  const n = await load(dir);
+  const pick = (x) => [x.path, x.summary, x.sourceUrl, x.testsPassed, x.severity, x.changeKind];
+  assert.deepEqual(pick(n.examples[0]), ['examples/105-pow', 'What was found.', 'https://example.invalid/pull/1', true, 'high', 'bug-fix']);
+  assert.deepEqual(pick(n.examples[1]), [null, null, null, null, null, b.changeKind ?? null]);
+  assert.deepEqual(pick(n.examples[2]), [null, null, null, null, null, null]);
+  // The fixture's own entries carry them as the catalog has them.
+  const whole = await load(UPSTREAM);
+  const first = json(UPSTREAM, 'examples/index.json').examples[0];
+  assert.deepEqual([whole.examples[0].path, whole.examples[0].sourceUrl, whole.examples[0].severity], [first.path, first.source, first.severity]);
+  assert.ok(whole.examples.some((x) => x.testsPassed === true) && whole.examples.some((x) => x.testsPassed === false) && whole.examples.some((x) => x.testsPassed === null));
 });

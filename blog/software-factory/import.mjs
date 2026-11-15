@@ -523,7 +523,8 @@ export function normalizeSources(raw, config = loadConfig()) {
     };
   });
 
-  // Examples: the catalog's public facts, never its summaries or notes.
+  // Examples: the catalog's public facts and its one-paragraph summary of each,
+  // never its working notes.
   const examples = list(EXAMPLES, examplesDoc, 'examples').map((x, i) => {
     if (!isObject(x) || typeof x.id !== 'string' || typeof x.title !== 'string') bad(EXAMPLES, `examples[${i}] lacks an id or title`);
     if (!['constructed', 'real-world'].includes(x.origin)) bad(EXAMPLES, `examples[${i}].origin ${JSON.stringify(x.origin)} is unknown`);
@@ -539,6 +540,16 @@ export function normalizeSources(raw, config = loadConfig()) {
       vacuous: typeof x.vacuous === 'boolean' ? x.vacuous : null,
       freshness: strOrNull(x.snapshot),
       tags: { domain: strings(tags.domain), defect: strings(tags.defect), technique: strings(tags.technique) },
+      // Where the example is in the repository, what it says of itself, and
+      // the change it verifies when that was published elsewhere.
+      path: typeof x.path === 'string' && /^examples\/[A-Za-z0-9._-]+$/.test(x.path) ? x.path : null,
+      summary: strOrNull(x.summary),
+      sourceUrl: typeof x.source === 'string' && /^https:\/\//.test(x.source) ? x.source : null,
+      // The catalog's own answers: did the module's unit tests pass on the same
+      // patch, how bad would the change be if it shipped unnoticed, what kind it is.
+      testsPassed: typeof x.existingTestsPassed === 'boolean' ? x.existingTestsPassed : null,
+      severity: strOrNull(x.severity),
+      changeKind: strOrNull(x.changeKind),
     };
   });
 

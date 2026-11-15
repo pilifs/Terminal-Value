@@ -50,7 +50,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '3' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '4' };
 
 const STATUSES = ['passed', 'failed'];
 const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
@@ -245,6 +245,18 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     },
   };
 
+  // The catalog's own answers about each example, counted by verdict: whether
+  // the existing tests passed on the same patch, and the severity it gives the
+  // change. An example with no answer is in neither count.
+  const tested = examples.filter((x) => typeof x.testsPassed === 'boolean');
+  const byVerdict = (rows, key) =>
+    Object.fromEntries(Object.entries(Object.groupBy(rows, (x) => x.verdict ?? 'none')).map(([verdict, list]) => [verdict, countBy(list, key)]));
+  const catalog = {
+    coverage: { included: tested.length, total: examples.length, missing: examples.length - tested.length, note: 'examples whose entry says whether the existing tests passed' },
+    tests: byVerdict(tested, (x) => (x.testsPassed ? 'passed' : 'failed')),
+    severity: byVerdict(examples.filter((x) => typeof x.severity === 'string'), (x) => x.severity),
+  };
+
   // Areas.
   const area = (record) => areaOf(record, areas);
   const areaLabel = (id) => (areas.areas.find((a) => a.id === id) ?? areas.unassigned).label;
@@ -369,6 +381,12 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     vacuous: x.vacuous,
     freshness: x.freshness,
     tags: x.tags,
+    path: x.path ?? null,
+    summary: x.summary ?? null,
+    sourceUrl: x.sourceUrl ?? null,
+    testsPassed: x.testsPassed ?? null,
+    severity: x.severity ?? null,
+    changeKind: x.changeKind ?? null,
   }));
 
   // Collections, the snapshot id over them (identity.mjs), then the manifest.
@@ -390,6 +408,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       loops: factory.loops,
       tools: factory.tools,
       code: factory.code,
+      catalog,
     },
     sessions: { schema: 'software-factory-sessions/v1', snapshotId: id, records: sessionRecords },
     changes: { schema: 'software-factory-changes/v1', snapshotId: id, records: changeRecords },

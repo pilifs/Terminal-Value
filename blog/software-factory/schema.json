@@ -284,7 +284,8 @@
         },
         "loops": { "$ref": "#/$defs/loopsOverview" },
         "tools": { "$ref": "#/$defs/toolsOverview" },
-        "code": { "$ref": "#/$defs/codeOverview" }
+        "code": { "$ref": "#/$defs/codeOverview" },
+        "catalog": { "$ref": "#/$defs/catalogOverview" }
       }
     },
 
@@ -418,6 +419,12 @@
               "verdictLabel": { "type": ["string", "null"] },
               "vacuous": { "type": ["boolean", "null"] },
               "freshness": { "type": ["string", "null"], "description": "The example's snapshot field: current, unknown, or null when absent." },
+              "path": { "type": ["string", "null"], "description": "The example's folder in the source repository, examples/<id>-<slug>. Since generator 4." },
+              "summary": { "type": ["string", "null"], "description": "The catalog's one-paragraph summary of the example. Since generator 4." },
+              "sourceUrl": { "type": ["string", "null"], "description": "The published change the example verifies (a pull request or commit), https only." },
+              "testsPassed": { "type": ["boolean", "null"], "description": "The catalog's existingTestsPassed: whether the module's unit tests passed on the same patch." },
+              "severity": { "type": ["string", "null"], "description": "The catalog's severity if the change shipped unnoticed." },
+              "changeKind": { "type": ["string", "null"], "description": "The catalog's kind of change: refactor, feature, bug-fix, ..." },
               "tags": {
                 "type": "object",
                 "required": ["domain", "defect", "technique"],
@@ -784,6 +791,30 @@
         }
       }
     },
+    "catalogOverview": {
+      "description": "The example catalog's own answers about each example, counted by verdict (none for an example with no single verdict). Since generator 4.",
+      "type": "object",
+      "required": ["coverage", "tests", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "tests": {
+          "description": "Examples whose entry says whether the existing tests passed on the same patch, by verdict.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": { "passed": { "type": "integer", "minimum": 1 }, "failed": { "type": "integer", "minimum": 1 } }
+          }
+        },
+        "severity": {
+          "description": "Examples by the severity the catalog gives the change, by verdict.",
+          "type": "object",
+          "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    },
+
     "codeOverview": {
       "description": "Lines in the source repository's git history, classed by config/code.json. Null when the snapshot was not made from a git checkout.",
       "type": ["object", "null"],

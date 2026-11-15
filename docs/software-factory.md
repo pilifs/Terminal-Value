@@ -154,9 +154,18 @@ Its claim is counted from `overview.stocks.examples`: "100 violations found and 
   of a current, non-vacuous proof, and it gives the count of proofs recorded as vacuous.
 - **The three numbers** are the library changes, the verification jobs that passed of those completed
   (`overview.verification`), and the median job.
-- **Still to do.** An example's record has no path, so a square can't link to its example. The source's
-  `examples/index.json` has `path` and a `summary` for each; carrying them needs a new field in the contract and a
-  new snapshot.
+- **What an example's record carries (generator 4, metric definitions 4).** Besides its title, system and verdict:
+  `path` (its folder in the source), `summary` (the catalog's one paragraph about it), `sourceUrl` (the pull request
+  or commit it verifies, when published elsewhere), `testsPassed` (the catalog's `existingTestsPassed`: did the
+  module's own unit tests pass on the same patch), `severity` (if the change shipped unnoticed) and `changeKind`.
+  All optional in `schema.json`, so an older snapshot still validates. The catalog's working `notes` stay out. The
+  importer's first version left the summary out with them; it is the catalog's own public paragraph, like a change's
+  summary line, so it is now selected.
+- **`overview.catalog`** counts those answers by verdict: `tests` (passed and failed, over the examples that say)
+  and `severity`, with a coverage count. At this revision the existing tests passed on 92 of the 100 changes where
+  the verifier found a violation. Most examples were constructed for the catalog, with the systems and tests they
+  change, and the definition on the methodology page says so.
+- The snapshot was made again from the same source revision (`fbd1fa86`), so no other number moved.
 
 ### Every run on one clock
 
