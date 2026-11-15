@@ -19,6 +19,7 @@ import {
   CREDENTIALS,
   DESTINATIONS,
   POINTER,
+  PRUNE_AFTER_MS,
   PublishError,
   StoreError,
   credentialsFromEnv,
@@ -26,6 +27,7 @@ import {
   s3Store,
   signRequest,
   sourceOrder,
+  supersededSnapshots,
 } from '../publish.mjs';
 import { validate } from '../validate.mjs';
 import { UPSTREAM } from './fixtures/cases.mjs';
@@ -62,6 +64,9 @@ const fakeOrder = () => {
 const T1 = '2026-11-15T12:00:00Z';
 const T2 = '2026-11-15T12:15:00Z';
 const T3 = '2026-11-15T12:30:00Z';
+/** A day after T2, and a minute short of it. */
+const T2_DAY = '2026-11-16T12:15:00Z';
+const T2_ALMOST_DAY = '2026-11-16T12:14:00Z';
 const failing = async () => {
   throw new Error('getaddrinfo ENOTFOUND raw.githubusercontent.com');
 };
@@ -70,17 +75,29 @@ const md5 = (b) => `"${crypto.createHash('md5').update(b).digest('hex')}"`;
 const hex = (b) => crypto.createHash('sha256').update(b).digest('hex');
 
 /**
- * R2 as the publisher sees it: get and put, ETags, and If-Match /
- * If-None-Match on put (412 when they fail). `fault(op, key, n)` runs before
- * each call and may throw; `mangle(key, body)` changes what a put stores.
+ * R2 as the publisher sees it: get, put, list and delete, ETags, and If-Match /
+ * If-None-Match on put (412 when they fail). A put is dated store.time, which a
+ * test moves along with its runs. `fault(op, key, n)` runs before each call and
+ * may throw; `mangle(key, body)` changes what a put stores.
  */
 function fakeStore({ fault = () => {}, mangle = (key, body) => body } = {}) {
   const objects = new Map();
   const log = [];
   let n = 0;
-  return {
+  const self = {
     objects,
     log,
+    time: T1,
+    async list(prefix) {
+      fault('list', prefix, n++);
+      log.push(['list', prefix]);
+      return [...objects].filter(([k]) => k.startsWith(prefix)).map(([key, o]) => ({ key, lastModified: o.modified }));
+    },
+    async delete(key) {
+      fault('delete', key, n++);
+      log.push(['delete', key]);
+      objects.delete(key);
+    },
     async get(key) {
       fault('get', key, n++);
       log.push(['get', key]);
@@ -94,7 +111,7 @@ function fakeStore({ fault = () => {}, mangle = (key, body) => body } = {}) {
       if (opts.ifMatch && (!o || o.etag !== opts.ifMatch)) throw new StoreError(`PUT ${key}: 412 PreconditionFailed`, { status: 412, code: 'PreconditionFailed' });
       if (opts.ifNoneMatch === '*' && o) throw new StoreError(`PUT ${key}: 412 PreconditionFailed`, { status: 412, code: 'PreconditionFailed' });
       const stored = Buffer.from(mangle(key, body));
-      objects.set(key, { body: stored, etag: md5(stored) });
+      objects.set(key, { body: stored, etag: md5(stored), modified: self.time });
       return { etag: md5(stored) };
     },
     pointer() {
@@ -108,6 +125,7 @@ function fakeStore({ fault = () => {}, mangle = (key, body) => body } = {}) {
       return log.filter(([op]) => op === 'put').map(([, key]) => key);
     },
   };
+  return self;
 }
 
 const run = (store, sha, opts = {}) => publish({ store, order: opts.order ?? fakeOrder(), sha, dir: UPSTREAM, now: T1, ...opts });
@@ -313,6 +331,97 @@ for (const [i, f] of FAILURES.entries()) {
   });
 }
 
+// --- Pruning ---------------------------------------------------------------
+
+const snapKeys = (id) => ['details/changes.json', 'details/examples.json', 'manifest.json', 'overview.json'].map((f) => `snapshots/${id}/${f}`);
+const listing = (entries) => entries.flatMap(([id, at]) => snapKeys(id).map((key) => ({ key, lastModified: at })));
+const ID1 = 'sf1-1111111111111111';
+const ID2 = 'sf1-2222222222222222';
+const ID3 = 'sf1-3333333333333333';
+
+test('a snapshot goes a day after a later upload superseded it, never the pointer\'s, never another key', () => {
+  const day = PRUNE_AFTER_MS;
+  assert.equal(day, 86_400_000);
+  const three = listing([[ID1, T1], [ID2, T2], [ID3, T2_DAY]]);
+  // ID1 was superseded at T2, ID2 at T2_DAY.
+  assert.deepEqual(supersededSnapshots(three, ID3, T2_ALMOST_DAY), []);
+  assert.deepEqual(supersededSnapshots(three, ID3, T2_DAY), [{ id: ID1, keys: snapKeys(ID1) }]);
+  assert.deepEqual(supersededSnapshots(three, ID3, '2026-11-17T12:15:00Z').map((s) => s.id), [ID1, ID2]);
+  // The pointer's snapshot stays however old; an upload after it (a run that lost the pointer race) stays too.
+  assert.deepEqual(supersededSnapshots(three, ID1, '2026-12-31T00:00:00Z').map((s) => s.id), [ID2]);
+  // A snapshot's upload time is its newest file's, so a finished upload counts from when it finished.
+  const resumed = [...listing([[ID1, T1]]), { key: `snapshots/${ID2}/manifest.json`, lastModified: T1 }, { key: `snapshots/${ID2}/overview.json`, lastModified: T2 }];
+  assert.deepEqual(supersededSnapshots(resumed, ID2, '2026-11-16T12:01:00Z'), []);
+  // Uploads at the same instant supersede neither.
+  assert.deepEqual(supersededSnapshots(listing([[ID1, T1], [ID2, T1]]), ID2, '2027-01-01T00:00:00Z'), []);
+  // Keys outside the snapshot layout are never touched.
+  const odd = [...three, { key: 'snapshots/notes.txt', lastModified: T1 }, { key: `snapshots/${ID1}/extra.json`, lastModified: T1 }, { key: 'snapshots/sf1-xyz/manifest.json', lastModified: T1 }];
+  assert.deepEqual(supersededSnapshots(odd, ID3, '2027-01-01T00:00:00Z').flatMap((s) => s.keys), [...snapKeys(ID1), ...snapKeys(ID2)]);
+  // A listing that lacks the pointer's snapshot, or has a date it can't read, deletes nothing.
+  assert.throws(() => supersededSnapshots(listing([[ID1, T1], [ID2, T2]]), ID3, T2_DAY), (e) => e instanceof PublishError && e.code === 'prune');
+  assert.throws(() => supersededSnapshots(listing([[ID1, 'yesterday'], [ID3, T2]]), ID3, T2_DAY), (e) => e instanceof PublishError && e.code === 'prune');
+});
+
+test('a run prunes after its pointer is safe: a day after a snapshot was superseded, every file of it', async () => {
+  const store = fakeStore();
+  const a = await run(store, A);
+  assert.deepEqual(a.pruned, []);
+  store.time = T2;
+  const c = await run(store, C, { now: T2 });
+  assert.equal(c.outcome, 'new-snapshot', c.error);
+  assert.deepEqual(c.pruned, [], 'just superseded: an open tab may still load its details');
+  const aKeys = Object.keys((await staged(A)).files);
+  for (const key of aKeys) assert.ok(store.objects.has(key), key);
+
+  const almost = await run(store, C, { now: T2_ALMOST_DAY });
+  assert.equal(almost.outcome, 'unchanged', almost.error);
+  assert.deepEqual(almost.pruned, []);
+
+  store.log.length = 0;
+  const later = await run(store, C, { now: T2_DAY });
+  assert.equal(later.outcome, 'unchanged', later.error);
+  assert.deepEqual(later.pruned, [a.snapshotId]);
+  assert.equal(later.pruneError, null);
+  for (const key of aKeys) assert.ok(!store.objects.has(key), key);
+  // The pointer, and C's snapshot whole, are what readers get.
+  const pointer = store.pointer();
+  assert.equal(pointer.snapshotId, c.snapshotId);
+  for (const key of Object.keys((await staged(C)).files)) assert.ok(store.objects.has(key), key);
+  // Only after the pointer was written and read back.
+  const ops = store.log.map(([op, key]) => `${op} ${key}`);
+  assert.ok(ops.lastIndexOf(`get ${POINTER}`) < ops.indexOf('list snapshots/'));
+  assert.ok(ops.indexOf(`put ${POINTER}`) < ops.indexOf('list snapshots/'));
+});
+
+test('a failure while pruning is reported, never a failed run, and the next run finishes it', async () => {
+  const store = fakeStore();
+  const a = await run(store, A);
+  store.time = T2;
+  await run(store, C, { now: T2 });
+  const { delete: del, list } = store;
+  let deletes = 0;
+  store.delete = (key) => (++deletes === 2 ? boom(key) : del.call(store, key));
+  const broken = await run(store, C, { now: T2_DAY });
+  assert.equal(broken.outcome, 'unchanged');
+  assert.equal(broken.error, null);
+  assert.deepEqual(broken.pruned, []);
+  assert.match(broken.pruneError, /503/);
+  store.delete = del;
+  store.list = (prefix) => boom(prefix, 500);
+  const unlisted = await run(store, C, { now: T2_DAY });
+  assert.equal(unlisted.outcome, 'unchanged');
+  assert.match(unlisted.pruneError, /500/);
+  store.list = list;
+  const fixed = await run(store, C, { now: T2_DAY });
+  assert.deepEqual(fixed.pruned, [a.snapshotId], fixed.pruneError);
+  assert.ok(![...store.objects.keys()].some((k) => k.includes(a.snapshotId)));
+  // A failed or refused run prunes nothing.
+  store.time = T3;
+  const refused = await run(store, A, { now: '2026-11-20T00:00:00Z' });
+  assert.equal(refused.outcome, 'refused');
+  assert.deepEqual(refused.pruned, []);
+});
+
 /** The fault and mangle hooks, added to an existing fake store. */
 function fakeStoreFaults(store, { fault = () => {}, mangle = (k, b) => b }) {
   const { get, put } = store;
@@ -438,7 +547,7 @@ test("SigV4 signatures equal AWS's published example and AWS's own signer", () =
  * A local stand-in for R2's S3 API: path-style /<bucket>/<key>, every request's
  * signature checked from what arrived, ETags, conditional puts, S3's XML errors.
  */
-async function fakeR2({ accessKeyId, secretAccessKey, bucket }) {
+async function fakeR2({ accessKeyId, secretAccessKey, bucket, pageSize = 1000, clock = () => new Date(T1) }) {
   const objects = new Map();
   const requests = [];
   const server = http.createServer(async (req, res) => {
@@ -446,7 +555,7 @@ async function fakeR2({ accessKeyId, secretAccessKey, bucket }) {
     for await (const c of req) chunks.push(c);
     const body = Buffer.concat(chunks);
     const url = new URL(req.url, `http://${req.headers.host}`);
-    requests.push({ method: req.method, path: url.pathname, headers: req.headers, bytes: body.length });
+    requests.push({ method: req.method, path: url.pathname, search: url.search, headers: req.headers, bytes: body.length });
     const error = (status, code) => {
       res.writeHead(status, { 'content-type': 'application/xml' });
       res.end(`<?xml version="1.0" encoding="UTF-8"?><Error><Code>${code}</Code><Message>${code}</Message></Error>`);
@@ -461,13 +570,35 @@ async function fakeR2({ accessKeyId, secretAccessKey, bucket }) {
     const headers = Object.fromEntries(listed.filter((h) => !['host', 'x-amz-date', 'x-amz-content-sha256'].includes(h)).map((h) => [h, req.headers[h]]));
     const amz = req.headers['x-amz-date'];
     const now = new Date(`${amz.slice(0, 4)}-${amz.slice(4, 6)}-${amz.slice(6, 8)}T${amz.slice(9, 11)}:${amz.slice(11, 13)}:${amz.slice(13, 15)}Z`);
-    const expected = signRequest({ method: req.method, url: `http://${req.headers.host}${url.pathname}`, headers, body, accessKeyId, secretAccessKey, now });
+    const expected = signRequest({ method: req.method, url: `http://${req.headers.host}${url.pathname}${url.search}`, headers, body, accessKeyId, secretAccessKey, now });
     if (expected.authorization !== auth) return error(403, 'SignatureDoesNotMatch');
 
     const [, b, ...rest] = url.pathname.split('/');
     if (b !== bucket) return error(404, 'NoSuchBucket');
     const key = rest.map(decodeURIComponent).join('/');
     const o = objects.get(key);
+    // ListObjectsV2 on the bucket itself, a page at a time.
+    if (req.method === 'GET' && rest.length === 0) {
+      if (url.searchParams.get('list-type') !== '2') return error(400, 'InvalidArgument');
+      const prefix = url.searchParams.get('prefix') ?? '';
+      const keys = [...objects.keys()].filter((k) => k.startsWith(prefix)).sort();
+      const start = Number(url.searchParams.get('continuation-token') ?? 0);
+      const page = keys.slice(start, start + pageSize);
+      const more = start + pageSize < keys.length;
+      const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      res.writeHead(200, { 'content-type': 'application/xml' });
+      return res.end(
+        `<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>${bucket}</Name><Prefix>${esc(prefix)}</Prefix><KeyCount>${page.length}</KeyCount><IsTruncated>${more}</IsTruncated>` +
+          (more ? `<NextContinuationToken>${start + pageSize}</NextContinuationToken>` : '') +
+          page.map((k) => `<Contents><Key>${esc(k)}</Key><LastModified>${objects.get(k).modified.toISOString()}</LastModified><ETag>${objects.get(k).etag}</ETag><Size>${objects.get(k).body.length}</Size></Contents>`).join('') +
+          '</ListBucketResult>'
+      );
+    }
+    if (req.method === 'DELETE') {
+      objects.delete(key); // S3 and R2 answer 204 whether or not the key was there
+      res.writeHead(204);
+      return res.end();
+    }
     if (req.method === 'GET') {
       if (!o) return error(404, 'NoSuchKey');
       res.writeHead(200, { etag: o.etag, 'content-type': o.type, 'content-length': o.body.length });
@@ -477,7 +608,7 @@ async function fakeR2({ accessKeyId, secretAccessKey, bucket }) {
       const ifMatch = req.headers['if-match'];
       if (ifMatch && (!o || o.etag !== ifMatch)) return error(412, 'PreconditionFailed');
       if (req.headers['if-none-match'] === '*' && o) return error(412, 'PreconditionFailed');
-      objects.set(key, { body, etag: md5(body), type: req.headers['content-type'] });
+      objects.set(key, { body, etag: md5(body), type: req.headers['content-type'], modified: clock() });
       res.writeHead(200, { etag: md5(body) });
       return res.end();
     }
@@ -500,7 +631,8 @@ test("s3Store publishes through R2's S3 API: signed, path-style, conditional", a
     for (const [key, text] of Object.entries(want.files)) assert.equal(r2.objects.get(key).body.toString('utf8'), text, key);
     const created = r2.requests.find((r) => r.method === 'PUT' && r.path.endsWith(`/${POINTER}`));
     assert.equal(created.headers['if-none-match'], '*');
-    assert.ok(r2.requests.every((r) => r.path.startsWith(`/${DESTINATIONS.preview}/`)));
+    assert.ok(r2.requests.every((r) => r.path.startsWith(`/${DESTINATIONS.preview}/`) || (r.path === `/${DESTINATIONS.preview}` && r.method === 'GET')));
+    assert.equal(first.pruneError, null);
 
     const second = await publish({ store, order: fakeOrder(), sha: A, dir: UPSTREAM, now: T2 });
     assert.equal(second.outcome, 'unchanged', second.error);
@@ -525,6 +657,43 @@ test("s3Store publishes through R2's S3 API: signed, path-style, conditional", a
     assert.match(denied.error, /403 SignatureDoesNotMatch/);
     assert.ok(!JSON.stringify(denied).includes('secret'), 'no credential in the result');
     assert.ok(r2.objects.get(POINTER).body.equals(before));
+  } finally {
+    await r2.close();
+  }
+});
+
+test("s3Store lists through ListObjectsV2's pages, deletes, and prunes over R2's S3 API", async () => {
+  const creds = { accessKeyId: 'AKIDLOCALTEST000000', secretAccessKey: 'local/test+secret=value' };
+  let time = new Date(T1);
+  const r2 = await fakeR2({ ...creds, bucket: DESTINATIONS.preview, pageSize: 3, clock: () => time });
+  try {
+    const store = s3Store({ ...creds, bucket: DESTINATIONS.preview, endpoint: r2.endpoint });
+    const a = await publish({ store, order: fakeOrder(), sha: A, dir: UPSTREAM, now: T1 });
+    time = new Date(T2);
+    const c = await publish({ store, order: fakeOrder(), sha: C, dir: UPSTREAM, now: T2 });
+    assert.equal(c.outcome, 'new-snapshot', c.error);
+    assert.deepEqual(c.pruned, []);
+    assert.equal(c.pruneError, null);
+
+    // Every key across pages of three, with its date; a prefix that matches nothing is empty.
+    const listed = await store.list('snapshots/');
+    assert.equal(listed.length, 12);
+    assert.deepEqual(listed.map((o) => o.key), [...r2.objects.keys()].filter((k) => k !== POINTER).sort());
+    assert.deepEqual(new Set(listed.map((o) => o.lastModified)), new Set([new Date(T1).toISOString(), new Date(T2).toISOString()]));
+    assert.ok(r2.requests.filter((r) => r.search.includes('continuation-token=')).length >= 3, 'followed the pages');
+    assert.deepEqual(await store.list('nothing/'), []);
+
+    const later = await publish({ store, order: fakeOrder(), sha: C, dir: UPSTREAM, now: T2_DAY });
+    assert.equal(later.outcome, 'unchanged', later.error);
+    assert.deepEqual(later.pruned, [a.snapshotId], later.pruneError);
+    assert.deepEqual([...r2.objects.keys()].filter((k) => k.includes(a.snapshotId)), []);
+    assert.equal(r2.requests.filter((r) => r.method === 'DELETE').length, 6);
+    assert.equal(JSON.parse(r2.objects.get(POINTER).body).snapshotId, c.snapshotId);
+    // Deleting a key that is gone is no error, as in S3.
+    await store.delete(`snapshots/${a.snapshotId}/manifest.json`);
+    // A listing the API refuses is a StoreError, with S3's code.
+    const wrong = s3Store({ accessKeyId: creds.accessKeyId, secretAccessKey: 'wrong-secret', bucket: DESTINATIONS.preview, endpoint: r2.endpoint });
+    await assert.rejects(wrong.list('snapshots/'), (e) => e instanceof StoreError && e.status === 403 && e.code === 'SignatureDoesNotMatch');
   } finally {
     await r2.close();
   }

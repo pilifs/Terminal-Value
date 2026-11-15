@@ -3,7 +3,7 @@
 // Milestone 2). Coordinator-owned. The CLI is `npm run software-factory:publish`.
 //
 //   publish({ store, order, ref, sha, checkout, dir, fetchImpl, now, config })
-//     -> Promise<{ outcome, snapshotId, sha, previous, uploaded, step, code, error }>
+//     -> Promise<{ outcome, snapshotId, sha, previous, uploaded, pruned, pruneError, step, code, error }>
 //
 //   1. refresh: import.mjs's refresh() into an empty staging directory, which
 //      builds the snapshot and validates it; then validateSnapshotDir again.
@@ -21,13 +21,22 @@
 //      The same snapshot as the current pointer is 'unchanged': only
 //      lastSourceCheck moves. A new one is 'new-snapshot', with publishedAt now.
 //
+//   6. prune: once the pointer is written and read back, the snapshots a newer
+//      upload superseded more than PRUNE_AFTER_MS (a day) ago are deleted, every
+//      file of each (pruned lists their ids). The pointer's snapshot is never
+//      one, nor any key outside the snapshot layout, and a day lets an open tab
+//      still load the details of the snapshot it shows. Best effort: a failure
+//      here is pruneError, never a failed outcome, and the next run tries again.
+//      Posts don't need old snapshots: each copies its own evidence.
+//
 //   A failure at any step is outcome 'failed', with the step, a code and the
 //   error. latest.json is then the previous one: nothing before step 5 writes
 //   it. A failed source check doesn't touch the pointer either, so
 //   lastSourceCheck stays the last successful one.
 //
 //   store: { get(key) -> { body: Buffer, etag } | null,
-//            put(key, body, { contentType, ifMatch, ifNoneMatch }) -> { etag } },
+//            put(key, body, { contentType, ifMatch, ifNoneMatch }) -> { etag },
+//            list(prefix) -> [{ key, lastModified }], delete(key) },
 //     throwing StoreError (status 412 for a failed condition). Keys are the
 //     Function's: latest.json and snapshots/<id>/(manifest|overview|details/*).json.
 //   order: async (base, head) -> 'ahead' | 'behind' | 'identical' | 'diverged'.
@@ -51,6 +60,9 @@ import { validate, validateSnapshotDir } from './validate.mjs';
 export const DESTINATIONS = { preview: 'software-factory-data-preview', production: 'software-factory-data' };
 export const CREDENTIALS = ['SOFTWARE_FACTORY_R2_ACCOUNT_ID', 'SOFTWARE_FACTORY_R2_ACCESS_KEY_ID', 'SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY'];
 export const POINTER = 'latest.json';
+/** How long a superseded snapshot stays, for tabs still showing it. */
+export const PRUNE_AFTER_MS = 24 * 60 * 60 * 1000;
+const SNAPSHOT_KEY = /^snapshots\/(sf1-[0-9a-f]{16})\/(?:manifest|overview|details\/(?:sessions|changes|verification|examples))\.json$/;
 const JSON_TYPE = 'application/json; charset=utf-8';
 const SHA = /^[0-9a-f]{40}$/;
 const RELATIONS = ['ahead', 'behind', 'identical', 'diverged'];
@@ -137,8 +149,8 @@ export function s3Store({ accountId, accessKeyId, secretAccessKey, bucket, endpo
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket ?? '')) throw new PublishError('destination', `not a bucket name: ${bucket}`);
   const base = endpoint.replace(/\/+$/, '');
 
-  async function send(method, key, { body, headers = {} } = {}) {
-    const url = `${base}/${bucket}/${key.split('/').map(uriEncode).join('/')}`;
+  async function send(method, key, { body, headers = {}, query } = {}) {
+    const url = query ? `${base}/${bucket}?${query}` : `${base}/${bucket}/${key.split('/').map(uriEncode).join('/')}`;
     const signed = signRequest({ method, url, headers, body: body ?? '', accessKeyId, secretAccessKey, now: clock() });
     try {
       return await fetchImpl(url, { method, headers: signed, body, signal: AbortSignal.timeout(timeoutMs) });
@@ -174,7 +186,65 @@ export function s3Store({ accountId, accessKeyId, secretAccessKey, bucket, endpo
       await res.body?.cancel();
       return { etag: res.headers.get('etag') };
     },
+    /** Every key under prefix with its LastModified, through ListObjectsV2's pages. */
+    async list(prefix) {
+      const out = [];
+      let token = null;
+      do {
+        const query = new URLSearchParams({ 'list-type': '2', prefix, ...(token ? { 'continuation-token': token } : {}) }).toString();
+        const res = await send('GET', '', { query });
+        if (res.status !== 200) throw await failure('LIST', prefix, res);
+        const xml = await res.text();
+        for (const [, item] of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+          const key = unxml(item.match(/<Key>([^<]*)<\/Key>/)?.[1]);
+          const lastModified = item.match(/<LastModified>([^<]*)<\/LastModified>/)?.[1];
+          if (!key || !lastModified) throw new StoreError(`LIST ${prefix}: an entry without a key or a date`);
+          out.push({ key, lastModified });
+        }
+        token = /<IsTruncated>true<\/IsTruncated>/.test(xml) ? unxml(xml.match(/<NextContinuationToken>([^<]*)<\/NextContinuationToken>/)?.[1]) : null;
+        if (token === undefined) throw new StoreError(`LIST ${prefix}: truncated without a continuation token`);
+      } while (token);
+      return out;
+    },
+    async delete(key) {
+      const res = await send('DELETE', key);
+      if (res.status !== 204 && res.status !== 200) throw await failure('DELETE', key, res);
+      await res.body?.cancel();
+    },
   };
+}
+
+const XML_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+const unxml = (s) => s?.replace(/&(amp|lt|gt|quot|apos);/g, (_, e) => XML_ENTITIES[e]);
+
+/**
+ * The snapshots to delete, from a listing of snapshots/: each one a later
+ * upload superseded at least graceMs before now, never keepId's, and only keys
+ * of the snapshot layout. A snapshot's upload time is its newest file's.
+ *   -> [{ id, keys }]
+ */
+export function supersededSnapshots(listing, keepId, now, graceMs = PRUNE_AFTER_MS) {
+  const snapshots = new Map();
+  for (const { key, lastModified } of listing) {
+    const id = key.match(SNAPSHOT_KEY)?.[1];
+    if (!id) continue;
+    const t = Date.parse(lastModified);
+    if (!Number.isFinite(t)) throw new PublishError('prune', `${key}: not a date, ${lastModified}`);
+    const s = snapshots.get(id) ?? { id, uploaded: -Infinity, keys: [] };
+    s.uploaded = Math.max(s.uploaded, t);
+    s.keys.push(key);
+    snapshots.set(id, s);
+  }
+  // A listing without the pointer's own snapshot is not one to delete by.
+  if (!snapshots.has(keepId)) throw new PublishError('prune', `the listing doesn't include the pointer's snapshot ${keepId}`);
+  const times = [...snapshots.values()].map((s) => s.uploaded);
+  return [...snapshots.values()]
+    .filter((s) => {
+      if (s.id === keepId) return false;
+      const next = Math.min(...times.filter((t) => t > s.uploaded)); // when a later upload superseded it
+      return Number.isFinite(next) && Date.parse(now) - next >= graceMs;
+    })
+    .map(({ id, keys }) => ({ id, keys: keys.sort() }));
 }
 
 // --- Source order ------------------------------------------------------------
@@ -254,12 +324,16 @@ export async function publish({ store, order, ref, sha, checkout, dir, fetchImpl
   let ours = null;
   let previous = null;
   const uploaded = [];
+  const pruned = [];
+  let pruneError = null;
   const result = (outcome, extra = {}) => ({
     outcome,
     snapshotId: ours?.snapshotId ?? null,
     sha: ours?.sha ?? null,
     previous,
     uploaded,
+    pruned,
+    pruneError,
     step: null,
     code: null,
     error: null,
@@ -341,6 +415,16 @@ export async function publish({ store, order, ref, sha, checkout, dir, fetchImpl
     step = 'verify';
     const back = await store.get(POINTER);
     if (!back || !back.body.equals(body)) throw new PublishError('verify', `${POINTER} read back different from what this run wrote`);
+
+    // 6. Snapshots superseded for a day: best effort, after the pointer is safe.
+    try {
+      for (const old of supersededSnapshots(await store.list('snapshots/'), pointer.snapshotId, at)) {
+        for (const key of old.keys) await store.delete(key);
+        pruned.push(old.id);
+      }
+    } catch (e) {
+      pruneError = e.message;
+    }
     return result(check.outcome, { pointer });
   } catch (e) {
     return result('failed', { step, code: e instanceof StoreError ? 'store' : (e.code ?? 'error'), error: e.message });

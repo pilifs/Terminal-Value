@@ -51,6 +51,8 @@ if (command === 'validate') {
     checkout,
   });
   console.log(JSON.stringify({ destination: opt('--destination'), ...result }));
+  // Old snapshots that stay are no harm to readers: the next run tries again.
+  if (result.pruneError) console.error(`WARN pruning old snapshots: ${result.pruneError}`);
   process.exit(result.outcome === 'new-snapshot' || result.outcome === 'unchanged' ? 0 : 1);
 } else {
   console.error('usage: cli.mjs refresh [--ref REF | --sha SHA] [--checkout PATH] | validate');

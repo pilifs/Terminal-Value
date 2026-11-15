@@ -275,7 +275,8 @@ concurrency group is the first guard either way), a deploy failing while a bound
 ### Reading a publish result
 
 `software-factory:publish` prints one JSON line, never a credential: `destination`, `outcome`, `snapshotId`, `sha`,
-`previous`, `uploaded` (the keys it wrote), and on a refusal or failure `step`, `code` and `error`. It exits 0 for
+`previous`, `uploaded` (the keys it wrote), `pruned` and `pruneError` (below), and on a refusal or failure `step`,
+`code` and `error`. It exits 0 for
 `new-snapshot` and `unchanged`, 1 for `refused`, `failed` or a credential problem, and 2 for a usage error.
 
 | Outcome | Meaning | The pointer |
@@ -297,8 +298,16 @@ Failure codes:
 Missing variables, or an account id that isn't 32 hex digits, stop it before anything runs, with an `ERROR` line
 that names the variable, never its value.
 
-A run after a failure uploads only what is still missing. Older snapshots stay in the bucket. Nothing deletes them
-yet.
+A run after a failure uploads only what is still missing.
+
+Old snapshots are pruned. After a run's pointer is written and read back, it deletes every snapshot that a later
+upload superseded at least a day before (`PRUNE_AFTER_MS`), all its files, and lists their ids in `pruned`. The
+day lets a tab still showing the old snapshot load its details. The pointer's snapshot is never deleted, nor any
+key outside the snapshot layout, and a listing that lacks the pointer's snapshot deletes nothing. Pruning is best
+effort: a failure is `pruneError` and a `WARN` line on stderr, the outcome stands, and the next run tries again.
+So a bucket holds the current snapshot and at most a day's worth of superseded ones: about 0.6 MB each at the
+committed snapshot's size, and at most 96 a day on the 15-minute schedule. Posts don't need old snapshots, because
+each copies its own evidence. The token's Object Read & Write covers the listing and deletes.
 
 ### What the importer refuses, and what it accepts
 
