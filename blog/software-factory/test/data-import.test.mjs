@@ -480,7 +480,15 @@ const loopsDoc = () => {
       { run: '2026-11-02-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: '2026-11-02T11:00:00.000Z', outcome: 'ended', interjections: 2, ...usage({ cycles: 1, cycles_committed: 1, commits: 2, jobs: 2, jobs_passed: 1, jobs_failed: 1 }) },
       { run: '2026-11-03-100000-core-values', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'transcript', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'stopped', interjections: 0, ...usage({ cycles: 1, commits: 1 }) },
     ],
-    cycles: [],
+    // The first run's three cycles committed; the second's one made two commits; one cycle made none and one has no end.
+    cycles: [
+      { run: '2026-11-01-100000-by-hand', cycle: 2, commits: 1, ended: '2026-11-01T11:00:00.000Z' },
+      { run: '2026-11-01-100000-by-hand', cycle: 1, commits: 1, ended: '2026-11-01T10:20:00.000Z' },
+      { run: '2026-11-01-100000-by-hand', cycle: 3, commits: 1, ended: '2026-11-01T12:00:00.000Z' },
+      { run: '2026-11-02-100000-core-values', cycle: 1, commits: 2, ended: '2026-11-02T10:45:00.500Z' },
+      { run: '2026-11-03-100000-core-values', cycle: 1, commits: 0, ended: '2026-11-03T10:30:00.000Z' },
+      { run: '2026-11-03-100000-core-values', cycle: 2, commits: 1, ended: null },
+    ],
   };
 };
 const LOOPS_FILE = 'llm-dlc/traces/loops.json';
@@ -509,6 +517,13 @@ test('the source’s account of its loops is read as it stands, checked to add u
     ['core-values', 'record', '2026-11-02T11:00:00.000Z', 'ended', 2, 2],
     ['core-values', 'transcript', null, 'stopped', 0, 1],
   ]);
+  // A run's brief, where it is a stream of one, and when each of its cycles that committed ended, in seconds from its start.
+  assert.deepEqual(a.runs.map((r) => [r.streamOf, r.ticks]), [[null, [1200, 3600, 7200]], ['core', [2701]], ['core', []]]);
+  // A file with no cycles gives no notches, and is still an account.
+  const { cycles, ...bare } = loopsDoc();
+  write(dir, LOOPS_FILE, bare);
+  assert.deepEqual((await load(dir)).loopAccount.runs.map((r) => r.ticks), [[], [], []]);
+  write(dir, LOOPS_FILE, loopsDoc());
   // A loop's instruction is prompt text: it goes no further.
   assert.doesNotMatch(JSON.stringify(n), /SECRET INSTRUCTION TEXT/);
 

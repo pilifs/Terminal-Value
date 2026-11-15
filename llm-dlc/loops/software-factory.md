@@ -912,6 +912,11 @@ Settled by the author on 2026-11-14:
   example changes had passed their unit tests". An example the catalog gives no verdict is counted by the marks
   in its label, so 163 of 183 have a verdict, as the landing page says; five have more than one and are drawn
   split.
+- **Every run of every loop on one clock** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, "Every run of every loop on one clock". The clock on the overview and the loops page is
+  drawn from the source's account (generator 9, `overview.loopAccount.runs`, snapshot `sf1-a9d0b91194c5ab43`): 109
+  runs from Oct 31, the verification loop's sessions in a gray row of their own. The pace claim stays on the loops
+  that write code. Runs with a run record still open; the other 59 don't yet.
 - Status: done
 
 ## Loop settings

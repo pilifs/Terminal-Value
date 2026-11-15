@@ -570,9 +570,9 @@ test('the source’s account of its loops is carried whole, with typed prompts a
       { loop: 'core-values', category: 'brief', kind: 'brief stream', streamOf: 'core', ...group({ runs: 2, cycles: 2, commits: 3 }) },
     ],
     runs: [
-      { run: 'a', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: null, outcome: 'unrecorded', interjections: 0, ...stat({ cycles: 3, commits: 3, toolCalls: 7 }) },
-      { run: 'b', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 2, ...stat({ commits: 2 }) },
-      { run: 'c', loop: 'core-values', kind: 'brief stream', category: 'brief', source: 'record', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 1, ...stat({}) },
+      { run: 'b', loop: 'core-values', kind: 'brief stream', category: 'brief', streamOf: 'core', source: 'record', started: '2026-11-02T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 2, ticks: [], ...stat({ commits: 2 }) },
+      { run: 'a', loop: 'by-hand', kind: 'moonshot by hand', category: 'moonshot', streamOf: null, source: 'transcript', started: '2026-11-01T10:00:00.000Z', ended: null, outcome: 'unrecorded', interjections: 0, ticks: [600, 1200], ...stat({ cycles: 3, commits: 3, toolCalls: 7 }) },
+      { run: 'c', loop: 'core-values', kind: 'brief stream', category: 'brief', streamOf: 'core', source: 'record', started: '2026-11-03T10:00:00.000Z', ended: null, outcome: 'ended', interjections: 1, ticks: [], ...stat({}) },
     ],
   };
   const a = run(norm({ calls: [call('2026-11-05T15:00:00Z')], loopAccount: account })).overview.loopAccount;
@@ -581,6 +581,11 @@ test('the source’s account of its loops is carried whole, with typed prompts a
   assert.deepEqual(a.byHand, { loops: 1, runs: 1, cycles: 3, commits: 3, toolCalls: 7 });
   assert.deepEqual(a.categories.map((c) => c.category), ['moonshot', 'brief']);
   assert.deepEqual(a.loops.map((l) => [l.loop, l.kind, l.streamOf]), [['by-hand', 'moonshot by hand', null], ['core-values', 'brief stream', 'core']]);
-  // The runs themselves are not in the overview: it carries the sums.
-  assert.equal('runs' in a && Array.isArray(a.runs), false);
+  // Every run, oldest first, with what a clock needs: a stream is in its brief's campaign, any other loop is its own.
+  assert.deepEqual(a.runs.map((r) => [r.id, r.loop, r.campaign, r.source, r.started, r.cycles, r.commits, r.usd, r.interjections, r.ticks]), [
+    ['a', 'by-hand', 'by-hand', 'transcript', '2026-11-01T10:00:00.000Z', 3, 3, 1.234568, 0, [600, 1200]],
+    ['b', 'core-values', 'core', 'record', '2026-11-02T10:00:00.000Z', 1, 2, 1.234568, 2, []],
+    ['c', 'core-values', 'core', 'record', '2026-11-03T10:00:00.000Z', 1, 1, 1.234568, 1, []],
+  ]);
+  assert.deepEqual(Object.keys(a.runs[0]), ['id', 'loop', 'campaign', 'category', 'kind', 'source', 'started', 'ended', 'outcome', 'cycles', 'commits', 'toolCalls', 'usd', 'interjections', 'ticks']);
 });

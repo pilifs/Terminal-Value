@@ -290,7 +290,7 @@
         "loopAccount": {
           "description": "The source's own account of its loops (llm-dlc/traces/loops.json), as it adds them up: moonshots, briefs and the verification loop, with runs from before the scripts left records. Apart from overview.loops, which is read from the run records and covers only the runs that left one. Null when the source has no such file. Since generator 7.",
           "type": ["object", "null"],
-          "required": ["totals", "interjections", "byHand", "categories", "loops"],
+          "required": ["totals", "interjections", "byHand", "categories", "loops", "runs"],
           "additionalProperties": false,
           "properties": {
             "totals": { "$ref": "#/$defs/loopStat" },
@@ -309,7 +309,33 @@
               }
             },
             "categories": { "type": "array", "items": { "$ref": "#/$defs/loopStat" } },
-            "loops": { "type": "array", "items": { "$ref": "#/$defs/loopStat" } }
+            "loops": { "type": "array", "items": { "$ref": "#/$defs/loopStat" } },
+            "runs": {
+              "type": "array",
+              "description": "Every run of the account, oldest first, with what a clock needs to draw it. A run from a run record has the id of its record in the loops collection. Since generator 9.",
+              "items": {
+                "type": "object",
+                "required": ["id", "loop", "campaign", "category", "kind", "source", "started", "ended", "outcome", "cycles", "commits", "toolCalls", "usd", "interjections", "ticks"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "loop": { "type": "string" },
+                  "campaign": { "type": "string", "description": "The brief a stream belongs to; for any other loop, the loop itself." },
+                  "category": { "type": ["string", "null"] },
+                  "kind": { "type": "string" },
+                  "source": { "type": ["string", "null"], "description": "Where the source read the run from: record (a run record), transcript (a session's prompts) or session (a verification session)." },
+                  "started": { "type": "string", "format": "date-time" },
+                  "ended": { "type": ["string", "null"], "format": "date-time" },
+                  "outcome": { "type": ["string", "null"] },
+                  "cycles": { "type": "integer", "minimum": 0 },
+                  "commits": { "type": "integer", "minimum": 0 },
+                  "toolCalls": { "type": "integer", "minimum": 0 },
+                  "usd": { "type": "number", "minimum": 0 },
+                  "interjections": { "type": "integer", "minimum": 0 },
+                  "ticks": { "type": "array", "description": "Seconds from the run's start to the end of each cycle that committed.", "items": { "type": "integer", "minimum": 0 } }
+                }
+              }
+            }
           }
         },
         "reported": {

@@ -63,7 +63,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '8' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '9' };
 
 // An example's verdict as the pages count it. The catalog gives most examples
 // one verdict. Where it gives none, the label may still record a result for
@@ -261,6 +261,29 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
         byHand: { loops: la.loops.filter((l) => l.kind === BY_HAND).length, runs: byHand.length, cycles: sumRuns(byHand, 'cycles'), commits: sumRuns(byHand, 'commits'), toolCalls: sumRuns(byHand, 'toolCalls') },
         categories: la.categories.map(tidyLoop),
         loops: la.loops.map(tidyLoop),
+        // Every run, oldest first, with what a clock needs to draw it: when it
+        // ran, what it made and when each of its cycles committed. A stream of
+        // a brief is in that brief's campaign; any other loop is its own.
+        // Since generator 9.
+        runs: la.runs
+          .map((x) => ({
+            id: x.run,
+            loop: x.loop,
+            campaign: x.streamOf ?? x.loop,
+            category: x.category,
+            kind: x.kind,
+            source: x.source,
+            started: x.started,
+            ended: x.ended,
+            outcome: x.outcome,
+            cycles: x.cycles,
+            commits: x.commits,
+            toolCalls: x.toolCalls,
+            usd: round6(x.usd),
+            interjections: x.interjections,
+            ticks: x.ticks ?? [],
+          }))
+          .sort((a, b) => byValue(a.started, b.started) || byValue(a.id, b.id)),
       }
     : null;
 

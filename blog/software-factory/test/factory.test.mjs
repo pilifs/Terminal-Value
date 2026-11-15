@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml, verdictOf, verdictsOf, accountClock } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
@@ -584,7 +584,7 @@ test('the floor draws each stretch to one scale, with the pause between them cut
     nights: [{ from: 8 * H, to: 16 * H }],
     ticks: [
       { at: 0, label: 'Nov 6', kind: 'start' },
-      { at: H, label: '6 pm', kind: 'hour' }, // 2.5% after the start: would run into its label
+      { at: H, label: '6 pm', kind: 'hour' }, // 2.5% after the start: would run into its label on any page
       { at: 10 * H, label: 'Nov 7', kind: 'day' },
       { at: 100 * H, label: 'Nov 14', kind: 'start' },
       { at: 108 * H, label: 'Nov 15', kind: 'day' },
@@ -601,7 +601,8 @@ test('the floor draws each stretch to one scale, with the pause between them cut
   assert.doesNotMatch(html, /6 pm/);
   assert.match(html, /<span class="sf-floor-tick sf-floor-tick-day" style="left:25%">Nov 7<\/span>/);
   assert.match(html, /<span class="sf-floor-tick sf-floor-tick-start" style="left:77\.5%">Nov 14<\/span>/);
-  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-day sf-floor-tick-end" style="left:97\.5%">Nov 15<\/span>/, 'a label at the right edge ends at its mark');
+  // A label that would run off the right edge ends at its mark. On a narrower page it would run into the start before it, so it is marked to be hidden there.
+  assert.match(html, /<span class="sf-floor-tick sf-floor-tick-day sf-floor-tick-end sf-floor-tick-wide sf-floor-tick-roomy" style="left:97\.5%">Nov 15<\/span>/);
   assert.match(html, /<div class="sf-floor-plot" aria-hidden="true">/, 'the plot is a picture; the names are links');
 });
 
@@ -1133,7 +1134,7 @@ test('the usage finding says the estimate runs low where the client counted more
 });
 
 test('a label shortly before a stretch that starts near the right edge gives way to that stretch’s own', () => {
-  // 100 hours, a cut, then 4 hours: the last stretch starts past 90% of the width, so its label ends at its mark.
+  // 100 hours, a cut, then 4 hours: the last stretch's label would run off the right edge, so it ends at its mark.
   const html = floorHtml({
     panels: [{ from: 0, to: 100 * H, pause: '' }, { from: 200 * H, to: 204 * H, pause: 'No loop ran for 4 days' }],
     rows: 1,
@@ -1143,13 +1144,46 @@ test('a label shortly before a stretch that starts near the right edge gives way
     ticks: [
       { at: 0, label: 'Nov 6', kind: 'start' },
       { at: 50 * H, label: 'Nov 8', kind: 'day' },
-      { at: 80 * H, label: 'noon', kind: 'hour' }, // more than 10% before the last start: kept
-      { at: 96 * H, label: 'Nov 15', kind: 'day' }, // under 10% before it: would sit under its label
+      { at: 80 * H, label: 'noon', kind: 'hour' }, // well before the last start: kept on a wide page
+      { at: 96 * H, label: 'Nov 15', kind: 'day' }, // shortly before it: would sit under its label
       { at: 200 * H, label: 'Nov 15', kind: 'start' },
     ],
   });
-  const labels = [...html.matchAll(/<span class="sf-floor-tick sf-floor-tick-(\w+)( sf-floor-tick-end)?" style="left:[\d.]+%">([^<]+)<\/span>/g)].map((m) => [m[1], Boolean(m[2]), m[3]]);
+  const labels = [...html.matchAll(/<span class="sf-floor-tick sf-floor-tick-(\w+)( sf-floor-tick-end)?[^"]*" style="left:[\d.]+%">([^<]+)<\/span>/g)].map((m) => [m[1], Boolean(m[2]), m[3]]);
   assert.deepEqual(labels, [['start', false, 'Nov 6'], ['day', false, 'Nov 8'], ['hour', false, 'noon'], ['start', true, 'Nov 15']]);
+});
+
+test('the clock’s labels are placed for a wide page, a narrow one and a phone: starts first, and none runs into another', () => {
+  // Eight stretches of uneven length, as a clock of every loop has: several start within a label's width of the one before.
+  const starts = [0, 20, 60, 70, 74, 80, 130, 146];
+  const ends = [18, 58, 68, 72, 78, 128, 144, 150];
+  const html = floorHtml({
+    panels: starts.map((from, i) => ({ from: from * H, to: ends[i] * H, pause: i ? 'No loop ran' : '' })),
+    rows: 1,
+    runs: [{ from: 0, to: H, row: 0, ticks: [], tip: 'one', flag: false, quiet: true }],
+    names: [
+      { at: 0, until: 18 * H, label: 'roomy', href: '/x' },
+      { at: 70 * H, until: 72 * H, label: 'squeezed', href: '/x' },
+    ],
+    nights: [],
+    ticks: [...starts.map((from, i) => ({ at: from * H, label: `S${i}`, kind: 'start' })), { at: 30 * H, label: 'D1', kind: 'day' }, { at: 100 * H, label: 'D2', kind: 'day' }, { at: 106 * H, label: 'h', kind: 'hour' }],
+  });
+  const ticks = [...html.matchAll(/<span class="sf-floor-tick ([^"]*)" style="left:([\d.]+)%">([^<]+)<\/span>/g)].map((m) => ({ label: m[3], at: Number(m[2]), classes: m[1].split(' ') }));
+  const shown = (hidden) => ticks.filter((t) => !hidden.some((c) => t.classes.includes(c))).map((t) => t.label);
+  // 136 hours share 82.5% of the width, with seven cuts of 2.5%. A label takes 5.5% on a wide page.
+  // S4 starts 3.7% after S3 and S7's label, ending at its mark, would run into S6's: both are left out.
+  // The hour is 3.6% after a day, inside its label.
+  assert.deepEqual(ticks.map((t) => t.label), ['S0', 'S1', 'S2', 'S3', 'S5', 'S6', 'D1', 'D2']);
+  // Narrow, 11% a label: S3 is 7.4% after S2, and D1 is 6.1% after S1.
+  assert.deepEqual(shown(['sf-floor-tick-wide', 'sf-floor-tick-hour']), ['S0', 'S1', 'S2', 'S5', 'S6', 'D2']);
+  // A phone, 17% a label, days hidden: the first start and the last one left are placed first, then what fits between.
+  assert.deepEqual(shown(['sf-floor-tick-wide', 'sf-floor-tick-roomy', 'sf-floor-tick-hour', 'sf-floor-tick-day']), ['S0', 'S2', 'S6']);
+  // A label that only runs off the edge on a phone is flipped there, not on a wider page.
+  assert.deepEqual(ticks.find((t) => t.label === 'S6').classes.filter((c) => c.includes('end')), ['sf-floor-tick-end-phone']);
+  // A name with too little room to say anything is left to the bar's own words; a quiet run is marked.
+  assert.match(html, /<code>roomy<\/code>/);
+  assert.doesNotMatch(html, /squeezed/);
+  assert.match(html, /<span class="sf-run sf-run-quiet" style=/);
 });
 
 test('a model the snapshot has no display name for is named by its id, once', () => {
@@ -1205,6 +1239,65 @@ test('with the source’s account, the headline is the commits made inside a loo
   const loops = finding.slice(finding.indexOf('id="finding-loops"'), finding.indexOf('id="finding-output"'));
   assert.match(loops, /<dt>estimated usage for each commit made in a loop run<\/dt><dd>\$2\.50<\/dd>/);
   assert.match(loops, /All 3 loops, and each campaign run by run/);
+});
+
+// The account's runs, as overview.loopAccount.runs has them: a moonshot typed by hand before any record, two streams
+// of one brief at work together (one left the fixture's run record), and a session of the verification loop beside them.
+const accountRun = (id, loop, started, ended, o = {}) => ({ id, loop, campaign: loop, category: 'brief', kind: 'brief', source: 'transcript', started, ended, outcome: 'ended', cycles: 1, commits: 1, toolCalls: 10, usd: 1, interjections: 0, ticks: [], ...o });
+const accountRuns = () => [
+  accountRun('2026-11-01-150000-by-hand', 'by-hand', '2026-11-01T15:00:00.000Z', '2026-11-01T18:00:00.000Z', { category: 'moonshot', kind: 'moonshot by hand', outcome: 'unrecorded', cycles: 3, commits: 3, ticks: [3600, 7200, 10800] }),
+  accountRun('2026-11-07-040000-demo-heap', 'demo-heap', '2026-11-07T04:00:00.000Z', '2026-11-07T06:00:00.000Z', { campaign: 'demo', kind: 'brief stream', source: 'record', cycles: 12, commits: 12, ticks: [1800] }),
+  accountRun('2026-11-07-050000-demo-values', 'demo-values', '2026-11-07T05:00:00.000Z', '2026-11-07T08:00:00.000Z', { campaign: 'demo', kind: 'brief stream', cycles: 12, commits: 12 }),
+  accountRun('2026-11-07-053000-verification', 'verification', '2026-11-07T05:30:00.000Z', '2026-11-07T06:30:00.000Z', { category: 'verification', kind: 'verification loop', source: 'session', cycles: 0, commits: 5 }),
+];
+
+test('with the account’s runs the clock has every run of every loop, and the pace is the loops’ that write code', () => {
+  const snap = snapshotOf(run());
+  const withRuns = { ...snap, overview: { ...snap.overview, loopAccount: accountOf({ runs: accountRuns() }) } };
+  const clock = accountClock(withRuns.overview);
+  // Only a run with a run record can be opened, and it has the record's outcome; the verification loop is quiet and first.
+  assert.deepEqual(clock.runs.map((r) => [r.id, r.loop, r.outcome, r.quiet, r.seconds]), [
+    [null, 'by-hand', 'unrecorded', false, 10800],
+    ['2026-11-07-040000-demo-heap', 'demo-heap', 'done', false, 7200],
+    [null, 'demo-values', 'ended', false, 10800],
+    [null, 'verification', 'ended', true, 3600],
+  ]);
+  assert.deepEqual(clock.campaigns, [
+    { id: 'verification', streams: 0, card: false, quiet: true },
+    { id: 'by-hand', streams: 0, card: false, quiet: false },
+    { id: 'demo', streams: 2, card: true, quiet: false },
+  ]);
+  assert.equal(clock.unrecorded, 3);
+  assert.equal(accountClock(snap.overview), null);
+  assert.equal(accountClock({ ...snap.overview, loopAccount: accountOf() }), null, 'an account from before its runs were carried');
+
+  const all = findingsHtml(withRuns);
+  const html = all.slice(all.indexOf('id="finding-loops"'), all.indexOf('id="finding-output"'));
+  // 24 commits in the four hours two streams ran: the verification loop's five are said apart.
+  assert.match(html, />A commit every 10 minutes for 4 hours<\/a><\/h2>/);
+  assert.match(html, /Toronto time: 24 commits from 2 loops, with a loop running for 4 of the 4 hours and up to two at once\. The verification loop committed proof results 5 more times in those hours\. Nobody typed a prompt into any of them\. In all: 3 loops, 12 runs and 30 cycles\./);
+  assert.match(html, /Every run of every loop, Nov 1 to Nov 7, 2026, on one clock\./);
+  assert.match(html, /3 runs in the account left no record of their own to open: the verification sessions, and the runs from before the script wrote one\./);
+  assert.match(html, /<li><span class="sf-swatch sf-swatch-quiet" aria-hidden="true"><\/span>A session of the verification loop: it runs the queued proofs and commits the results<\/li>/);
+  // Four bars: one can be picked, one is quiet and in the first row, which no other loop is drawn in.
+  const bars = [...html.matchAll(/<span class="(sf-run[^"]*)"( id="run-[^"]+" data-run="([^"]+)")? style="[^"]*--sf-row:(\d+)" title="([^"]*)"/g)].map((m) => [m[1], m[3] ?? null, Number(m[4]), m[5]]);
+  assert.deepEqual(bars.map((b) => b.slice(0, 3)), [
+    ['sf-run', null, 1],
+    ['sf-run', '2026-11-07-040000-demo-heap', 1],
+    ['sf-run', null, 2],
+    ['sf-run sf-run-quiet', null, 0],
+  ]);
+  assert.match(bars[0][3], /^by-hand, from Nov 1, 10 am: 3 cycles and 3 commits in 3 h\. No end recorded\.$/);
+  assert.match(bars[3][3], /^A session of the verification loop, from Nov 7, 12:30 am: 5 commits of results in 1 h\.$/);
+  // A campaign with run records links to its card; any other loop to the list of every loop. The quiet row has no name.
+  assert.deepEqual([...html.matchAll(/<a href="([^"]+)"><code>([^<]+)<\/code><\/a><\/li>/g)].map((m) => [m[2], m[1]]), [['by-hand', '/software-factory/loops/#every-loop'], ['demo', '/software-factory/loops/#loop-demo']]);
+
+  // The loops page draws it under the account, whole, and the runs that left a record follow without a clock of their own.
+  const page = loopsHtml(withRuns);
+  inOrderOf(page, ['id="every-loop"', 'id="clock"', 'Every run on one clock', 'Every run of every loop, Nov 1 to Nov 7, 2026', 'The runs that left a record', 'Campaign by campaign']);
+  assert.doesNotMatch(page, /Those runs on one clock/);
+  assert.match(page, /The prompts and the campaigns below are read from those records/);
+  assert.equal((page.match(/class="sf-floor"/g) ?? []).length, 1);
 });
 
 test('the loops page leads with the source’s account: by kind, then every loop, then the runs that left a record', () => {

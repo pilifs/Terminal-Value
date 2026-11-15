@@ -1269,6 +1269,11 @@ body.software-factory .sf-swatch.sf-swatch-run {
   width: 1.4rem;
   background: linear-gradient(to right, var(--sf-mark) 0 45%, var(--sf-surface) 45% 52%, var(--sf-mark) 52%);
 }
+body.software-factory .sf-swatch.sf-swatch-quiet {
+  flex: none;
+  width: 1.4rem;
+  background: var(--sf-neutral);
+}
 body.software-factory .sf-swatch.sf-swatch-asked {
   width: 0.5rem;
   height: 0.5rem;
@@ -1294,8 +1299,15 @@ body.software-factory .sf-shell .sf-floor-figure figcaption {
 /* Hours on the axis only where there is room for them; on a phone, each
    stretch's first day and nothing else. */
 @media (max-width: 60rem) {
-  body.software-factory .sf-floor-tick-hour {
+  body.software-factory .sf-floor-tick-hour,
+  body.software-factory .sf-floor-tick-wide {
     display: none;
+  }
+  body.software-factory .sf-floor-tick-end-narrow {
+    padding: 0.3rem 0.3rem 0 0;
+    border-right: 1px solid var(--sf-rule-strong);
+    border-left: 0;
+    transform: translateX(-100%);
   }
 }
 @media (max-width: 36rem) {
@@ -1304,8 +1316,15 @@ body.software-factory .sf-shell .sf-floor-figure figcaption {
     --sf-row-gap: 0.3rem;
   }
   body.software-factory .sf-floor-names,
-  body.software-factory .sf-floor-tick-day {
+  body.software-factory .sf-floor-tick-day,
+  body.software-factory .sf-floor-tick-roomy {
     display: none;
+  }
+  body.software-factory .sf-floor-tick-end-phone {
+    padding: 0.3rem 0.3rem 0 0;
+    border-right: 1px solid var(--sf-rule-strong);
+    border-left: 0;
+    transform: translateX(-100%);
   }
   body.software-factory .sf-run-flag::after {
     right: -0.2rem;
@@ -1325,7 +1344,7 @@ body.software-factory .sf-shell .sf-floor-figure figcaption {
 }
 
 /* A run picked on the floor, and its record under the clock. */
-body.software-factory [data-pick] > :is(.sf-run, .sf-cell) {
+body.software-factory [data-pick] > :is(.sf-run[data-run], .sf-cell) {
   cursor: pointer;
 }
 body.software-factory .sf-cell {
@@ -1852,6 +1871,11 @@ body.software-factory .sf-run {
 }
 body.software-factory .sf-run:hover {
   background: var(--sf-mark-hover);
+}
+/* A session of the verification loop: it runs proofs others queued, so it is drawn quieter. */
+body.software-factory .sf-run.sf-run-quiet,
+body.software-factory .sf-run.sf-run-quiet:hover {
+  background: var(--sf-neutral);
 }
 body.software-factory .sf-run i {
   position: absolute;

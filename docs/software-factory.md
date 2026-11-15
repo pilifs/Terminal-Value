@@ -439,10 +439,47 @@ script left records, read from their sessions' prompts. It is the answer to requ
   clock's caption says "Every run that left a record".
 - **Still from the run records, and so still partial:** the clock, each run's cycle lines, the campaigns, and the
   share of tool calls set off by a loop's prompt. Reading runs and cycles from `loops.json` would let the clock
-  start on Oct 31 with the moonshots; that is the next step.
+  start on Oct 31 with the moonshots; that is the next step. (Done in generator 9: see "Every run of every loop on
+  one clock" below.)
 
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
+
+### Every run of every loop on one clock (generator 9)
+
+The clock on the overview and on the loops page now starts on Oct 31 with the first loop, where it started on
+Nov 6 with the first run record. It is drawn from the source's account, so it shows the 109 runs the headline
+counts and not the 50 that left a record.
+
+- **Read from the source.** The importer takes each run's brief (`stream_of`) and, from the index's `cycles`, when
+  each cycle that committed ended, as seconds from the run's start (`ticks`). A file without cycles gives none.
+- **In the snapshot** as `overview.loopAccount.runs`: every run, oldest first, with its loop, its campaign (the
+  brief a stream belongs to, or the loop itself), where the source read it from, start, end, outcome, cycles,
+  commits, tool calls, estimated usage, typed prompts and ticks. About 38 KB before compression.
+- **Drawn by the same figure** (`floorFigure` in `factory.js`, fed by `accountClock`). A run that left a run record
+  has that record's outcome and id, so it can still be picked and opened. The other 59 are drawn and say what the
+  account has in their tip; the caption says they have no record to open. The pointer is a hand only over a run
+  that opens.
+- **The verification loop** takes the first row for the whole clock, in gray: 50 sessions that run the queued
+  proofs and commit the results. They have no cycles, so no notches. The legend names the row.
+- **The pace keeps its claim.** "A commit every 13 minutes for 49 hours" is counted over the loops that write
+  code: 225 commits from 18 loops, Nov 6 to Nov 8. The verification loop committed results 112 more times in
+  those hours, and the sentence under the claim says so apart. Counting them would have made it every 9 minutes;
+  it would also have counted commits that publish proof results as if they were work.
+- **The overview** shows the newest 160 hours of stretches (`CLOCK_HOURS`), which today is all of them. The
+  loops page shows every stretch, under the account's tables; "The runs that left a record" follows without a
+  clock of its own.
+- **Labels are placed by the room they take** (`floorHtml` in `figures.js`). Eight stretches put several starts
+  within a label's width of each other. Labels are now placed three times, for a wide page, a narrow one and a
+  phone: the starts of the stretches, then the days, then the hours, each only where it runs into none before it.
+  One with no room on a wide page is left out; one with no room on a narrower page gets a class the stylesheet
+  hides there. A label that would run off the right edge ends at its mark, on the widths where it would. A
+  campaign's name with under 4% of the plot to itself is left to its bars' own words.
+- **Still from the run records:** a run's cycle lines when it is opened, the campaigns, and the prompts. The
+  index's `cycles` carry each cycle's summary and change, so every run could open; that is the next step here.
+
+Metric definitions are version 9: the account's definition says how the clock and the pace are drawn. Snapshot
+`sf1-a9d0b91194c5ab43`, the same revision.
 
 ### The landing page's verdict words and count (generator 8)
 

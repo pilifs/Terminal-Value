@@ -223,6 +223,15 @@ const BREAK = 2.5; // the width of a cut in the floor's clock, in percent
  * The plot is a picture of records that the linked page lists, so only the
  * names are read out.
  */
+// The least share of the plot a name needs to say anything, and the share a
+// day's label and an hour's take on a wide page, a narrow one and a phone.
+const NAME_ROOM = 4;
+const LABEL_ROOM = [
+  [5.5, 4],
+  [11, 8],
+  [17, 12],
+];
+
 export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
   const total = panels.reduce((t, p) => t + (p.to - p.from), 0) || 1;
   const scale = (100 - BREAK * (panels.length - 1)) / total;
@@ -255,21 +264,51 @@ export function floorHtml({ panels, rows, runs, names, nights, ticks }) {
               .map((t) => `<i style="left:${Number((((t - r.from) / length) * 100).toFixed(2))}%"></i>`)
               .join('');
       const name = r.id ? ` id="run-${e(r.id)}" data-run="${e(r.id)}"` : '';
-      return `<span class="sf-run${r.flag ? ' sf-run-flag' : ''}"${name} style="${box(r.from, r.to)};--sf-row:${r.row}" title="${e(r.tip)}" data-tip="${e(r.tip)}">${notches}</span>`;
+      return `<span class="sf-run${r.flag ? ' sf-run-flag' : ''}${r.quiet ? ' sf-run-quiet' : ''}"${name} style="${box(r.from, r.to)};--sf-row:${r.row}" title="${e(r.tip)}" data-tip="${e(r.tip)}">${notches}</span>`;
     })
     .join('');
+  // A name has the room up to the next one. With too little of it to read, it is left to the bar's own words.
   const labels = names
-    .map((n) => `<li style="left:${x(n.at)}%;width:${Number(Math.max(0, x(n.until) - x(n.at) - 0.6).toFixed(2))}%"><a href="${e(n.href)}"><code>${e(n.label)}</code></a></li>`)
+    .map((n) => ({ ...n, width: Number(Math.max(0, x(n.until) - x(n.at) - 0.6).toFixed(2)) }))
+    .filter((n) => n.width >= NAME_ROOM)
+    .map((n) => `<li style="left:${x(n.at)}%;width:${n.width}%"><a href="${e(n.href)}"><code>${e(n.label)}</code></a></li>`)
     .join('');
-  // A label starts at its mark. One near a panel's start would run into the
-  // start's own label, and one near the right edge ends at its mark instead:
-  // a panel that starts there has its label to the left of its mark, so a
-  // label shortly before it gives way too.
-  const END = 90;
-  const before = (t) => placed.some((q) => q.left > END && q.from > t.at && q.left - x(t.at) < 10);
+  // A label starts at its mark; one that would run off the right edge ends
+  // at its mark instead. Labels take room, and how much of the plot that is depends on how wide
+  // the plot is drawn: so they are placed three times, for a wide page, a
+  // narrow one and a phone: the starts of the stretches, then the days, then
+  // the hours. One with no room on a wide page is left out; one with no room
+  // on a narrower page is marked, and the stylesheet hides it there.
+  const widthOf = (t, tier) => LABEL_ROOM[tier][t.kind === 'hour' ? 1 : 0];
+  const flips = (t, tier) => x(t.at) + widthOf(t, tier) > 100;
+  const room = (t, tier) => (flips(t, tier) ? [x(t.at) - widthOf(t, tier), x(t.at)] : [x(t.at), x(t.at) + widthOf(t, tier)]);
+  // A narrower page chooses among the labels the wider one kept, so none it keeps is missing from the page.
+  const fit = (tier, among) => {
+    const taken = [];
+    const kept = new Set();
+    // On a phone few labels fit: the first start and the last one left say when the clock begins and ends, so they are placed first.
+    const starts = among.filter((k) => k.kind === 'start');
+    const ends = tier === 2 ? [starts[0], starts.at(-1)] : [];
+    const ordered = [...new Set([...ends, ...starts, ...among.filter((k) => k.kind === 'day'), ...among.filter((k) => k.kind === 'hour')])].filter(Boolean);
+    for (const t of ordered) {
+      const [from, to] = room(t, tier);
+      if (taken.some(([a, b]) => from < b && a < to)) continue;
+      taken.push([from, to]);
+      kept.add(t);
+    }
+    return kept;
+  };
+  const wide = fit(0, ticks);
+  const narrow = fit(1, [...wide]);
+  const phone = fit(2, [...narrow]);
   const marks = ticks
-    .filter((t) => t.kind === 'start' || (x(t.at) - (placed.findLast((q) => t.at >= q.from) ?? placed[0]).left >= 8 && !before(t)))
-    .map((t) => `<span class="sf-floor-tick sf-floor-tick-${e(t.kind)}${x(t.at) > END ? ' sf-floor-tick-end' : ''}" style="left:${x(t.at)}%">${e(t.label)}</span>`)
+    .filter((t) => wide.has(t))
+    .map(
+      (t) =>
+        `<span class="sf-floor-tick sf-floor-tick-${e(t.kind)}${flips(t, 0) ? ' sf-floor-tick-end' : flips(t, 1) ? ' sf-floor-tick-end-narrow' : flips(t, 2) ? ' sf-floor-tick-end-phone' : ''}${narrow.has(t) ? '' : ' sf-floor-tick-wide'}${
+          phone.has(t) ? '' : ' sf-floor-tick-roomy'
+        }" style="left:${x(t.at)}%">${e(t.label)}</span>`
+    )
     .join('');
   return `<div class="sf-floor" style="--sf-rows:${rows}">
               <ul class="sf-floor-names">${labels}</ul>

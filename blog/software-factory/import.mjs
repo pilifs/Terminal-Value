@@ -618,6 +618,13 @@ export function normalizeSources(raw, config = loadConfig()) {
       if (!isObject(l) || !LOOP_NAME.test(l.loop ?? '') || typeof l.category !== 'string' || typeof l.kind !== 'string') bad(LOOPS, `loops[${i}] lacks a loop, category or kind`);
       return { loop: l.loop, category: l.category, kind: l.kind, streamOf: LOOP_NAME.test(l.stream_of ?? '') ? l.stream_of : null, ...group(`loops[${i}]`, l) };
     });
+    // When each cycle that committed ended, by run: the notches on a run's bar.
+    // A file without cycles, or a cycle without an end, gives none.
+    const cycleEnds = new Map();
+    for (const c of Array.isArray(loopsDoc.cycles) ? loopsDoc.cycles : []) {
+      if (!isObject(c) || typeof c.run !== 'string' || !isCount(c.commits) || !c.commits || !isInstant(c.ended)) continue;
+      (cycleEnds.get(c.run) ?? cycleEnds.set(c.run, []).get(c.run)).push(Date.parse(c.ended));
+    }
     const loopRuns = list(LOOPS, loopsDoc, 'runs').map((r, i) => {
       const at = `runs[${i}]`;
       if (!isObject(r) || typeof r.run !== 'string' || !LOOP_NAME.test(r.loop ?? '') || typeof r.kind !== 'string' || !isInstant(r.started)) bad(LOOPS, `${at} lacks a run, loop, kind or start`);
@@ -627,11 +634,18 @@ export function normalizeSources(raw, config = loadConfig()) {
         loop: r.loop,
         kind: r.kind,
         category: strOrNull(r.category),
+        // The brief a stream belongs to: the run's own word for it, or its loop's.
+        streamOf: LOOP_NAME.test(r.stream_of ?? '') ? r.stream_of : (loops.find((l) => l.loop === r.loop)?.streamOf ?? null),
         source: strOrNull(r.source),
         started: new Date(r.started).toISOString(),
         ended: isInstant(r.ended) ? new Date(r.ended).toISOString() : null,
         outcome: strOrNull(r.outcome),
         interjections: r.interjections,
+        // Seconds from the run's start to the end of each cycle that committed, in order.
+        ticks: (cycleEnds.get(r.run) ?? [])
+          .map((ms) => Math.round((ms - Date.parse(r.started)) / 1000))
+          .filter((s) => s >= 0)
+          .sort((a, b) => a - b),
         ...stat(at, r),
       };
     });
