@@ -45,7 +45,7 @@ function peak(runs) {
   return best;
 }
 
-export function aggregateFactory(normalized, { config, days, day, modelIds, label, area, areaLabel, changeRecords }) {
+export function aggregateFactory(normalized, { config, days, day, modelIds, label, area, areaLabel, changeRecords, changeTook = new Map() }) {
   const { sessions, prompts, tools, sessionCommits, runs, code: git } = normalized;
   const dayIndex = new Map(days.map((d, i) => [d, i]));
   const modelIndex = new Map(modelIds.map((m, i) => [m, i]));
@@ -66,7 +66,15 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       const [added, removed] = codeLines(c.lines);
       const seen = changeFacts.get(c.changeId);
       // A change id rewritten into several commits keeps the newest (git log lists newest first).
-      if (!seen) changeFacts.set(c.changeId, { commit: c.sha, committedAt: c.committedAt, codeAdded: added, codeRemoved: removed });
+      if (!seen)
+        changeFacts.set(c.changeId, {
+          commit: c.sha,
+          committedAt: c.committedAt,
+          codeAdded: added,
+          codeRemoved: removed,
+          // Never more than it added: blame can credit a merge with lines numstat gave its parents.
+          codeSurviving: git.blame ? Math.min(added, git.blame[c.sha] ?? 0) : null,
+        });
     }
 
   // --- Feature loops ------------------------------------------------------
@@ -87,6 +95,24 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       windows.push({ run: r, from, to, session: sid, prompts: to === null ? [] : mine.filter((p) => ms(p.start) <= to) });
     });
   }
+  // Who set off a tool call: the sender of the latest prompt before it in its
+  // session (config/loops.json, drivers). A notification keeps the driver it follows.
+  const drivers = new Map();
+  for (const [sid, own] of promptsOf) {
+    const marks = [];
+    let current = 'other';
+    for (const p of [...own].sort((a, b) => ms(a.start) - ms(b.start))) {
+      if (p.sender === 'harness') current = 'loop';
+      else if (p.sender === 'person' || p.sender === 'interrupt') current = 'person';
+      else if (p.sender !== 'notification') current = 'other';
+      marks.push([ms(p.start), current]);
+    }
+    drivers.set(sid, marks);
+  }
+  const driverOf = (t) => {
+    const at = ms(t.start);
+    return (drivers.get(t.session) ?? []).findLast((m) => m[0] <= at)?.[1] ?? 'other';
+  };
   const housekeeping = (id) => change.get(id)?.housekeeping === true;
   const runRows = windows
     .map(({ run, from, to, session: sid, prompts: own }) => {
@@ -127,20 +153,27 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
           ? { harness: sent('harness'), person: sent('person'), agent: sent('agent'), interrupt: sent('interrupt'), compactions: own.filter((p) => p.command === '/compact').length }
           : null,
         codeAdded,
+        changeIds: [...commits],
         record: run,
       };
     })
     .sort((a, b) => a.started.localeCompare(b.started) || a.id.localeCompare(b.id));
 
+  // The loop whose run a change was committed in: the earliest such run's.
+  const changeLoop = new Map();
+  for (const r of runRows) for (const id of r.changeIds) if (!changeLoop.has(id)) changeLoop.set(id, r.loop);
+
   const total = (rows, k) => rows.reduce((t, r) => t + (r[k] ?? 0), 0);
   const people = (rows, k) => rows.reduce((t, r) => t + (r.prompts?.[k] ?? 0), 0);
   const sums = (rows) => {
     const measured = rows.filter((r) => r.measured);
+    // A change committed in two of the runs (a stream's, then the merge loop's) counts once.
+    const changed = new Set(rows.flatMap((r) => r.changeIds));
     return {
       runs: rows.length,
       loops: new Set(rows.map((r) => r.loop)).size,
       cycles: total(rows, 'cycles'),
-      commits: total(rows, 'commits'),
+      commits: changed.size,
       calls: total(measured, 'calls'),
       toolCalls: total(measured, 'toolCalls'),
       toolErrors: total(measured, 'toolErrors'),
@@ -155,7 +188,7 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         interrupt: people(measured, 'interrupt'),
         compactions: people(measured, 'compactions'),
       },
-      codeAdded: git ? total(rows, 'codeAdded') : null,
+      codeAdded: git ? [...changed].reduce((t, id) => t + (changeFacts.get(id)?.codeAdded ?? 0), 0) : null,
     };
   };
 
@@ -190,6 +223,16 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         const cell = inRun.get(day(t.start));
         if (cell) cell[spans.some((w) => at >= w.from && at <= w.to) ? 0 : 1]++;
       }
+    }
+    // Who set off each day's tool calls, and how often a person typed.
+    const drive = new Map(days.map((d) => [d, { loop: 0, person: 0, other: 0, typed: 0 }]));
+    for (const t of tools ?? []) {
+      const cell = drive.get(day(t.start));
+      if (cell) cell[driverOf(t)]++;
+    }
+    for (const p of prompts ?? []) {
+      const cell = drive.get(day(p.start));
+      if (cell && (p.sender === 'person' || p.sender === 'interrupt')) cell.typed++;
     }
     loops = {
       coverage: { included: measured.length, total: runRows.length, missing: runRows.length - measured.length, note: 'runs whose session has a prompts table' },
@@ -230,6 +273,12 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         ticks: r.record.cycles.map((c) => Math.max(0, Math.round((ms(c.at) - ms(r.started)) / 1000))),
       })),
       daily: { columns: ['day', 'inRuns', 'outside'], rows: days.map((d, i) => [i, ...inRun.get(d)]).filter((r) => r[1] || r[2]) },
+      drive: {
+        columns: ['day', 'loop', 'person', 'other', 'typed'],
+        rows: days.map((d, i) => [i, drive.get(d).loop, drive.get(d).person, drive.get(d).other, drive.get(d).typed]).filter((r) => r[1] || r[2] || r[3] || r[4]),
+      },
+      // The loop's own scripts: every commit that changed them. Null without a checkout.
+      scripts: git?.scripts ? { paths: config.loops.scripts?.paths ?? [], commits: git.scripts } : null,
     };
   }
 
@@ -270,6 +319,11 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
     const byModel = new Map();
     const buckets = config.code.contextBuckets.map((from, i, list) => ({ from, to: list[i + 1] ?? null, ...tally() }));
     const mode = { runs: tally(), outside: tally() };
+    const hourEdges = config.loops.runHours ?? [0];
+    const runHours = hourEdges.map((from, i) => ({ from, to: hourEdges[i + 1] ?? null, ...tally() }));
+    const parallel = new Map();
+    const ended = windows.filter((w) => w.to !== null);
+    const recovery = { failures: 0, nextOk: 0, nextFailed: 0, noNext: 0, streaks: new Map() };
     const dayTop = new Map();
     const get = (map, key, make = tally) => map.get(key) ?? map.set(key, make()).get(key);
     for (const [sid, own] of toolsOf) {
@@ -285,13 +339,38 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         if (t.family) count(get(byFamily, t.family), t);
         if (t.contextTokens !== null) count(buckets.findLast((b) => t.contextTokens >= b.from) ?? buckets[0], t);
         const at = ms(t.start);
-        count(spans.some((w) => at >= w.from && at <= w.to) ? mode.runs : mode.outside, t);
+        const inside = spans.find((w) => at >= w.from && at <= w.to);
+        count(inside ? mode.runs : mode.outside, t);
+        if (inside) {
+          // How far into its run the call was made, and how many runs were under way then.
+          const h = (at - inside.from) / 3600000;
+          count(runHours.findLast((b) => h >= b.from) ?? runHours[0], t);
+          count(get(parallel, ended.filter((w) => at >= w.from && at <= w.to).length), t);
+        }
         if (kindOf(t)) {
           const source = t.name === 'Bash' && t.family ? `${t.family} (Bash)` : t.name;
           const top = get(dayTop, d, () => new Map());
           top.set(source, (top.get(source) ?? 0) + 1);
         }
       }
+    }
+    // After a failed call: did the session's next call succeed, and how long did failures run on.
+    for (const own of toolsOf.values()) {
+      const ordered = own.filter((t) => dayIndex.has(day(t.start))).sort((a, b) => ms(a.start) - ms(b.start));
+      let streak = 0;
+      ordered.forEach((t, i) => {
+        if (!kindOf(t)) return;
+        recovery.failures++;
+        streak++;
+        const next = ordered[i + 1];
+        if (next?.status === 'ok') recovery.nextOk++;
+        else if (next && kindOf(next)) recovery.nextFailed++;
+        else recovery.noNext++; // the session's last call, or one with no result recorded
+        if (!next || !kindOf(next)) {
+          recovery.streaks.set(streak, (recovery.streaks.get(streak) ?? 0) + 1);
+          streak = 0;
+        }
+      });
     }
     const row = (key, v) => ({ ...key, calls: v.calls, errors: v.errors, exit: v.exit, rejected: v.rejected, denied: v.denied, other: v.other });
     const ranked = (map, name) => [...map].map(([k, v]) => row({ [name]: k }, v)).sort((a, b) => b.calls - a.calls || (a[name] < b[name] ? -1 : 1));
@@ -315,6 +394,17 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
         .slice(0, 12),
       byContext: buckets.filter((b) => b.calls).map(({ from, to, ...v }) => row({ from, to }, v)),
       byMode: { runs: row({}, mode.runs), outside: row({}, mode.outside) },
+      // Inside a run only: by hours since the run started, and by runs under way at the time.
+      byRunHour: runHours.filter((b) => b.calls).map(({ from, to, ...v }) => row({ from, to }, v)),
+      byParallel: [...parallel].sort((a, b) => a[0] - b[0]).map(([runs, v]) => row({ runs }, v)),
+      recovery: {
+        failures: recovery.failures,
+        nextOk: recovery.nextOk,
+        nextFailed: recovery.nextFailed,
+        noNext: recovery.noNext,
+        // [failed calls in a row, how many times]
+        streaks: [...recovery.streaks].sort((a, b) => a[0] - b[0]),
+      },
       // Each day's largest single source of failed calls.
       dayTop: [...dayTop]
         .sort((a, b) => a[0] - b[0])
@@ -345,7 +435,7 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       };
       for (let d = commitDays[0]; d <= commitDays.at(-1); d = next(d)) codeDays.push(d);
     }
-    const perDay = new Map(codeDays.map((d) => [d, [0, 0, 0]]));
+    const perDay = new Map(codeDays.map((d) => [d, [0, 0, 0, 0]]));
     for (const c of git.commits) {
       for (const [id, [added, removed]] of Object.entries(c.lines)) add(id, added, removed);
       if (!c.committedAt) continue;
@@ -354,6 +444,7 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       cell[0] += added;
       cell[1] += removed;
       cell[2]++;
+      cell[3] += git.blame?.[c.sha] ?? 0;
     }
     const part = (id, name) => ({ id, label: name, added: classes.get(id)?.added ?? 0, removed: classes.get(id)?.removed ?? 0, inTree: git.tree[id] ?? 0 });
     const languages = config.code.languages
@@ -362,6 +453,53 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       .sort((a, b) => b.added - a.added || (a.id < b.id ? -1 : 1));
     const totals = languages.reduce((t, l) => ({ added: t.added + l.added, removed: t.removed + l.removed, inTree: t.inTree + l.inTree }), { added: 0, removed: 0, inTree: 0 });
     const joined = git.commits.filter((c) => c.changeId && change.has(c.changeId)).length;
+    // What each change took, where the rollup says: the spread behind the average.
+    const edges = config.code.perLineBuckets ?? [0];
+    const buckets = edges.map((from, i) => ({ from, to: edges[i + 1] ?? null, changes: 0, added: 0, outputTokens: 0 }));
+    const some = () => ({ changes: 0, added: 0, outputTokens: 0, usd: 0 });
+    const withCode = some();
+    const noCode = some();
+    const perLine = [];
+    let untaken = 0;
+    let costed = 0;
+    for (const [id, fact] of changeFacts) {
+      const took = changeTook.get(id);
+      if (!took) continue;
+      costed++;
+      const into = fact.codeAdded > 0 ? withCode : noCode;
+      into.changes++;
+      into.added += fact.codeAdded;
+      into.outputTokens += took.outputTokens;
+      into.usd += took.usd;
+      if (!(fact.codeAdded > 0)) continue;
+      if (!(took.outputTokens > 0)) {
+        untaken++;
+        continue;
+      }
+      const ratio = took.outputTokens / fact.codeAdded;
+      perLine.push(ratio);
+      const b = buckets.findLast((x) => ratio >= x.from) ?? buckets[0];
+      b.changes++;
+      b.added += fact.codeAdded;
+      b.outputTokens += took.outputTokens;
+    }
+    perLine.sort((a, b) => a - b);
+    // Nearest rank: the value at or above which the given share of changes lies.
+    const rank = (q) => (perLine.length ? perLine[Math.max(0, Math.ceil(q * perLine.length) - 1)] : null);
+    const spend = ({ usd: spent, ...v }) => ({ ...v, usd: round6(spent) });
+    const perChange = costed
+      ? {
+          coverage: { included: costed, total: changeFacts.size, missing: changeFacts.size - costed, note: 'committed changes the rollup gives a cost for' },
+          code: spend(withCode),
+          noCode: spend(noCode),
+          // Changes that added code with no output tokens given to them: left out of the spread.
+          untaken,
+          median: rank(0.5),
+          p10: rank(0.1),
+          p90: rank(0.9),
+          buckets,
+        }
+      : null;
     const calls = normalized.calls;
     const outputTokens = calls.reduce((t, c) => t + c.outputTokens, 0);
     const usd = calls.reduce((t, c) => t + (c.usd ?? 0), 0);
@@ -373,15 +511,25 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
       data: part('data', config.code.data.label),
       totals,
       days: codeDays,
-      daily: { columns: ['day', 'added', 'removed', 'commits'], rows: codeDays.map((d, i) => [i, ...perDay.get(d)]).filter((r) => r[3]) },
+      // surviving: of the day's added lines, those still in the tree as written (git blame); null where nothing was blamed.
+      daily: {
+        columns: ['day', 'added', 'removed', 'commits', 'surviving'],
+        rows: codeDays
+          .map((d, i) => {
+            const [added, removed, commits, surviving] = perDay.get(d);
+            return [i, added, removed, commits, git.blame ? Math.min(added, surviving) : null];
+          })
+          .filter((r) => r[3]),
+      },
       outputTokens,
       usd: round6(usd),
       tokensPerLine: totals.added ? outputTokens / totals.added : null,
       usdPerLine: totals.added ? usd / totals.added : null,
       retained: totals.added ? totals.inTree / totals.added : null,
       removedShare: totals.added ? totals.removed / totals.added : null,
+      perChange,
     };
   }
 
-  return { loops, tools: toolsOut, code, runRecords, changeFacts };
+  return { loops, tools: toolsOut, code, runRecords, changeFacts, changeLoop };
 }

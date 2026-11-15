@@ -159,3 +159,24 @@ export function parseTree(text, code) {
   }
   return tree;
 }
+
+/**
+ * `git blame -w -M --incremental` of one or more files, joined: the lines each
+ * commit still holds at the blamed revision. An entry starts with a line of
+ * '<sha> <source line> <result line> <lines>'; every other line has a keyword first.
+ */
+export function parseBlame(text) {
+  const lines = {};
+  for (const m of text.matchAll(/^([0-9a-f]{40}) \d+ \d+ (\d+)$/gm)) lines[m[1]] = (lines[m[1]] ?? 0) + Number(m[2]);
+  return lines;
+}
+
+/** `git log --format=%H%x09%ct%x09%s`: the commits that changed the loop's own scripts, oldest first. */
+export function parseScriptLog(text) {
+  const commits = [];
+  for (const line of text.split('\n')) {
+    const m = line.match(/^([0-9a-f]{40})\t(\d+)\t(.*)$/);
+    if (m) commits.push({ sha: m[1], at: new Date(Number(m[2]) * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'), subject: m[3] });
+  }
+  return commits.sort((a, b) => a.at.localeCompare(b.at) || a.sha.localeCompare(b.sha));
+}

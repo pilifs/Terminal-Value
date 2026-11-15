@@ -1517,3 +1517,119 @@ body.software-factory .sf-tool-tables .sf-breakdown,
 body.software-factory .sf-code-tables .sf-breakdown {
   overflow-x: auto;
 }
+
+/* Who set off the work; code that still stands; a day the loop's scripts changed. */
+body.software-factory {
+  --sf-c-other-driver: #6250d6;
+}
+@media (prefers-color-scheme: dark) {
+  body.software-factory {
+    --sf-c-other-driver: #9085e9;
+  }
+}
+body.software-factory .sf-seg.sf-series-by-loop,
+body.software-factory .sf-seg.sf-series-reach,
+body.software-factory .sf-seg.sf-series-kept { fill: var(--sf-mark); }
+body.software-factory .sf-swatch.sf-series-by-loop,
+body.software-factory .sf-swatch.sf-series-kept { background: var(--sf-mark); }
+body.software-factory .sf-seg.sf-series-by-person,
+body.software-factory .sf-seg.sf-series-gone { fill: var(--sf-neutral); }
+body.software-factory .sf-swatch.sf-series-by-person,
+body.software-factory .sf-swatch.sf-series-gone { background: var(--sf-neutral); }
+body.software-factory .sf-seg.sf-series-by-other { fill: var(--sf-c-other-driver); }
+body.software-factory .sf-swatch.sf-series-by-other { background: var(--sf-c-other-driver); }
+body.software-factory .sf-chart .sf-flag {
+  fill: var(--sf-text);
+}
+body.software-factory .sf-swatch.sf-swatch-flag {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 0;
+  background: var(--sf-text);
+  transform: rotate(45deg);
+}
+body.software-factory .sf-subhead-follow {
+  margin-top: 1.25rem;
+  padding-top: 0;
+  border-top: 0;
+}
+body.software-factory .sf-figures-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+body.software-factory .sf-breakdown-wide {
+  grid-column: 1 / -1;
+}
+body.software-factory .sf-table tr.sf-total :is(th, td) {
+  font-weight: 650;
+}
+body.software-factory .sf-history-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+body.software-factory .sf-history-list > li {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--sf-rule);
+}
+body.software-factory .sf-history-list time {
+  color: var(--sf-muted);
+  font-family: var(--sf-mono);
+  font-size: 0.8125rem;
+}
+body.software-factory .sf-history-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+body.software-factory .sf-history-list ul li + li {
+  margin-top: 0.3rem;
+}
+@media (max-width: 40rem) {
+  body.software-factory .sf-figures-three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Every change as a dot. */
+body.software-factory .sf-plot .sf-dot {
+  fill-opacity: 0.62;
+  stroke: var(--sf-surface);
+  stroke-width: 0.75;
+}
+body.software-factory .sf-plot .sf-dot.sf-series-by-loop { fill: var(--sf-mark); }
+body.software-factory .sf-plot .sf-dot.sf-series-by-person { fill: var(--sf-neutral); }
+body.software-factory .sf-plot a:hover .sf-dot,
+body.software-factory .sf-plot a:focus-visible .sf-dot,
+body.software-factory .sf-plot .sf-dot:hover {
+  fill-opacity: 1;
+  stroke: var(--sf-text);
+  stroke-width: 1.25;
+}
+body.software-factory .sf-plot .sf-guide {
+  stroke: var(--sf-text);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.55;
+}
+body.software-factory .sf-plot .sf-guide-label {
+  fill: var(--sf-text);
+}
+body.software-factory .sf-spread {
+  margin-top: 0.5rem;
+}
+body.software-factory .sf-change-plot {
+  margin-top: 0.9rem;
+}
+body.software-factory .sf-shell .sf-history-list a {
+  color: var(--sf-text);
+  text-decoration: none;
+}
+body.software-factory .sf-shell .sf-history-list a:hover {
+  color: var(--sf-accent);
+  text-decoration: underline;
+}

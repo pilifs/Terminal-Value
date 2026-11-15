@@ -13,7 +13,7 @@
 
 import { chartSvg, chartTable } from './chart.js';
 import { detailCount, detailTable, FIRST_ROWS } from './details.js';
-import { campaignRunsHtml, codeHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, heroHtml, loopsHtml, toolChartHtml, toolsHtml } from './factory.js';
 import { escapeHtml as e, formatCoverage, formatValue } from './format.js';
 import { METRICS, trend, usageBreakdown } from './measures-local.js';
 import { computeMeasures, series } from './measures.js';
@@ -254,12 +254,29 @@ async function start(shell) {
       body.innerHTML = '<p>These runs could not be loaded. Close this and open it again to retry.</p>';
     }
   }
+  // Every change as a dot, from the changes collection: drawn when opened.
+  async function openChangePlot(d) {
+    const body = $('[data-sf-change-plot-body]', d);
+    const snap = current;
+    if (d.dataset.loaded === snap.manifest.snapshotId) return;
+    body.innerHTML = '<p class="sf-muted">Loading…</p>';
+    try {
+      const file = await loadCollection(snap, 'changes', { fetch: get });
+      if (snap !== current) return;
+      body.innerHTML = changePlotHtml(file.records, { median: Number(d.dataset.median) || null });
+      d.dataset.loaded = snap.manifest.snapshotId;
+      readyFactory(body);
+    } catch {
+      body.innerHTML = '<p>These changes could not be loaded. Close this and open it again to retry.</p>';
+    }
+  }
   // toggle doesn't bubble, so it is caught on the way down.
   shell.addEventListener(
     'toggle',
     (ev) => {
       const d = ev.target;
       if (d.matches?.('[data-sf-campaign]') && d.open) openCampaign(d);
+      if (d.matches?.('[data-sf-change-plot]') && d.open) openChangePlot(d);
     },
     true
   );

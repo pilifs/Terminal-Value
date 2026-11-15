@@ -7,7 +7,7 @@
 // inside of its section. A snapshot made before these were measured has no
 // overview.loops, .tools or .code: each section then says so, and shows no number.
 
-import { columnsSvg, lanesHtml, legendHtml } from './figures.js';
+import { columnsSvg, lanesHtml, legendHtml, scatterSvg } from './figures.js';
 import { escapeHtml as e, formatCoverage, formatDay, formatValue } from './format.js';
 import { torontoDay } from './measures-local.js';
 
@@ -51,10 +51,6 @@ export const KINDS = [
   { key: 'denied', label: 'Permission denied' },
   { key: 'other', label: 'Other error' },
 ];
-const MODES = [
-  { key: 'runs', label: 'Inside a loop run' },
-  { key: 'outside', label: 'Outside one' },
-];
 
 const unavailable = (title, why) =>
   `<p class="sf-eyebrow">${e(title)}</p><div class="sf-empty" role="status"><p>${e(why)}</p><p>No numbers are shown rather than numbers that weren't measured.</p></div>`;
@@ -86,8 +82,10 @@ export function heroHtml(snapshot, { title, lede }) {
           <p class="sf-hero-links"><a class="sf-button" href="#loops">See the loops</a> <a class="sf-button sf-button-quiet" href="methodology/">How it is measured</a></p>
         </div>`;
 
+  const drive = (loops.drive?.rows ?? []).reduce((a, r) => [a[0] + r[1], a[1] + r[1] + r[2] + r[3]], [0, 0]);
   const strip = [
-    [hours(t.agentSeconds), `of agent time inside ${plural(t.runs, 'loop run')}`, '#loops'],
+    drive[1] ? [pct(drive[0] / drive[1], 0), 'of all tool calls were set off by the loop’s own prompt', '#loops'] : null,
+    drive[1] ? null : [hours(t.agentSeconds), `of agent time inside ${plural(t.runs, 'loop run')}`, '#loops'],
     loops.longest ? [span(loops.longest.seconds), 'the longest run nobody typed into', '#loops'] : null,
     [count(loops.peakParallel.runs), `${loops.peakParallel.runs === 1 ? 'loop' : 'loops'} running side by side at the peak`, '#loops'],
     tools ? [pct(rate(tools.totals.ok, tools.totals.calls)), `of ${count(tools.totals.calls)} tool calls succeeded`, '#tools'] : null,
@@ -205,40 +203,101 @@ function campaignTable(campaigns) {
           </div>`;
 }
 
-/** Tool calls per day, inside a recorded run and outside one. */
-function shiftFigure(overview) {
-  const { loops, days } = overview;
-  const byDay = new Map(loops.daily.rows.map((r) => [r[0], r]));
-  const points = days.map((day, i) => {
-    const r = byDay.get(i);
-    if (!r) return { day, up: null, tip: `${formatDay(day)}: no tool calls` };
-    const total = r[1] + r[2];
-    return { day, up: [r[1], r[2]], tip: `${formatDay(day)}: ${count(r[1])} of ${count(total)} tool calls inside a loop run (${pct(rate(r[1], total), 0)})` };
-  });
-  const rows = points
-    .map((p) =>
-      p.up === null
-        ? `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td colspan="3"><span class="sf-muted">No tool calls</span></td></tr>`
-        : `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td>${count(p.up[0])}</td><td>${count(p.up[1])}</td><td>${e(pct(rate(p.up[0], p.up[0] + p.up[1]), 0))}</td></tr>`
+const DRIVERS = [
+  { key: 'by-loop', label: 'The loop’s own prompt' },
+  { key: 'by-person', label: 'A prompt a person typed' },
+  { key: 'by-other', label: 'A slash command or another agent' },
+];
+
+/** The loop's own scripts, commit by commit: how the loop itself changed. */
+function scriptsHtml(scripts, days) {
+  if (!scripts?.commits.length) return '';
+  const first = scripts.commits[0];
+  const last = scripts.commits.at(-1);
+  const items = [...Map.groupBy(scripts.commits, (c) => torontoDay(c.at))]
+    .map(
+      ([day, list]) =>
+        `<li><time datetime="${e(day)}">${e(formatDay(day, { year: false }))}</time><ul>${list
+          .map((c) => `<li><a href="${REPO}/commit/${e(c.sha)}">${e(c.subject)}</a></li>`)
+          .join('')}</ul></li>`
     )
     .join('');
-  const firstRun = loops.daily.rows.find((r) => r[1] > 0);
-  const since = loops.daily.rows.filter((r) => firstRun && r[0] >= firstRun[0]);
-  const share = rate(
-    since.reduce((t, r) => t + r[1], 0),
-    since.reduce((t, r) => t + r[1] + r[2], 0)
+  return `<details class="sf-data-table sf-history"><summary>How the loop itself changed: ${plural(scripts.commits.length, 'commit')} to its scripts, ${e(dayOf(first.at))} to ${e(
+    dayOf(last.at)
+  )}</summary><p class="sf-caption">Every commit to ${scripts.paths.map((f) => `<code>${e(f.slice(f.lastIndexOf('/') + 1))}</code>`).join(', ')}, oldest first, by its own summary line.</p><ol class="sf-history-list">${items}</ol></details>`;
+}
+
+/** Who set off each day's tool calls, and how many tool calls each typed prompt was matched by. */
+function driveFigure(overview) {
+  const { loops, days } = overview;
+  if (!loops.drive) return '';
+  const byDay = new Map(loops.drive.rows.map((r) => [r[0], r]));
+  const changed = new Map();
+  for (const c of loops.scripts?.commits ?? []) changed.set(torontoDay(c.at), (changed.get(torontoDay(c.at)) ?? 0) + 1);
+  const rows = days.map((day, i) => {
+    const r = byDay.get(i);
+    const flag = changed.get(day) ?? 0;
+    const note = flag ? `; the loop’s scripts changed in ${plural(flag, 'commit')}` : '';
+    if (!r || !(r[1] + r[2] + r[3])) return { day, flag, total: 0, up: null, tip: `${formatDay(day)}: no tool calls${note}` };
+    const total = r[1] + r[2] + r[3];
+    return {
+      day,
+      flag,
+      total,
+      typed: r[4],
+      up: [r[1], r[2], r[3]],
+      per: r[4] ? total / r[4] : null,
+      tip: `${formatDay(day)}: ${count(total)} tool calls, ${count(r[1])} set off by the loop’s own prompt (${pct(rate(r[1], total), 0)}), ${count(r[2])} by a person’s${note}`,
+    };
+  });
+  const measured = rows.filter((p) => p.up !== null);
+  const sum = (k) => measured.reduce((t, p) => t + p.up[k], 0);
+  const all = sum(0) + sum(1) + sum(2);
+  const firstLoop = measured.find((p) => p.up[0] > 0);
+  const ratios = measured.filter((p) => p.per !== null);
+  const first = ratios[0];
+  const peak = ratios.reduce((a, b) => (a === null || b.per > a.per ? b : a), null);
+  const short = (p) => formatDay(p.day, { year: false });
+  const leverage = rows.map((p) =>
+    p.up === null || p.per === null
+      ? { day: p.day, up: null, tip: p.up === null ? `${formatDay(p.day)}: no tool calls` : `${formatDay(p.day)}: ${count(p.total)} tool calls, no prompt typed by a person` }
+      : { day: p.day, up: [p.per], tip: `${formatDay(p.day)}: ${count(p.total)} tool calls and ${plural(p.typed, 'prompt')} typed by a person, ${count(p.per)} for each` }
   );
-  return `<div class="sf-subhead"><h3>Where the work happens</h3>${legendHtml(MODES)}</div>
-          <p class="sf-caption">Tool calls per day (Toronto days), inside a recorded loop run and outside one.${
-            firstRun ? ` Since the first recorded run on ${e(formatDay(days[firstRun[0]], { year: false }))}, ${e(pct(share, 0))} of tool calls were made inside a run.` : ''
-          } Loops before then left no run record, so their work counts as outside.</p>
-          <div class="sf-chart-wrap">${columnsSvg(points, {
-            id: 'sf-chart-shift',
-            title: 'Tool calls per day, inside a loop run and outside one',
-            series: { up: MODES },
-            desc: `${loops.daily.rows.length} of ${days.length} days with tool calls.`,
+  const table = rows
+    .map((p) =>
+      p.up === null
+        ? `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td colspan="6"><span class="sf-muted">No tool calls</span></td><td>${p.flag ? count(p.flag) : ''}</td></tr>`
+        : `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td>${count(p.up[0])}</td><td>${count(p.up[1])}</td><td>${count(p.up[2])}</td><td>${e(
+            pct(rate(p.up[0], p.total), 0)
+          )}</td><td>${count(p.typed)}</td><td>${p.per === null ? '<span class="sf-muted">None typed</span>' : count(p.per)}</td><td>${p.flag ? count(p.flag) : ''}</td></tr>`
+    )
+    .join('');
+  const flagged = rows.some((p) => p.flag);
+  return `<div class="sf-subhead"><h3>Who set off the work</h3>${legendHtml(DRIVERS, { flag: flagged ? 'The loop’s scripts changed' : null })}</div>
+          <p class="sf-caption">Tool calls per day (Toronto days), by who sent the prompt that set them off. The loop’s own prompts are behind ${e(pct(rate(sum(0), all), 0))} of all ${count(all)} tool calls${
+            firstLoop ? `, from none before ${e(short(firstLoop))}` : ''
+          }. This needs no run record, so it reaches back before the first one. <a href="methodology/#def-loop_drive">Definition</a></p>
+          <div class="sf-chart-wrap">${columnsSvg(rows, {
+            id: 'sf-chart-drive',
+            title: 'Tool calls per day, by who set them off',
+            series: { up: DRIVERS },
+            desc: `${measured.length} of ${days.length} days with tool calls.`,
           })}</div>
-          <details class="sf-data-table"><summary>Data table</summary><table class="sf-table"><thead><tr><th scope="col">Day (Toronto)</th><th scope="col">Inside a run</th><th scope="col">Outside</th><th scope="col">Share inside</th></tr></thead><tbody>${rows}</tbody></table></details>`;
+          ${
+            first && peak
+              ? `<div class="sf-subhead sf-subhead-follow"><h3>Tool calls for each prompt a person typed</h3></div>
+          <p class="sf-caption">A day’s tool calls, in every session, divided by the prompts a person typed that day: ${count(first.per)} on ${e(short(first))}, ${count(peak.per)} on ${e(short(peak))}. A person’s prompt often starts a loop, so this is reach, not absence.</p>
+          <div class="sf-chart-wrap">${columnsSvg(leverage, {
+            id: 'sf-chart-reach',
+            title: 'Tool calls for each prompt a person typed, per day',
+            series: { up: [{ key: 'reach', label: 'Tool calls for each prompt a person typed' }] },
+            desc: `${ratios.length} of ${days.length} days with a prompt typed by a person.`,
+            slim: true,
+          })}</div>`
+              : ''
+          }
+          <details class="sf-data-table"><summary>Data table</summary><table class="sf-table"><thead><tr><th scope="col">Day (Toronto)</th><th scope="col">Set off by the loop</th><th scope="col">By a person</th><th scope="col">By a command or agent</th><th scope="col">Loop’s share</th><th scope="col">Prompts typed</th><th scope="col">Tool calls for each</th><th scope="col">Script commits</th></tr></thead><tbody>${table}</tbody></table></details>
+          ${scriptsHtml(loops.scripts, days)}`;
 }
 
 /** What the live panel will show, with example data: only ever in a preview build, and labelled. */
@@ -297,7 +356,7 @@ export function loopsHtml(snapshot) {
         }</p>
         <dl class="sf-figures">${figures}</dl>
         <p class="sf-coverage">Coverage: ${e(formatCoverage(loops.coverage))} · All time; the filters below don't apply · <a href="methodology/#def-loop_person_prompts">What counts as a prompt from a person</a></p>
-        ${shiftFigure(snapshot.overview)}
+        ${driveFigure(snapshot.overview)}
         <div class="sf-subhead"><h3>Campaign by campaign</h3></div>
         <p class="sf-caption">In the order they ran. At once is the most loops under way together. Failed is the share of tool calls that failed, which is not a failed loop: see the tools below.</p>
         ${campaignTable(campaigns)}
@@ -474,6 +533,9 @@ export function toolsHtml(snapshot) {
         <div class="sf-subhead sf-subhead-legend">${legendHtml(KINDS)}</div>
         <p class="sf-caption">Share of each day's tool calls that failed, by how. Days are Toronto days; a short mark on the baseline is a day with no tool calls. The data table names each day's largest source of failures.</p>
         <div data-sf-tool-chart>${toolChartHtml(snapshot.overview)}</div>
+        ${recoveryHtml(tools)}
+        <div class="sf-subhead"><h3>What failures follow, and what they don’t</h3></div>
+        <p class="sf-caption">The same failed calls, cut six ways. Each table describes where failures happened; none of them is an experiment.</p>
         <div class="sf-breakdowns sf-tool-tables">
           <section class="sf-breakdown" id="tools-stumbles" aria-labelledby="tools-stumbles-title">
             <h3 id="tools-stumbles-title">Where they stumbled</h3>
@@ -506,12 +568,140 @@ export function toolsHtml(snapshot) {
               { ...modes.outside, label: 'Outside one' },
             ],
           })}
+          ${
+            tools.byRunHour?.length > 1
+              ? rateTable({
+                  id: 'tools-by-run-hour',
+                  title: 'By time into a run',
+                  caption: `Calls made inside a recorded run, by how long it had been going. Under ${plural(tools.byRunHour[0].to, 'hour')} in, ${e(
+                    pct(rate(tools.byRunHour[0].errors, tools.byRunHour[0].calls))
+                  )} failed; ${plural(tools.byRunHour.at(-1).from, 'hour')} in and later, ${e(pct(rate(tools.byRunHour.at(-1).errors, tools.byRunHour.at(-1).calls)))}.`,
+                  head: 'Since the run started',
+                  rows: tools.byRunHour.map((b) => ({ ...b, label: e(hourBucket(b)) })),
+                })
+              : ''
+          }
+          ${
+            tools.byParallel?.length > 1
+              ? rateTable({
+                  id: 'tools-by-parallel',
+                  title: 'By loops running at once',
+                  caption: 'Calls made inside a recorded run, by how many recorded runs were under way at that moment.',
+                  head: 'Under way',
+                  rows: tools.byParallel.map((b) => ({ ...b, label: b.runs === 1 ? 'One loop alone' : `${e(word(b.runs))} at once` })),
+                })
+              : ''
+          }
         </div>`;
+}
+
+const hourBucket = (b) => (b.to === null ? `${plural(b.from, 'hour')} and over` : b.from === 0 ? `Under ${plural(b.to, 'hour')}` : `${count(b.from)} to ${plural(b.to, 'hour')}`);
+
+/** What followed a failed call: the next call in its session, and how long failures ran on. */
+function recoveryHtml(tools) {
+  const r = tools.recovery;
+  if (!r || !r.failures) return '';
+  const streaks = r.streaks.reduce((t, [, n]) => t + n, 0);
+  const alone = r.streaks.find(([length]) => length === 1)?.[1] ?? 0;
+  const longest = r.streaks.at(-1)?.[0] ?? 0;
+  const list = r.streaks.map(([length, n]) => `${plural(length, 'call')} ${n === 1 ? 'once' : `${count(n)} times`}`).join(', ');
+  return `<div class="sf-subhead"><h3>After a failure</h3></div>
+        <p class="sf-caption">What the next tool call in the same session did. The trace doesn’t say whether it was a retry. <a href="methodology/#def-tool_recovery">Definition</a></p>
+        <dl class="sf-figures sf-figures-three">${[
+          tile('Next call succeeded', pct(rate(r.nextOk, r.failures)), `${count(r.nextOk)} of ${count(r.failures)} failed calls`),
+          tile('Failures that stood alone', pct(rate(alone, streaks)), `${count(alone)} of ${plural(streaks, 'streak')} were one call long`),
+          tile('Most failures in a row', plural(longest, 'call'), e(`In a row: ${list}`)),
+        ].join('')}</dl>`;
 }
 
 // --- Code ---------------------------------------------------------------------
 
 const CODE_SERIES = { up: [{ key: 'added', label: 'Lines added' }], down: [{ key: 'removed', label: 'Lines removed' }] };
+// Where git blame was read: a day's added lines, by whether they still stand.
+const STANDING = { up: [{ key: 'kept', label: 'Still in the tree as written' }, { key: 'gone', label: 'Since rewritten or removed' }] };
+
+const perLineBucket = (b) => (b.to === null ? `${count(b.from)} and over` : b.from === 0 ? `Under ${count(b.to)}` : `${count(b.from)} to ${count(b.to)}`);
+const PLOT_SERIES = [
+  { key: 'by-loop', label: 'Committed inside a loop run' },
+  { key: 'by-person', label: 'Outside one' },
+];
+
+/** The spread behind the average: what each change took, and a plot of every change, drawn when opened. */
+function perChangeHtml(code) {
+  const pc = code.perChange;
+  if (!pc || pc.median === null) return '';
+  const spent = pc.code.outputTokens + pc.noCode.outputTokens;
+  const spread = pc.buckets.reduce((t, b) => t + b.changes, 0);
+  const most = Math.max(1, ...pc.buckets.map((b) => b.changes));
+  const rows = pc.buckets
+    .map(
+      (b) =>
+        `<tr><th scope="row">${e(perLineBucket(b))}</th><td>${count(b.changes)}<span class="sf-share" aria-hidden="true"><span style="width:${((b.changes / most) * 100).toFixed(1)}%"></span></span></td><td>${count(b.added)}</td><td>${e(
+          pct(rate(b.added, pc.code.added))
+        )}</td></tr>`
+    )
+    .join('');
+  return `<div class="sf-subhead"><h3>What a change took</h3></div>
+        <p class="sf-caption">The average hides a wide spread. Each recorded change has its own commit and its own cost, so the same division can be done change by change. ${
+          pc.untaken ? `${plural(pc.untaken, 'change')} that added code had no output tokens given to ${pc.untaken === 1 ? 'it' : 'them'} and ${pc.untaken === 1 ? 'is' : 'are'} left out of the spread. ` : ''
+        }<a href="methodology/#def-tokens_per_change">Definition</a></p>
+        <dl class="sf-figures sf-figures-three">${[
+          tile('The middle change', `${count(pc.median)} per line`, `one in ten under ${count(pc.p10)}, one in ten over ${count(pc.p90)}`),
+          tile('Output tokens that went to code', pct(rate(pc.code.outputTokens, spent)), `${count(pc.code.outputTokens)} of ${count(spent)} given to a change`),
+          tile('Changes that added code', `${count(pc.code.changes)} of ${count(pc.code.changes + pc.noCode.changes)}`, `${count(pc.noCode.changes)} touched only docs, briefs or data`),
+        ].join('')}</dl>
+        <p class="sf-coverage">Coverage: ${e(formatCoverage(pc.coverage))}</p>
+        <table class="sf-table sf-spread"><thead><tr><th scope="col">Output tokens per line</th><th scope="col">Changes</th><th scope="col">Lines of code</th><th scope="col">Share of all code</th></tr></thead><tbody>${rows}</tbody></table>
+        <details class="sf-data-table sf-change-plot" data-sf-change-plot data-median="${e(pc.median)}">
+          <summary>Every change, plotted: ${plural(spread, 'change')} by lines of code and output tokens</summary>
+          <div data-sf-change-plot-body><p class="sf-caption">Loaded when opened, from this snapshot's changes.</p></div>
+        </details>`;
+}
+
+/** Every change that added code and was given output tokens, as a dot: drawn when a reader opens it. */
+export function changePlotHtml(records, { median = null } = {}) {
+  const own = records.filter((r) => r.codeAdded > 0 && r.outputTokens > 0);
+  if (!own.length) return '<p class="sf-muted">No change in this snapshot has both code lines and output tokens.</p>';
+  const points = own.map((r) => ({
+    x: r.codeAdded,
+    y: r.outputTokens,
+    key: r.loop ? 'by-loop' : 'by-person',
+    href: r.commit ? `${REPO}/commit/${r.commit}` : null,
+    tip: `${r.summary} · +${count(r.codeAdded)} lines, ${count(r.outputTokens)} output tokens, ${count(r.outputTokens / r.codeAdded)} per line${r.loop ? ` · ${r.loop}` : ''}`,
+  }));
+  const inLoop = own.filter((r) => r.loop).length;
+  return `<div class="sf-subhead sf-subhead-legend">${legendHtml(PLOT_SERIES)}</div>
+          <p class="sf-caption">One dot per change: lines of code added across, output tokens up, both on log scales. ${plural(inLoop, 'dot')} of ${count(own.length)} were committed inside a recorded loop run. ${
+            median ? 'Dots above the line took more per line than the middle change. ' : ''
+          }A dot opens its commit; <a href="#explore-changes">Recent changes</a> lists the same records as a table.</p>
+          <div class="sf-chart-wrap">${scatterSvg(points, {
+            id: 'sf-chart-changes',
+            title: 'Output tokens against lines of code added, one dot per change',
+            desc: `${own.length} changes. The changes table lists each one.`,
+            xLabel: 'Lines of code added',
+            yLabel: 'Output tokens',
+            guide: median ? { slope: median, label: `${count(median)} per line, the middle change` } : null,
+          })}</div>`;
+}
+
+/** Lines of code and what they took, campaign by campaign, inside the loops and outside them. */
+function codeByLoop(overview) {
+  const { loops, code } = overview;
+  if (!loops || loops.totals.codeAdded === null || !loops.totals.codeAdded) return '';
+  const line = (label, added, tokens, usd, strong = false) =>
+    `<tr${strong ? ' class="sf-total"' : ''}><th scope="row">${label}</th><td>${count(added)}</td><td>${added ? count(tokens / added) : 'No data'}</td><td>${added ? e(formatValue((usd / added) * 1000, 'usd')) : 'No data'}</td></tr>`;
+  const t = loops.totals;
+  const rows = [
+    ...loops.campaigns.filter((c) => c.codeAdded).map((c) => line(`<a href="#loop-${e(c.id)}"><code>${e(c.id)}</code></a>`, c.codeAdded, c.outputTokens, c.usd)),
+    line('Inside loop runs', t.codeAdded, t.outputTokens, t.usd, true),
+    line('Outside them', code.totals.added - t.codeAdded, code.outputTokens - t.outputTokens, code.usd - t.usd, true),
+  ].join('');
+  return `<section class="sf-breakdown sf-breakdown-wide" id="code-by-loop" aria-labelledby="code-by-loop-title">
+            <h3 id="code-by-loop-title">In a loop and outside</h3>
+            <p class="sf-caption"><span class="sf-tag">All time</span> Lines of code in the commits made inside a recorded run, against the output tokens and estimated usage of that run. Outside is everything else: sessions with a person at the keyboard, and the loops that left no record.</p>
+            <table class="sf-table"><thead><tr><th scope="col">Where</th><th scope="col">Lines of code added</th><th scope="col">Output tokens per line</th><th scope="col">Usage per 1,000 lines</th></tr></thead><tbody>${rows}</tbody></table>
+          </section>`;
+}
 
 export function codeHtml(snapshot) {
   const { code } = snapshot.overview;
@@ -519,19 +709,33 @@ export function codeHtml(snapshot) {
     return unavailable('Code', 'This snapshot has no code figures. They are counted from the source repository’s git history, which only a snapshot made from a checkout has.');
   const sha = snapshot.manifest.source.sha;
   const byDay = new Map(code.daily.rows.map((r) => [r[0], r]));
+  // Blamed snapshots split a day's added lines by whether they still stand.
+  const blamed = code.daily.rows.length > 0 && code.daily.rows.every((r) => r[4] !== null && r[4] !== undefined);
   const points = code.days.map((day, i) => {
     const r = byDay.get(i);
-    return r
-      ? { day, up: [r[1]], down: [r[2]], commits: r[3], tip: `${formatDay(day)}: +${count(r[1])} and −${count(r[2])} lines of code in ${plural(r[3], 'commit')}` }
-      : { day, up: null, tip: `${formatDay(day)}: no commits` };
+    if (!r) return { day, up: null, tip: `${formatDay(day)}: no commits` };
+    const base = { day, added: r[1], removed: r[2], commits: r[3], kept: blamed ? r[4] : null };
+    return blamed
+      ? {
+          ...base,
+          up: [r[4], r[1] - r[4]],
+          tip: `${formatDay(day)}: +${count(r[1])} lines of code in ${plural(r[3], 'commit')}; ${count(r[4])} still in the tree as written (${pct(rate(r[4], r[1]))})`,
+        }
+      : { ...base, up: [r[1]], down: [r[2]], tip: `${formatDay(day)}: +${count(r[1])} and −${count(r[2])} lines of code in ${plural(r[3], 'commit')}` };
   });
   const dayRows = points
     .map((p) =>
       p.up === null
-        ? `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td colspan="3"><span class="sf-muted">No commits</span></td></tr>`
-        : `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td>${count(p.commits)}</td><td>${count(p.up[0])}</td><td>${count(p.down[0])}</td></tr>`
+        ? `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td colspan="${blamed ? 5 : 3}"><span class="sf-muted">No commits</span></td></tr>`
+        : `<tr><th scope="row"><time datetime="${p.day}">${e(formatDay(p.day))}</time></th><td>${count(p.commits)}</td><td>${count(p.added)}</td>${
+            blamed ? `<td>${count(p.kept)}</td><td>${e(pct(rate(p.kept, p.added)))}</td>` : ''
+          }<td>${count(p.removed)}</td></tr>`
     )
     .join('');
+  const written = points.filter((p) => p.up !== null && p.added > 0);
+  const least = blamed ? written.reduce((a, b) => (a === null || b.kept / b.added < a.kept / a.added ? b : a), null) : null;
+  const firstHalf = written.slice(0, Math.ceil(written.length / 2));
+  const share = (list) => rate(list.reduce((t, p) => t + p.kept, 0), list.reduce((t, p) => t + p.added, 0));
   const most = Math.max(1, ...code.languages.map((l) => l.added));
   const languageRows = code.languages
     .map(
@@ -561,15 +765,25 @@ export function codeHtml(snapshot) {
           tile('Estimated usage per 1,000 lines', formatValue(code.usdPerLine * 1000, 'usd'), `${e(formatValue(code.usd, 'usd'))} in all`),
         ].join('')}</dl>
         <p class="sf-coverage">Coverage: ${e(formatCoverage(code.coverage))} · All time; the filters below don't apply · <a href="methodology/#def-code_lines">What counts as code</a></p>
-        <div class="sf-subhead"><h3>Code committed per day</h3>${legendHtml([...CODE_SERIES.up, ...CODE_SERIES.down])}</div>
-        <p class="sf-caption">Lines of code added, above the line, and removed, below it, by the day of each commit in Toronto. Both use the same scale.</p>
+        ${
+          blamed
+            ? `<div class="sf-subhead"><h3>How much of each day’s code still stands</h3>${legendHtml(STANDING.up)}</div>
+        <p class="sf-caption">Lines of code added per day (Toronto), split by whether <code>git blame</code> at <code>${e(sha.slice(0, 7))}</code> still gives them to that day’s commits. ${
+          least ? `${e(formatDay(least.day, { year: false }))} was reworked most: ${e(pct(rate(least.kept, least.added)))} of its ${count(least.added)} lines stand. ` : ''
+        }Of the code from the first ${plural(firstHalf.length, 'day')} with commits, ${e(pct(share(firstHalf)))} stands. <a href="methodology/#def-code_surviving">Definition</a></p>`
+            : `<div class="sf-subhead"><h3>Code committed per day</h3>${legendHtml([...CODE_SERIES.up, ...CODE_SERIES.down])}</div>
+        <p class="sf-caption">Lines of code added, above the line, and removed, below it, by the day of each commit in Toronto. Both use the same scale.</p>`
+        }
         <div class="sf-chart-wrap">${columnsSvg(points, {
           id: 'sf-chart-code',
-          title: 'Lines of code added and removed per day',
-          series: CODE_SERIES,
+          title: blamed ? 'Lines of code added per day, by whether they still stand' : 'Lines of code added and removed per day',
+          series: blamed ? STANDING : CODE_SERIES,
           desc: `${code.daily.rows.length} of ${code.days.length} days with commits.`,
         })}</div>
-        <details class="sf-data-table"><summary>Data table</summary><table class="sf-table"><thead><tr><th scope="col">Day (Toronto)</th><th scope="col">Commits</th><th scope="col">Lines added</th><th scope="col">Lines removed</th></tr></thead><tbody>${dayRows}</tbody></table></details>
+        <details class="sf-data-table"><summary>Data table</summary><table class="sf-table"><thead><tr><th scope="col">Day (Toronto)</th><th scope="col">Commits</th><th scope="col">Lines added</th>${
+          blamed ? '<th scope="col">Still standing</th><th scope="col">Share</th>' : ''
+        }<th scope="col">Lines removed that day</th></tr></thead><tbody>${dayRows}</tbody></table></details>
+        ${perChangeHtml(code)}
         <div class="sf-breakdowns sf-code-tables">
           <section class="sf-breakdown" id="code-by-language" aria-labelledby="code-by-language-title">
             <h3 id="code-by-language-title">By language</h3>
@@ -580,11 +794,16 @@ export function codeHtml(snapshot) {
             <h3 id="code-not-code-title">Counted apart, not as code</h3>
             <p class="sf-caption"><span class="sf-tag">All time</span> Prose, and the data the factory generates: results, receipts, logs and its own traces.</p>
             <table class="sf-table"><thead><tr><th scope="col">Kind</th><th scope="col">Added</th><th scope="col">Removed</th><th scope="col">In the tree</th><th scope="col">Still there</th></tr></thead><tbody>${other}</tbody></table>
-            <p class="sf-caption">Each recorded change lists its own commit, lines and tokens under <a href="#explore-changes">Recent changes</a>.</p>
+            <p class="sf-caption">Each recorded change lists its own commit, lines and tokens under <a href="#explore-changes">Recent changes</a>. GitHub draws its own count of every file, generated data included, as <a href="${REPO}/graphs/code-frequency">code frequency</a>.</p>
           </section>
+          ${codeByLoop(snapshot.overview)}
         </div>
         <aside class="sf-note">
           <h3>What this can't say yet</h3>
-          <p>Still in the tree is a coarse measure of rework. It can't tell a line rewritten the next day from one removed on purpose months later. Rework by line age, and what review changed, need git blame and pull request data that no snapshot has yet. The <a href="methodology/#requests">methodology</a> lists what is asked of the source.</p>
+          <p>${
+            blamed
+              ? 'How much of a day’s code was later reworked is measured. When, and why, is not: a line replaced an hour later counts the same as one retired on purpose weeks later.'
+              : 'Still in the tree is a coarse measure of rework. It can’t tell a line rewritten the next day from one removed on purpose months later.'
+          } What review changed isn’t recorded at all, and the source has no pull requests for GitHub to count. The <a href="methodology/#requests">methodology</a> lists what is asked of the source.</p>
         </aside>`;
 }

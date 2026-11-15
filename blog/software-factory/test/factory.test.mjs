@@ -5,11 +5,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, codeHtml, heroHtml, loopsHtml, runningHtml, span, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
-import { shareTicks } from '../../assets/software-factory/figures.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, heroHtml, loopsHtml, runningHtml, span, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
 import { aggregate } from '../metrics.mjs';
-import { campaignOf, classOf, parseGitLog, parseRunRecord, parseTree, senderOf } from '../records.mjs';
+import { campaignOf, classOf, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from '../records.mjs';
 import { validate } from '../validate.mjs';
 
 const config = loadConfig();
@@ -82,6 +82,10 @@ test('who sent a prompt: the loop, another agent, an interruption, or a person',
   assert.equal(sender('<agent-message from="a1"> [Subagent hand-back'), 'agent');
   assert.equal(sender('<cross-session-message from="uds:/run/x">'), 'agent');
   assert.equal(sender('[Request interrupted by user]'), 'interrupt');
+  // The fixed prompts the script sent before it worked from briefs.
+  assert.equal(sender('Add more advanced examples showcasing verification of TLA specs'), 'harness');
+  assert.equal(sender('Enhance relational verification capabilities to be more efficient and accurate'), 'harness');
+  assert.equal(sender('Add more advanced tests'), 'person');
   assert.equal(sender('Continue'), 'person');
   assert.equal(sender('Please work on the brief in x'), 'person', 'only the start of the text counts');
   assert.equal(sender(null), 'person');
@@ -134,6 +138,18 @@ test('git’s log gives each commit’s lines by class: renames by their new pat
   assert.equal(classOf('.github/x.YML', config.code), 'data');
   assert.equal(classOf('lib/Foo.JAVA', config.code), 'java');
   assert.deepEqual(parseTree('12\t0\tlib/a.rs\n3\t0\tdocs/x.md\n-\t-\tx.png\n', config.code), { rust: 12, docs: 3 });
+});
+
+test('git blame gives each commit the lines it still holds; the script log lists commits oldest first', () => {
+  const a = 'a'.repeat(40);
+  const b = 'b'.repeat(40);
+  const blame = `${a} 1 1 3\nauthor A\nsummary ${b} 9 9 9 is a subject, not an entry\nfilename lib/a.rs\n${b} 4 4 2\nfilename lib/a.rs\n\n${a} 7 1 5\nfilename lib/b.rs\n`;
+  assert.deepEqual(parseBlame(blame), { [a]: 8, [b]: 2 });
+  assert.deepEqual(parseBlame(''), {});
+  assert.deepEqual(parseScriptLog(`${b}\t1794744887\tSecond <b>change</b>\n${a}\t1794744000\tFirst\nnot a line\n`), [
+    { sha: a, at: '2026-11-15T12:00:00Z', subject: 'First' },
+    { sha: b, at: '2026-11-15T12:14:47Z', subject: 'Second <b>change</b>' },
+  ]);
 });
 
 // --- Counting ----------------------------------------------------------------
@@ -255,6 +271,7 @@ test('runs side by side: the peak, each campaign’s streams, and a run with no 
   });
   const [campaign] = overview.loops.campaigns;
   assert.deepEqual([campaign.runs, campaign.streams, campaign.peakParallel, campaign.outcome], [3, 2, 2, 'blocked']);
+  assert.deepEqual([overview.loops.runs.map((r) => r.commits), campaign.commits, campaign.codeAdded], [[1, 1, 1], 1, 90], 'a change committed in three runs is one commit, and its lines are counted once');
   const open = overview.loops.runs.find((r) => r.loop === 'demo-values');
   assert.equal(open.ended, '2026-11-07T05:40:00Z', 'it lasts until its last prompt from the loop ends');
   assert.deepEqual(overview.loops.outcomes, { done: 1, open: 1, blocked: 1 });
@@ -304,13 +321,128 @@ test('code: lines by language from git, what is still in the tree, and tokens pe
   assert.equal(c.tokensPerLine, 10, '1,000 output tokens over 100 lines of code');
   assert.deepEqual(c.coverage, { included: 1, total: 2, missing: 1, note: 'commits whose change id the traces record' });
   assert.deepEqual(c.days, ['2026-11-06', '2026-11-07', '2026-11-08']);
-  assert.deepEqual(c.daily.rows, [[0, 90, 10, 1], [2, 10, 5, 1]]);
+  assert.deepEqual(c.daily.rows, [[0, 90, 10, 1, null], [2, 10, 5, 1, null]], 'no blame was read: surviving is null, not zero');
   const change = details.changes.records.find((r) => r.changeId === C1);
   assert.deepEqual(
     { commit: change.commit, codeAdded: change.codeAdded, codeRemoved: change.codeRemoved, calls: change.calls, outputTokens: change.outputTokens, usd: change.usd },
     { commit: 'a'.repeat(40), codeAdded: 90, codeRemoved: 10, calls: 4, outputTokens: 900, usd: 1.5 }
   );
   assert.ok(!('commit' in details.changes.records.find((r) => r.changeId === C2)), 'a change git doesn’t have keeps no commit');
+});
+
+test('who set off the work: each tool call goes to the sender of the prompt before it', () => {
+  const { overview } = run();
+  // 03:00Z is a person's; 04:10 to 04:12 follow the loop's prompt; 12:00Z follows the person's at 07:00Z.
+  assert.deepEqual(overview.loops.drive.rows, [[0, 3, 1, 0, 1], [1, 0, 2, 0, 1]]);
+  const base = normalized();
+  const later = run({
+    prompts: [...base.prompts, prompt('2026-11-07T04:10:30Z', 'notification'), prompt('2026-11-07T04:11:30Z', 'command', { command: '/compact' }), prompt('2026-11-07T04:11:45Z', 'notification')],
+  }).overview;
+  assert.deepEqual(later.loops.drive.rows[0], [0, 2, 1, 1, 1], 'a notification keeps the loop as the driver; a slash command is other, and so is what follows it');
+  assert.equal(overview.loops.scripts, null, 'no script history was read');
+  const html = loopsHtml(snapshotOf(run()));
+  assert.match(html, /Who set off the work/);
+  assert.match(html, /behind 50% of all 6 tool calls/);
+  assert.match(html, /Tool calls for each prompt a person typed/);
+  assert.doesNotMatch(html, /sf-flag|How the loop itself changed/);
+});
+
+test('the loop’s own history: its scripts’ commits, flagged on their days and listed, escaped', () => {
+  const base = normalized();
+  const scripts = [
+    { sha: 'e'.repeat(40), at: '2026-11-07T03:30:00Z', subject: 'Add <b>the loop</b>' },
+    { sha: 'f'.repeat(40), at: '2026-11-07T13:00:00Z', subject: 'Run streams' },
+  ];
+  const out = run({ code: { ...base.code, scripts } });
+  assert.deepEqual(out.overview.loops.scripts, { paths: config.loops.scripts.paths, commits: scripts });
+  const html = loopsHtml(snapshotOf(out));
+  assert.equal(html.match(/class="sf-flag"/g).length, 4, 'two flagged days, each drawn wide and compact');
+  assert.match(html, /How the loop itself changed: 2 commits to its scripts, Nov 6 to Nov 7/);
+  assert.match(html, new RegExp(`<a href="https://github.com/pilifs/in-the-loop/commit/${'e'.repeat(40)}">Add &lt;b&gt;the loop&lt;/b&gt;</a>`));
+  assert.doesNotMatch(html, /<b>the loop/);
+});
+
+test('after a failure: the next call, streaks, and failures by time into a run and by loops at once', () => {
+  const { overview } = run();
+  const t = overview.tools;
+  // 03:00 failed, then 04:10 succeeded; 04:11, 04:12 and 12:00 failed in a row; 12:01 has no result.
+  assert.deepEqual(t.recovery, { failures: 4, nextOk: 1, nextFailed: 2, noNext: 1, streaks: [[1, 1], [3, 1]] });
+  assert.deepEqual(t.byRunHour, [{ from: 0, to: 1, calls: 3, errors: 2, exit: 1, rejected: 1, denied: 0, other: 0 }], 'only the calls inside the run');
+  assert.deepEqual(t.byParallel, [{ runs: 1, calls: 3, errors: 2, exit: 1, rejected: 1, denied: 0, other: 0 }]);
+  const html = toolsHtml(snapshotOf(run()));
+  assert.match(html, /After a failure/);
+  assert.match(html, /1 of 4 failed calls/);
+  assert.match(html, /In a row: 1 call once, 3 calls once/);
+  assert.doesNotMatch(html, /tools-by-run-hour|tools-by-parallel/, 'one row is no comparison: the tables wait for two');
+});
+
+test('rework: git blame splits a day’s code into what stands and what was rewritten', () => {
+  const base = normalized();
+  const out = run({ code: { ...base.code, blame: { ['a'.repeat(40)]: 70, ['b'.repeat(40)]: 12 } } });
+  assert.deepEqual(out.overview.code.daily.rows, [[0, 90, 10, 1, 70], [2, 10, 5, 1, 10]], 'a commit is never credited with more than it added');
+  assert.equal(out.details.changes.records.find((r) => r.changeId === C1).codeSurviving, 70);
+  const html = codeHtml(snapshotOf(out));
+  assert.match(html, /How much of each day’s code still stands/);
+  assert.match(html, /Nov 6 was reworked most: 77\.8% of its 90 lines stand/);
+  assert.match(html, /sf-series-kept/);
+  assert.match(html, /<td>70<\/td><td>77\.8%<\/td>/);
+  const plain = codeHtml(snapshotOf(run()));
+  assert.match(plain, /Code committed per day/);
+  assert.doesNotMatch(plain, /still stands|sf-series-kept/);
+});
+
+test('what a change took: the spread of tokens per line, the loop that made it, and the plot', () => {
+  const base = normalized();
+  // Ids that share no prefix with the run's cycle, which names its change by twelve characters.
+  const D1 = 'z'.repeat(32);
+  const D2 = 'y'.repeat(32);
+  const out = run({
+    changes: [...base.changes, { changeId: D1, summary: 'Docs only', sessions: [S1], housekeeping: false, campaign: null, took: { calls: 1, outputTokens: 300, usd: 0.25 } }, { changeId: D2, summary: 'Free <i>code</i>', sessions: [S1], housekeeping: false, campaign: null, took: { calls: 0, outputTokens: 0, usd: 0 } }],
+    code: {
+      ...base.code,
+      commits: [
+        ...base.code.commits,
+        { sha: 'c'.repeat(40), changeId: D1, committedAt: '2026-11-07T08:00:00.000Z', lines: { docs: [20, 0] } },
+        { sha: 'd'.repeat(40), changeId: D2, committedAt: '2026-11-07T09:00:00.000Z', lines: { rust: [5, 0] } },
+      ],
+    },
+  });
+  const pc = out.overview.code.perChange;
+  assert.deepEqual(pc.coverage, { included: 3, total: 3, missing: 0, note: 'committed changes the rollup gives a cost for' });
+  assert.deepEqual(pc.code, { changes: 2, added: 95, outputTokens: 900, usd: 1.5 });
+  assert.deepEqual(pc.noCode, { changes: 1, added: 0, outputTokens: 300, usd: 0.25 });
+  assert.deepEqual([pc.untaken, pc.median, pc.p10, pc.p90], [1, 10, 10, 10], 'the change with no tokens is left out of the spread');
+  assert.deepEqual(pc.buckets.map((b) => b.changes), [1, 0, 0, 0, 0, 0]);
+  const records = out.details.changes.records;
+  assert.equal(records.find((r) => r.changeId === C1).loop, 'demo-heap', 'committed inside the run');
+  assert.ok(!('loop' in records.find((r) => r.changeId === D1)), 'committed after it');
+  const html = codeHtml(snapshotOf(out));
+  assert.match(html, /What a change took/);
+  assert.match(html, /10 per line/);
+  assert.match(html, /data-sf-change-plot data-median="10"/);
+  const plot = changePlotHtml(records, { median: pc.median });
+  assert.equal(plot.match(/class="sf-dot /g).length, 2, 'one change with code and tokens, drawn wide and compact');
+  assert.match(plot, new RegExp(`<a href="https://github.com/pilifs/in-the-loop/commit/${'a'.repeat(40)}">`));
+  assert.match(plot, /sf-series-by-loop/);
+  assert.match(changePlotHtml([{ changeId: D2, summary: '<i>x</i>', codeAdded: 5, outputTokens: 50 }]), /&lt;i&gt;x&lt;\/i&gt;/);
+  assert.match(changePlotHtml([]), /No change in this snapshot/);
+  assert.equal(run().overview.code.perChange.median, 10);
+  assert.equal(run({ changes: base.changes.map((c) => ({ ...c, took: null })) }).overview.code.perChange, null, 'no cost recorded: no spread, not zeros');
+});
+
+test('the scatter: log axes from the decade below to just above the data, and a guide', () => {
+  const svg = scatterSvg(
+    [
+      { x: 3, y: 500, key: 'by-loop', tip: 'a', href: null },
+      { x: 2000, y: 90000, key: 'by-person', tip: 'b', href: 'https://example.invalid/x' },
+    ],
+    { id: 't', title: 'T', xLabel: 'X', yLabel: 'Y', guide: { slope: 100, label: '100 per line' } }
+  );
+  assert.equal(svg.match(/<svg /g).length, 2);
+  assert.match(svg, />1K<\/text>/);
+  assert.match(svg, /class="sf-guide"/);
+  assert.match(svg, /<a href="https:\/\/example\.invalid\/x"><circle/);
+  assert.doesNotMatch(svg, /NaN|Infinity/);
 });
 
 test('nothing measured is null, never zero: no run record, no tools table, no checkout', () => {

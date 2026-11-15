@@ -33,12 +33,17 @@ function segment(x, y, w, h, round, down) {
  *   unit: 'ratio' for shares (ticks as %), else a count; title names the chart.
  * Returns the wide and the compact <svg>; a table beside them is the text equivalent.
  */
-export function columnsSvg(points, { id, title, series, unit = 'count', desc = '' }) {
-  return ['wide', 'compact'].map((shape) => columnsShape(points, { id: shape === 'wide' ? id : `${id}-compact`, title, series, unit, desc, shape })).join('');
+export function columnsSvg(points, { id, title, series, unit = 'count', desc = '', slim = false }) {
+  return ['wide', 'compact'].map((shape) => columnsShape(points, { id: shape === 'wide' ? id : `${id}-compact`, title, series, unit, desc, shape, slim })).join('');
 }
 
-function columnsShape(points, { id, title, series, unit, desc, shape }) {
-  const { W, H, PAD, labels } = SHAPES[shape];
+function columnsShape(points, { id, title, series, unit, desc, shape, slim }) {
+  const { W, labels, ...size } = SHAPES[shape];
+  // A slim chart sits under a taller one on the same days. A flagged point
+  // (point.flag) gets a diamond in a band above the plot.
+  const flagged = points.some((p) => p.flag);
+  const H = slim ? size.H - 70 : size.H + (flagged ? 12 : 0);
+  const PAD = { ...size.PAD, top: size.PAD.top + (flagged ? 12 : 0) };
   const sum = (list) => (list ?? []).reduce((t, v) => t + (v ?? 0), 0);
   const measured = points.filter((p) => p.up !== null);
   const maxUp = Math.max(0, ...measured.map((p) => sum(p.up)));
@@ -75,7 +80,9 @@ function columnsShape(points, { id, title, series, unit, desc, shape }) {
         i % every === 0
           ? `<text class="sf-tick" x="${fixed(cx)}" y="${H - PAD.bottom + 16}" text-anchor="middle">${e(formatDay(p.day, { year: false }))}</text>`
           : '';
-      const hit = `<rect class="sf-hit" x="${fixed(cx - band / 2)}" y="${PAD.top}" width="${fixed(band)}" height="${plotH}"/>`;
+      const hit =
+        (p.flag ? `<path class="sf-flag" d="M${fixed(cx)},3l4.5,4.5l-4.5,4.5l-4.5,-4.5Z"/>` : '') +
+        `<rect class="sf-hit" x="${fixed(cx - band / 2)}" y="${PAD.top}" width="${fixed(band)}" height="${plotH}"/>`;
       const tip = `<title>${e(p.tip)}</title>`;
       if (p.up === null)
         return `<g class="sf-day sf-day-none" data-tip="${e(p.tip)}">${tip}<line class="sf-none" x1="${x}" x2="${fixed(cx + barW / 2)}" y1="${fixed(base)}" y2="${fixed(base)}"/>${hit}${label}</g>`;
@@ -116,9 +123,10 @@ export function shareTicks(max) {
   return Array.from({ length: steps + 1 }, (_, i) => Number(((top * i) / steps).toPrecision(6)));
 }
 
-/** A legend for two or more series: a swatch and its name, in text ink. */
-export function legendHtml(series) {
-  return `<ul class="sf-legend">${series.map((s) => `<li><span class="sf-swatch sf-series-${e(s.key)}" aria-hidden="true"></span>${e(s.label)}</li>`).join('')}</ul>`;
+/** A legend for two or more series: a swatch and its name, in text ink. `flag` names what a diamond marks. */
+export function legendHtml(series, { flag = null } = {}) {
+  const diamond = flag ? `<li><span class="sf-swatch sf-swatch-flag" aria-hidden="true"></span>${e(flag)}</li>` : '';
+  return `<ul class="sf-legend">${series.map((s) => `<li><span class="sf-swatch sf-series-${e(s.key)}" aria-hidden="true"></span>${e(s.label)}</li>`).join('')}${diamond}</ul>`;
 }
 
 /**
@@ -147,4 +155,78 @@ export function lanesHtml(lanes, { from, to, startLabel, endLabel }) {
     })
     .join('');
   return `<div class="sf-lanes" aria-hidden="true">${rows}<div class="sf-lane sf-lane-axis"><span class="sf-lane-label"></span><span class="sf-lane-scale"><span>${e(startLabel)}</span><span>${e(endLabel)}</span></span></div></div>`;
+}
+
+const PLOTS = {
+  wide: { W: 640, H: 340, PAD: { top: 22, right: 14, bottom: 40, left: 52 }, r: 3.4 },
+  compact: { W: 360, H: 330, PAD: { top: 22, right: 10, bottom: 40, left: 44 }, r: 3 },
+};
+const decade = (v) => (v >= 1e6 ? `${v / 1e6}M` : v >= 1000 ? `${v / 1000}K` : String(v));
+
+/**
+ * A scatter on two log axes: one dot per record, each a link.
+ *
+ *   points: [{ x, y, key, tip, href }] with x and y above zero; key picks the
+ *     series colour (sf-series-<key>).
+ *   guide: { slope, label } draws y = slope * x, a ratio every dot can be read against.
+ * Returns the wide and the compact <svg>.
+ */
+export function scatterSvg(points, { id, title, desc = '', xLabel, yLabel, guide = null }) {
+  return ['wide', 'compact'].map((shape) => scatterShape(points, { id: shape === 'wide' ? id : `${id}-compact`, title, desc, xLabel, yLabel, guide, shape })).join('');
+}
+
+function scatterShape(points, { id, title, desc, xLabel, yLabel, guide, shape }) {
+  const { W, H, PAD, r } = PLOTS[shape];
+  const log = Math.log10;
+  // From the decade at or below the least value to the quarter decade above the greatest.
+  const span = (values) => {
+    const low = Math.floor(log(Math.min(...values)));
+    return [low, Math.max(Math.ceil(log(Math.max(...values)) * 4 + 0.2) / 4, low + 1)];
+  };
+  const [x0, x1] = span(points.map((p) => p.x));
+  const [y0, y1] = span(points.map((p) => p.y));
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+  const px = (v) => fixed(PAD.left + ((log(v) - x0) / (x1 - x0)) * plotW);
+  const py = (v) => fixed(PAD.top + plotH - ((log(v) - y0) / (y1 - y0)) * plotH);
+  const steps = (from, to) => Array.from({ length: Math.floor(to) - from + 1 }, (_, i) => 10 ** (from + i));
+  const grid =
+    steps(y0, y1)
+      .map(
+        (v) =>
+          `<line class="sf-grid" x1="${PAD.left}" x2="${W - PAD.right}" y1="${py(v)}" y2="${py(v)}"/><text class="sf-tick" x="${PAD.left - 6}" y="${py(v)}" dy="0.32em" text-anchor="end">${decade(v)}</text>`
+      )
+      .join('') +
+    steps(x0, x1)
+      .map(
+        (v) =>
+          `<line class="sf-grid" x1="${px(v)}" x2="${px(v)}" y1="${PAD.top}" y2="${PAD.top + plotH}"/><text class="sf-tick" x="${px(v)}" y="${PAD.top + plotH + 16}" text-anchor="middle">${decade(v)}</text>`
+      )
+      .join('');
+  // The guide, clipped to the plot: the line's ends are where it meets the frame.
+  let line = '';
+  if (guide) {
+    const fromX = Math.max(10 ** x0, 10 ** y0 / guide.slope);
+    const toX = Math.min(10 ** x1, 10 ** y1 / guide.slope);
+    if (toX > fromX)
+      line =
+        `<line class="sf-guide" x1="${px(fromX)}" y1="${py(fromX * guide.slope)}" x2="${px(toX)}" y2="${py(toX * guide.slope)}"/>` +
+        `<text class="sf-tick sf-guide-label" x="${fixed(px(toX) - 30)}" y="${fixed(py(toX * guide.slope) + 11)}" text-anchor="end">${e(guide.label)}</text>`;
+  }
+  const dots = points
+    .map((p) => {
+      const dot = `<circle class="sf-dot sf-series-${e(p.key)}" cx="${px(p.x)}" cy="${py(p.y)}" r="${r}" data-tip="${e(p.tip)}"><title>${e(p.tip)}</title></circle>`;
+      return p.href ? `<a href="${e(p.href)}">${dot}</a>` : dot;
+    })
+    .join('');
+  return (
+    `<svg class="sf-chart sf-plot sf-chart-${shape}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc">` +
+    `<title id="${id}-title">${e(title)}</title><desc id="${id}-desc">${e(desc)}</desc>` +
+    grid +
+    `<text class="sf-tick" x="${PAD.left}" y="12">${e(yLabel)}</text>` +
+    `<text class="sf-tick" x="${W - PAD.right}" y="${H - 6}" text-anchor="end">${e(xLabel)}</text>` +
+    line +
+    dots +
+    `</svg>`
+  );
 }

@@ -37,7 +37,7 @@ const TABLES = {
   },
   changes: {
     caption: 'Recorded changes, as the rollup lists them',
-    head: ['Change', 'Summary', 'Area', 'Sessions', 'Code lines', 'Output tokens', 'Estimated usage'],
+    head: ['Change', 'Summary', 'Area', 'Sessions', 'Code lines', 'Still standing', 'Output tokens', 'Estimated usage'],
     wrap: [1],
     row: (r) => [
       r.commit ? `<a href="${COMMIT}${e(r.commit)}">${id(r.changeId.slice(0, 12))}</a>` : id(r.changeId.slice(0, 12)),
@@ -45,6 +45,7 @@ const TABLES = {
       e(r.area === 'unassigned' ? 'Unassigned' : r.area),
       e(r.sessions.length),
       r.codeAdded === undefined ? muted('Not recorded') : `+${e(r.codeAdded.toLocaleString('en-US'))} −${e(r.codeRemoved.toLocaleString('en-US'))}`,
+      r.codeSurviving === undefined || !r.codeAdded ? muted(r.codeSurviving === undefined ? 'Not recorded' : 'No code') : `${e(r.codeSurviving.toLocaleString('en-US'))} of ${e(r.codeAdded.toLocaleString('en-US'))}`,
       known(r.outputTokens, 'tokens'),
       known(r.usd, 'usd'),
     ],

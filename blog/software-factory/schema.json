@@ -343,6 +343,8 @@
               "committedAt": { "$ref": "#/$defs/instant" },
               "codeAdded": { "type": "integer", "minimum": 0 },
               "codeRemoved": { "type": "integer", "minimum": 0 },
+              "codeSurviving": { "type": "integer", "minimum": 0 },
+              "loop": { "type": "string" },
               "calls": { "type": "integer", "minimum": 0 },
               "outputTokens": { "type": "integer", "minimum": 0 },
               "usd": { "type": "number", "minimum": 0 }
@@ -567,6 +569,28 @@
         "daily": {
           "$ref": "#/$defs/table",
           "description": "Tool calls per day (index into days) made inside a recorded run, and outside one. Columns: day, inRuns, outside."
+        },
+        "drive": {
+          "$ref": "#/$defs/table",
+          "description": "Who set off each day's tool calls (config/loops.json, drivers), and how many prompts a person typed that day. Columns: day (index into days), loop, person, other, typed."
+        },
+        "scripts": {
+          "description": "The commits that changed the loop's own scripts, oldest first. Null when the snapshot was not made from a git checkout.",
+          "type": ["object", "null"],
+          "required": ["paths", "commits"],
+          "additionalProperties": false,
+          "properties": {
+            "paths": { "type": "array", "items": { "type": "string" } },
+            "commits": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["sha", "at", "subject"],
+                "additionalProperties": false,
+                "properties": { "sha": { "type": "string" }, "at": { "$ref": "#/$defs/instant" }, "subject": { "type": "string" } }
+              }
+            }
+          }
         }
       }
     },
@@ -707,6 +731,56 @@
             "additionalProperties": false,
             "properties": { "day": { "type": "integer", "minimum": 0 }, "source": { "type": "string" }, "errors": { "type": "integer", "minimum": 0 } }
           }
+        },
+        "byRunHour": {
+          "description": "Calls made inside a recorded run, by hours since that run started: from (inclusive) to (exclusive, null for the last).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "from": { "type": "number", "minimum": 0 },
+              "to": { "type": ["number", "null"], "minimum": 0 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "byParallel": {
+          "description": "Calls made inside a recorded run, by the number of recorded runs under way when the call was made.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["runs", "calls", "errors", "exit", "rejected", "denied", "other"],
+            "additionalProperties": false,
+            "properties": {
+              "runs": { "type": "integer", "minimum": 1 },
+              "calls": { "type": "integer", "minimum": 0 },
+              "errors": { "type": "integer", "minimum": 0 },
+              "exit": { "type": "integer", "minimum": 0 },
+              "rejected": { "type": "integer", "minimum": 0 },
+              "denied": { "type": "integer", "minimum": 0 },
+              "other": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "recovery": {
+          "description": "What followed each failed call in its session: the next call succeeded (nextOk), failed too (nextFailed), or there was none or it has no result recorded (noNext). streaks lists [failed calls in a row, how many times].",
+          "type": "object",
+          "required": ["failures", "nextOk", "nextFailed", "noNext", "streaks"],
+          "additionalProperties": false,
+          "properties": {
+            "failures": { "type": "integer", "minimum": 0 },
+            "nextOk": { "type": "integer", "minimum": 0 },
+            "nextFailed": { "type": "integer", "minimum": 0 },
+            "noNext": { "type": "integer", "minimum": 0 },
+            "streaks": { "type": "array", "items": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "minItems": 2, "maxItems": 2 } }
+          }
         }
       }
     },
@@ -770,14 +844,55 @@
         "days": { "type": "array", "items": { "$ref": "#/$defs/localDate" } },
         "daily": {
           "$ref": "#/$defs/table",
-          "description": "Code lines per commit day (index into this record's days). Columns: day, added, removed, commits."
+          "description": "Code lines per commit day (index into this record's days). Columns: day, added, removed, commits, surviving (of the day's added lines, those git blame still gives to its commits; null where nothing was blamed)."
         },
         "outputTokens": { "type": "integer", "minimum": 0 },
         "usd": { "type": "number", "minimum": 0 },
         "tokensPerLine": { "type": ["number", "null"] },
         "usdPerLine": { "type": ["number", "null"] },
         "retained": { "type": ["number", "null"] },
-        "removedShare": { "type": ["number", "null"] }
+        "removedShare": { "type": ["number", "null"] },
+        "perChange": {
+          "description": "What each committed change took, where the rollup says: output tokens per line of code added, change by change. median, p10 and p90 are nearest-rank values over the changes that added code and were given output tokens. Null when no change has both a commit and a cost.",
+          "type": ["object", "null"],
+          "required": ["coverage", "code", "noCode", "untaken", "median", "p10", "p90", "buckets"],
+          "additionalProperties": false,
+          "properties": {
+            "coverage": { "$ref": "#/$defs/coverage" },
+            "code": { "$ref": "#/$defs/changeSpend" },
+            "noCode": { "$ref": "#/$defs/changeSpend" },
+            "untaken": { "type": "integer", "minimum": 0 },
+            "median": { "type": ["number", "null"] },
+            "p10": { "type": ["number", "null"] },
+            "p90": { "type": ["number", "null"] },
+            "buckets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["from", "to", "changes", "added", "outputTokens"],
+                "additionalProperties": false,
+                "properties": {
+                  "from": { "type": "number", "minimum": 0 },
+                  "to": { "type": ["number", "null"], "minimum": 0 },
+                  "changes": { "type": "integer", "minimum": 0 },
+                  "added": { "type": "integer", "minimum": 0 },
+                  "outputTokens": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "changeSpend": {
+      "type": "object",
+      "required": ["changes", "added", "outputTokens", "usd"],
+      "additionalProperties": false,
+      "properties": {
+        "changes": { "type": "integer", "minimum": 0 },
+        "added": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "usd": { "type": "number", "minimum": 0 }
       }
     },
     "loops": {

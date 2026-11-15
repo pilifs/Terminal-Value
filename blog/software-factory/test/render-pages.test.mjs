@@ -110,7 +110,7 @@ test('methodology: source, versions, prices, timezone and freshness from the sna
   assert.match(body, /href="https:\/\/github\.com\/pilifs\/in-the-loop\/tree\/7384f8c23eef441817ddb714c6ef5571cdc138bd">pilifs\/in-the-loop<\/a>/);
   assert.ok(body.includes(`<code>${snapshot.manifest.snapshotId}</code>`));
   assert.match(body, /<code>blog\/software-factory\/test\/fixtures\/make-snapshot-example\.mjs<\/code>, version 1/);
-  assert.ok(body.includes(`Metric definitions</dt><dd>Version 2, SHA-256 <code>${snapshot.manifest.metricDefinitions.sha256.slice(0, 12)}</code>`));
+  assert.ok(body.includes(`Metric definitions</dt><dd>Version ${snapshot.manifest.metricDefinitions.version}, SHA-256 <code>${snapshot.manifest.metricDefinitions.sha256.slice(0, 12)}</code>`));
   assert.match(body, /List prices as of <time datetime="2026-10-31">Oct 31, 2026<\/time>/);
   assert.match(body, /America\/Toronto: half-open \[start, end\)/);
   assert.match(body, /Data as of<\/dt><dd><time datetime="2026-11-08">Nov 8, 2026<\/time>/);

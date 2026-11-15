@@ -74,8 +74,9 @@ the panel says the report is stale. It never shows a quiet loop as running.
 
 **Today.** A prompt's sender is read from the start of its text, against the templates in
 `blog/software-factory/config/loops.json`: the loop harness, another agent, an interruption, or else a person. A
-new harness template would count as a person until it is added there. Loops run before 2026-11-06 repeat an
-instruction that no template matches, so the page counts prompts only inside recorded runs.
+new harness template would count as a person until it is added there. This has already happened once: the four
+fixed prompts the script sent from Oct 31 to Nov 4 were counted as a person's (46 prompts) until they were found in
+the script's git history and listed. The page uses the same patterns to say who set off each tool call.
 
 **Ask.** In each session's `metrics.json`, a field on every `prompts` row:
 
@@ -86,8 +87,9 @@ instruction that no template matches, so the page counts prompts only inside rec
 `origin` is one of `person`, `loop`, `agent`, `interrupt`, `command`, `notification`. `feature-loop.sh` knows which
 prompts it sends, so it can mark them when it sends them.
 
-**Then.** The page drops its text patterns, and can show prompts per person-day and tool calls per typed prompt for
-every session, not only for recorded runs.
+**Then.** The page drops its text patterns. "Who set off the work" and "tool calls for each prompt a person typed"
+stop depending on a list someone has to keep up. A slash command would also say who sent it: today the page can't
+tell a person's `/compact` from the one `verification-loop.sh` sends, so it counts both as other.
 
 ### 3. Run records as data
 
@@ -144,11 +146,12 @@ By file extension is enough. This repo classes extensions in `config/code.json`.
 
 ### 5. Rework by line age
 
-**Today.** One coarse figure: the share of added code lines still in the tree. It can't tell a line rewritten the
-next day from one removed on purpose.
+**Today.** The importer runs `git blame -w -M` over every code file at the published revision, so the page shows
+how much of each day's code, and of each change's, still stands. That takes a checkout and about six seconds. It
+doesn't say when a line was replaced, or by which change: a line rewritten an hour later counts the same as one
+retired weeks later.
 
-**Ask.** From `git blame` at each published revision, per change: how many code lines it replaced, and how old
-those lines were.
+**Ask.** Per change: how many code lines it replaced, and how old those lines were.
 
 ```json
 { "change_id": "…", "replaced": { "same_session": 40, "within_1d": 12, "within_7d": 3, "older": 0 },
@@ -163,7 +166,9 @@ soonest, and by which later loop.
 
 ### 6. What happened after a failed call
 
-**Today.** Each tool call's outcome alone: succeeded, exited non-zero, refused, denied, other.
+**Today.** Each tool call's outcome, and whether the next tool call in the same session succeeded: 404 of 427
+failed calls were followed by one that did, and the longest run of failures was four calls. The trace doesn't link
+a call to the one it retries, so the page can't say the next call was a retry.
 
 **Ask.** On each failed row of `tools`: `retried` (the next call by the same agent ran the same tool or command
 family within a minute) and `recovered` (that call succeeded). Also `error_class` for a refused call: `invalid_input`,

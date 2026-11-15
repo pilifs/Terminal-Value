@@ -822,6 +822,16 @@ Settled by the author on 2026-11-14:
   hand against the run records and `git log --numstat` outside the importer. What the pages can't measure yet is
   in docs/software-factory-upstream.md, for in-the-loop's agents. Still the author's, beside the list above: the
   push, so the workflow publishes a generator 2 snapshot to R2 (until then the page shows its bundled one).
+- **A second pass on the leading sections** (2026-11-15, interactive, the author asked to keep going):
+  docs/software-factory.md, "A second pass, the same day", lists the new figures. Who set off each day's tool calls
+  (the loop's own prompts are behind 74% of all 24,501) and tool calls for each prompt a person typed (14 on Oct 24,
+  202 on Nov 8); the loop scripts' own 40 commits; what followed a failed call (404 of 427 were followed by a call
+  that succeeded) and failures by time into a run and by loops at once; how much of each day's code still stands,
+  from git blame; and what each change took (the middle change 158 output tokens per line). Two corrections: the
+  script's four early fixed prompts are no longer counted as a person's, and a change committed in two runs counts
+  once in a total, so the headline is 311 commits, not 320. Generator and metric definitions 3; the committed
+  snapshot is `sf1-69af3d419ef2c8fd`, still of in-the-loop `fbd1fa86`. Still the author's: the push, so the
+  workflow publishes a generator 3 snapshot to R2.
 - Status: done
 
 ## Loop settings

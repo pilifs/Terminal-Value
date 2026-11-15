@@ -59,7 +59,7 @@ this on 2026-11-15, after the loop.
 - A change record gains `commit`, `committedAt`, `codeAdded`, `codeRemoved`, `calls`, `outputTokens` and `usd`,
   where known.
 - The manifest lists the datasets `loops`, `tools` and `code` when they exist.
-- The generator is version 2 and the metric definitions are version 2. `loops.json` and `code.json` are part of
+- The generator was version 2 and the metric definitions version 2 (both 3 since the second pass, below). `loops.json` and `code.json` are part of
   the config hash. Every snapshot id changed.
 
 **Code needs a checkout.** Lines come from `git log -M --numstat`. A refresh from GitHub alone gives a snapshot
@@ -72,6 +72,37 @@ snapshot on the first run after this is pushed.
 
 **What isn't measured yet** is in [`software-factory-upstream.md`](software-factory-upstream.md): what to ask of
 in-the-loop for running loops, prompt senders, run records as data, rework by line age and review.
+
+### A second pass, the same day
+
+The author asked to keep going. This pass answers three of the brief's questions that the first left thin: how the
+loops changed over time, what tool failures follow, and what rework there was.
+
+| Figure | What it shows | From |
+| --- | --- | --- |
+| Who set off the work | Each day's tool calls by who sent the prompt before them: the loop's script, a person, or a command or agent. It needs no run record, so it covers the loops run before Nov 6. Days the loop's scripts changed are flagged | `overview.loops.drive`, `.scripts` |
+| Tool calls for each prompt a person typed | A day's tool calls divided by the prompts a person typed that day | `overview.loops.drive` |
+| How the loop itself changed | Every commit to `feature-loop.sh`, `run-streams.sh` and `loop-common.sh`, by its own summary line | `overview.loops.scripts` |
+| After a failure | Whether the session's next tool call succeeded, and how many failures came in a row | `overview.tools.recovery` |
+| By time into a run, by loops at once | Failure rates for calls inside a run, by hours since it started and by runs under way | `overview.tools.byRunHour`, `.byParallel` |
+| How much of each day's code still stands | A day's added lines split by whether `git blame -w -M` still gives them to that day's commits | `overview.code.daily`, column `surviving` |
+| What a change took | Output tokens per line change by change: the middle change, the spread, and a plot of every change that loads when opened | `overview.code.perChange`, `details/changes.json` |
+| In a loop and outside | Lines of code and tokens per line for each campaign, inside the runs and outside them | `overview.loops`, `overview.code` |
+
+Three things changed what the page says, not just what it shows:
+
+- **Early loop prompts were counted as a person's.** Before it worked from briefs (Oct 31 to Nov 4), the loop's
+  script sent one of four fixed prompts. `config/loops.json` now lists them, each checked against the script's git
+  history. No run record covers those days, so the headline didn't move, but 46 prompts are no longer a person's.
+- **A change committed in two runs counts once in a total.** A merge loop recommits some of its streams' changes.
+  The headline was 320 commits and is now 311. A run's own count is unchanged.
+- **Tokens per line has a spread.** 135 is the average over everything. Change by change, the middle change that
+  added code took 158 per line, and 90% of output tokens went to changes that added code.
+
+The contract stays additive: `overview.loops.drive` and `.scripts`, `overview.tools.byRunHour`, `.byParallel` and
+`.recovery`, `overview.code.perChange`, a fifth column in `overview.code.daily`, and `codeSurviving` and `loop` on a
+change record. The generator and the metric definitions are version 3. Blame adds about six seconds to a refresh
+from a checkout.
 
 ## Routes and files
 

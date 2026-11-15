@@ -65,7 +65,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_DIR, serialize, sha256 } from './identity.mjs';
 import { aggregate, collectionFiles } from './metrics.mjs';
-import { campaignOf as loopCampaign, parseGitLog, parseRunRecord, parseTree, senderOf } from './records.mjs';
+import { campaignOf as loopCampaign, classOf, parseBlame, parseGitLog, parseRunRecord, parseScriptLog, parseTree, senderOf } from './records.mjs';
 import { validate, validateSnapshotDir } from './validate.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -143,10 +143,22 @@ function gitReader(checkout) {
     },
     // The history's lines per commit and the tree's lines, as git prints them.
     // Only a checkout has them: GitHub has no numstat without a call per commit.
-    async code(sha) {
+    // `isCode` picks the files whose lines are blamed to the commit that wrote
+    // them; `scripts` are the loop's own files, whose history is listed.
+    async code(sha, { isCode = () => false, scripts = [] } = {}) {
+      const files = git(['ls-tree', '-r', '--name-only', sha]).toString().split('\n').filter((f) => f && isCode(f));
+      const blame = files.map((f) => {
+        try {
+          return git(['blame', '-w', '-M', '--incremental', sha, '--', f]).toString();
+        } catch {
+          return ''; // a submodule or an unreadable path holds no lines
+        }
+      });
       return {
         log: git(['log', '--format=raw', '-M', '--numstat', sha]).toString(),
         tree: git(['diff', '--numstat', EMPTY_TREE, sha]).toString(),
+        blame: blame.join('\n'),
+        scripts: scripts.length ? git(['log', '--format=%H%x09%ct%x09%s', sha, '--', ...scripts]).toString() : '',
       };
     },
   };
@@ -256,7 +268,8 @@ export async function readSources({ ref, sha, checkout, dir, fetchImpl = globalT
   // The run records themselves, for the feature loops; the briefs' names, for their campaigns.
   await mapLimit(runs, 8, put);
   const briefs = (await reader.list(at, 'llm-dlc/loops')).map((p) => p.match(BRIEF)?.[1]).filter(Boolean).sort();
-  const code = reader.code ? await reader.code(at) : null;
+  const languages = new Set(config.code.languages.map((l) => l.id));
+  const code = reader.code ? await reader.code(at, { isCode: (f) => languages.has(classOf(f, config.code)), scripts: config.loops.scripts?.paths ?? [] }) : null;
 
   return { source: { repository, sha: at, ref: resolvedRef }, files, runs, briefs, code };
 }
@@ -550,7 +563,13 @@ export function normalizeSources(raw, config = loadConfig()) {
 
   // Code: git's own account of each commit, where the source was a checkout.
   const code = raw.code
-    ? { commits: parseGitLog(raw.code.log, config.code), tree: parseTree(raw.code.tree, config.code) }
+    ? {
+        commits: parseGitLog(raw.code.log, config.code),
+        tree: parseTree(raw.code.tree, config.code),
+        // The code lines each commit still holds at this revision, where the reader blamed them.
+        blame: typeof raw.code.blame === 'string' ? parseBlame(raw.code.blame) : null,
+        scripts: typeof raw.code.scripts === 'string' ? parseScriptLog(raw.code.scripts) : null,
+      }
     : null;
 
   // The tag vocabulary: names only.

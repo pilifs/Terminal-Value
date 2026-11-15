@@ -50,7 +50,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '2' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '3' };
 
 const STATUSES = ['passed', 'failed'];
 const ORDER = ['overview', 'sessions', 'changes', 'verification', 'examples', 'loops'];
@@ -257,18 +257,19 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   }));
 
   // The feature loops, the tools and the code (factory.mjs).
+  const tookOf = new Map(changeList.map((c) => [c.changeId, c.took ?? null]));
   const factory = aggregateFactory(
     { prompts: [], tools: [], sessionCommits: [], runs: [], code: null, ...normalized },
-    { config: { ...config, loops: config.loops, code: config.code }, days, day, modelIds, label, area, areaLabel, changeRecords: baseChanges }
+    { config: { ...config, loops: config.loops, code: config.code }, days, day, modelIds, label, area, areaLabel, changeRecords: baseChanges, changeTook: tookOf }
   );
-  const tookOf = new Map(changeList.map((c) => [c.changeId, c.took ?? null]));
   const changeRecords = baseChanges.map((c) => {
     const fact = factory.changeFacts.get(c.changeId);
     const took = tookOf.get(c.changeId);
     return {
       ...c,
-      ...(fact ? { commit: fact.commit, committedAt: fact.committedAt, codeAdded: fact.codeAdded, codeRemoved: fact.codeRemoved } : {}),
+      ...(fact ? { commit: fact.commit, committedAt: fact.committedAt, codeAdded: fact.codeAdded, codeRemoved: fact.codeRemoved, ...(fact.codeSurviving === null ? {} : { codeSurviving: fact.codeSurviving }) } : {}),
       ...(took ? { calls: took.calls, outputTokens: took.outputTokens, usd: round6(took.usd) } : {}),
+      ...(factory.changeLoop.has(c.changeId) ? { loop: factory.changeLoop.get(c.changeId) } : {}),
     };
   });
 

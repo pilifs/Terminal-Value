@@ -9,11 +9,22 @@
       "^Cycle \\d+ of the feature loop is committed",
       "^The feature loop is ending after ",
       "^This conversation goes on as one of the parallel streams",
-      "^You decided that the loop stops after "
+      "^You decided that the loop stops after ",
+      "^Add more advanced features along with examples to the jvmcontract ",
+      "^Add more advanced examples showcasing verification of TLA ",
+      "^Enhance the jvmcontract library to be more useful to expert ",
+      "^Enhance relational verification capabilities "
     ],
+    "harnessNote": "The last four are the fixed prompts feature-loop.sh sent before it worked from briefs (Oct 31 to Nov 4, 2026). Each was checked against the script's own history.",
     "agent": ["^<agent-message ", "^<cross-session-message "],
     "interrupt": ["^\\[Request interrupted by user"]
   },
+  "drivers": "Who set off a tool call: the sender of the latest prompt before it in its session. A prompt from the loop's script is 'loop'; one a person typed, or their interrupt, is 'person'; a notification that background work finished keeps the driver it follows; a slash command, a message from another agent, and anything before a session's first prompt are 'other', because the trace doesn't say who sent them.",
+  "scripts": {
+    "note": "The loop's own scripts. Their commits are listed as the loop's history, read from a git checkout.",
+    "paths": ["llm-dlc/tools/feature-loop.sh", "llm-dlc/tools/run-streams.sh", "llm-dlc/tools/loop-common.sh"]
+  },
+  "runHours": [0, 1, 2, 4],
   "campaign": "A loop belongs to the campaign of the shortest brief name that equals its own or that it extends with '-': foundations-heap runs in the campaign foundations when a brief named foundations exists. Brief names are the files of llm-dlc/loops/ at the source revision, and the names of the runs themselves.",
   "outcomes": {
     "note": "How a run ended, from its record's Ended or Stopped line. The first matching pattern wins; no such line is 'open': the record doesn't say the run ended.",
