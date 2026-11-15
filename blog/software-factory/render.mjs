@@ -345,19 +345,11 @@ function unavailableNotice(unavailable, e) {
       </section>`;
 }
 
-/** Where the overview sends a reader next: what the factory used, the author's analysis, how it is measured. */
+/** Where the overview sends a reader next: the author's analysis, how it is measured. */
 function more(snapshot, posts, { e, route }) {
-  const fact = (id) => {
-    const m = snapshot.overview.measures.find((x) => x.id === id);
-    return m ? `<div><dt>${e(METRIC[id].label)}</dt><dd data-sf-value="${e(id)}">${e(formatValue(m.value, m.unit))}</dd></div>` : '';
-  };
   const hasPosts = Boolean(posts?.featured || posts?.items?.length);
+  // What the work took is the last finding above, with its own link to the usage page.
   const cards = [
-    `<article class="sf-more-card">
-          <h2><a href="${e(route)}usage/">What the factory used</a></h2>
-          <dl class="sf-more-facts">${fact('usage_usd')}${fact('model_calls')}</dl>
-          <p class="sf-finding-more"><a href="${e(route)}usage/">Usage, verification and records</a></p>
-        </article>`,
     // With posts the analysis has its own panel above; without, a small honest note here.
     hasPosts
       ? ''

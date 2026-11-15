@@ -1676,6 +1676,16 @@ body.software-factory .sf-seg.sf-series-denied { fill: var(--sf-c-denied); }
 body.software-factory .sf-swatch.sf-series-denied { background: var(--sf-c-denied); }
 body.software-factory .sf-seg.sf-series-other { fill: var(--sf-c-other); }
 body.software-factory .sf-swatch.sf-series-other { background: var(--sf-c-other); }
+/* Usage by model: the three largest in the first three hues, in that order
+   (checked as neighbours in a stack), and the others together in the neutral. */
+body.software-factory .sf-seg.sf-series-model-0 { fill: var(--sf-c-exit); }
+body.software-factory .sf-swatch.sf-series-model-0 { background: var(--sf-c-exit); }
+body.software-factory .sf-seg.sf-series-model-1 { fill: var(--sf-c-rejected); }
+body.software-factory .sf-swatch.sf-series-model-1 { background: var(--sf-c-rejected); }
+body.software-factory .sf-seg.sf-series-model-2 { fill: var(--sf-c-denied); }
+body.software-factory .sf-swatch.sf-series-model-2 { background: var(--sf-c-denied); }
+body.software-factory .sf-seg.sf-series-model-rest { fill: var(--sf-neutral); }
+body.software-factory .sf-swatch.sf-series-model-rest { background: var(--sf-neutral); }
 body.software-factory .sf-chart .sf-day:hover .sf-seg {
   filter: brightness(0.9);
 }

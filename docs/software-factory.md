@@ -229,6 +229,42 @@ counts say about getting stuck: "24,501 tool calls, never more than 4 failures i
   how many runs the latest bucket's calls come from (3 at this revision), counted from `loops.runs`.
 - The tables with the same numbers are on the model performance page, which the figure's label says.
 
+### What it took: the usage finding
+
+The overview ended on a small card with two numbers, "What the factory used". What all of this cost is the
+question a reader has left after four findings, so it is now the fifth: "Every session on record, for an estimated
+$2,174.98 of model usage" (`usageFinding` in `factory.js`). The card is gone; the finding links the usage page.
+
+- **The claim is the `usage_usd` measure**, all time, with the metric's own caution in the sentence under it: an
+  estimate from token counts at list prices, not a bill. It adds what the figure leaves out by definition: no
+  person's time and no machine that ran a proof.
+- **The three numbers**: the share of input tokens read from cache (`cache_reuse`), the share of the model with the
+  most usage, named with its raw id, and the usage inside feature loop runs (`loops.totals.usd`).
+- **The figure** is estimated usage per day, stacked by model, from `overview.usage` (`usageDays`). The three
+  models with the most usage get a hue each, largest first; any others are drawn together in the neutral. The
+  three hues are the first three of the failure kinds' palette, which the palette check passes as neighbours in a
+  stack. The order is by usage in the snapshot, so a model's hue can change if another overtakes it. The legend
+  names each model with its raw id.
+- `columnsSvg` takes `unit: 'usd'` for a dollar axis.
+
+### What the section ships: its scripts and stylesheet without comments
+
+The fifth finding took the overview's first load to 154.1 KB gzip, over the plan's 150 KB
+(`test/site-load.test.mjs`). About 14 KB of that was comments in the section's own scripts and stylesheet. The
+build now blanks them in the copies under `dist/software-factory/` (`lighten.mjs`, called from `buildSection`).
+The first load is 135.7 KB.
+
+- **Only full lines go**, and a blanked line stays as an empty line, so a line number in the browser is the line
+  number in the source. A comment after code on its line is kept.
+- **It reads lines, not code.** It assumes no line inside a template literal starts with `//` or `/*`, and it
+  refuses a block comment that ends before the end of its line (the build fails, naming the file and line).
+- **A parser checks it.** `test/site-lighten.test.mjs` minifies each source and its shipped copy with esbuild and
+  expects the same text. esbuild comes with wrangler; without it that test is skipped and the others still run.
+- **What is left of the budget is mostly data.** The manifest is 34 KB gzip, almost all of it
+  `source.inputs`: one line with a SHA-256 for each source file, which doesn't compress and grows with every
+  session. The page needs the count and the methodology page shows only that. Moving the list to its own file
+  would take it off the first load; it is a change to the contract, so it is left for the author.
+
 ### Every run on one clock
 
 The loops finding leads the overview with one figure of every finished loop run, and its claim is the pace of the

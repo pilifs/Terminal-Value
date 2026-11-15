@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { selectPosts } from './editorial.mjs';
+import { kindOf, withoutComments } from './lighten.mjs';
 import { renderPages } from './render.mjs';
 import { validateSnapshotDir } from './validate.mjs';
 
@@ -97,6 +98,16 @@ export function buildSection({ outDir, posts, includeDrafts, site, layout, helpe
   if (snapshot) fs.cpSync(dataDir, path.join(out, 'static-data'), { recursive: true });
   fs.mkdirSync(out, { recursive: true });
   fs.copyFileSync(path.join(HERE, 'measures.mjs'), path.join(out, 'measures.js'));
+  // The section's own scripts and stylesheet go out without their full-line comments.
+  for (const file of fs.readdirSync(out)) {
+    const kind = kindOf(file);
+    if (!kind || !fs.statSync(path.join(out, file)).isFile()) continue;
+    try {
+      fs.writeFileSync(path.join(out, file), withoutComments(fs.readFileSync(path.join(out, file), 'utf8'), kind));
+    } catch (err) {
+      throw new Error(`${ROUTE}/${file}: ${err.message}`);
+    }
+  }
 
   // The client module runs on the pages that show the snapshot's numbers
   // (page.app), and only with a snapshot to load.

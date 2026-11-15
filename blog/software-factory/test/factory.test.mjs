@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolsHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
 import { loadConfig } from '../import.mjs';
@@ -465,7 +465,7 @@ test('a snapshot made before these were read has no such fields, and each sectio
   assert.deepEqual(validate('overview', old), []);
   const snap = snapshotOf({ manifest, overview: old });
   for (const html of [loopsHtml(snap), toolsHtml(snap), codeHtml(snap)]) assert.match(html, /class="sf-empty"/);
-  assert.equal(findingsHtml(snap), '', 'and the overview has no finding to claim');
+  assert.deepEqual([...findingsHtml(snap).matchAll(/<article class="sf-panel sf-finding[^>]* id="([\w-]+)"/g)].map((m) => m[1]), ['finding-usage'], 'and the overview claims only what the snapshot has: its usage');
 });
 
 // --- Drawing -----------------------------------------------------------------
@@ -492,7 +492,7 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   // Described, never explained or ranked; and nothing is called live.
   // The overview's findings: a claim from the data, three numbers, one chart and a link, per section.
   const findings = findingsHtml(snap);
-  assert.equal((findings.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 3);
+  assert.equal((findings.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 4);
   // One run and one commit are no pace to claim: the loops finding counts them instead.
   assert.match(findings, /<h2 id="finding-loops-title"><a href="\/software-factory\/loops\/">One campaign, 1 run, 1 cycle, no prompt from a person<\/a><\/h2>/);
   assert.match(findings, /<dt>of all tool calls were set off by a loop’s own prompt<\/dt><dd>50%<\/dd>/);
@@ -504,8 +504,8 @@ test('the leading sections carry their numbers in static HTML, each with coverag
   assert.equal((findings.match(/<div class="sf-floor"/g) ?? []).length, 1);
   assert.match(findings, /<li style="left:0%;width:[\d.]+%"><a href="\/software-factory\/loops\/#loop-demo"><code>demo<\/code><\/a><\/li>/);
   assert.match(findings, /data-tip="demo-heap, from Nov 6, 11 pm: 1 cycle and 1 commit in 2 h\. Done\."/);
-  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length + (findings.match(/<div class="sf-rates"/g) ?? []).length, 2, 'one chart each');
-  assert.equal((findings.match(/<ul class="sf-legend[ "]/g) ?? []).length, 3, 'each figure has its legend');
+  assert.equal((findings.match(/<svg class="sf-chart sf-chart-wide"/g) ?? []).length + (findings.match(/<div class="sf-rates"/g) ?? []).length, 3, 'one chart each');
+  assert.equal((findings.match(/<ul class="sf-legend[ "]/g) ?? []).length, 4, 'each figure has its legend');
   assert.doesNotMatch(findings, /The table below/, 'the tables are on the pages the findings open');
   assert.match(loops, /<h2>Every run on one clock<\/h2>/, 'and the loops page has the same figure');
   const text = [hero, findings, loops, tools, code, runningHtml()].join(' ').replace(/<[^>]+>/g, ' ');
@@ -909,4 +909,47 @@ test('the model performance finding claims a short streak only against many call
   assert.match(older, /<svg class="sf-chart sf-chart-wide"/);
   assert.match(older, /Share of each day’s tool calls that failed, by how\./);
   assert.doesNotMatch(older, /sf-rates/);
+});
+
+// --- What it took: the usage finding -------------------------------------------
+
+test('usage per day is cut by model: the largest get a hue each, in order, and the rest are drawn together', () => {
+  const overview = {
+    days: ['2026-11-01', '2026-11-02', '2026-11-03'],
+    models: [{ id: 'm-a', label: 'A' }, { id: 'm-b', label: 'B' }, { id: 'm-c', label: 'C' }, { id: 'm-d', label: 'D' }, { id: 'm-e', label: 'E' }],
+    usage: {
+      columns: ['day', 'model', 'effort', 'calls', 'pricedCalls', 'usd'],
+      // Model B has the most in all, then D, A, and C and E the least; E has calls that cost nothing on day 2.
+      rows: [[0, 0, 0, 1, 1, 3], [0, 1, 0, 1, 1, 10], [0, 1, 1, 1, 1, 5], [2, 3, 0, 1, 1, 8], [2, 2, 0, 1, 1, 1], [2, 4, 0, 1, 1, 0.5], [1, 4, 0, 2, 2, 0]],
+    },
+  };
+  const { series, points } = usageDays(overview);
+  assert.deepEqual(series.map((s) => [s.key, s.label, s.id, s.usd]), [['model-0', 'B', 'm-b', 15], ['model-1', 'D', 'm-d', 8], ['model-2', 'A', 'm-a', 3], ['model-rest', 'Two other models', null, 1.5]]);
+  assert.deepEqual(points.map((p) => p.up), [[15, 0, 3, 0], null, [0, 8, 0, 1.5]], 'both efforts of a model on a day are one part; a day with nothing priced has no column');
+  assert.equal(points[0].tip, 'Nov 1, 2026: $18.00 of estimated usage (B $15.00, A $3.00)');
+  assert.equal(points[1].tip, 'Nov 2, 2026: no model usage');
+  // One model left over is named, not called "other".
+  const four = usageDays({ ...overview, usage: { ...overview.usage, rows: overview.usage.rows.filter((r) => r[1] !== 4) } });
+  assert.deepEqual(four.series.at(-1), { key: 'model-rest', label: 'C', id: 'm-c', usd: 1 });
+  assert.equal(four.points[2].tip, 'Nov 3, 2026: $9.00 of estimated usage (D $8.00, C $1.00)');
+});
+
+test('the usage finding says what every session took, as an estimate, and names its models with their ids', () => {
+  const snap = snapshotOf(run());
+  const html = findingsHtml(snap);
+  const usage = html.slice(html.indexOf('id="finding-usage"'));
+  assert.match(usage, /<a href="\/software-factory\/usage\/">Every session on record, for an estimated \$\d+\.\d\d of model usage<\/a>/);
+  assert.match(usage, /That is \d+ model calls, Nov \d+ to Nov \d+, 2026, priced from the [\d,]+ input tokens they read and the output they wrote, at list prices\. It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof\. <a href="\/software-factory\/methodology\/#def-usage_usd">Definition<\/a>/);
+  assert.match(usage, /<dt>of input tokens were read from cache<\/dt><dd>\d+\.\d%<\/dd>/);
+  assert.match(usage, /<dt>of it was [^<]+ \(claude-[a-z0-9-]+\)<\/dt><dd>\d+\.\d%<\/dd>/);
+  assert.match(usage, /<dt>of it was inside feature loop runs<\/dt><dd>\$\d+\.\d\d<\/dd>/);
+  assert.match(usage, /<li><span class="sf-swatch sf-series-model-0" aria-hidden="true"><\/span>[^<]+ <code>claude-[a-z0-9-]+<\/code><\/li>/);
+  assert.match(usage, /<svg class="sf-chart sf-chart-wide"[^>]*role="img"/);
+  assert.match(usage, /<text class="sf-tick"[^>]*>\$\d/, 'the axis is in dollars');
+  assert.match(usage, /Where usage went says nothing about which model is better: the models did different work\./);
+  // Without loop runs the third number is the calls; with nothing priced there is no finding.
+  const { loops, ...rest } = snap.overview;
+  assert.match(findingsHtml({ ...snap, overview: rest }), /<dt>model calls<\/dt><dd>\d+<\/dd>/);
+  const free = { ...snap, overview: { ...snap.overview, measures: snap.overview.measures.map((m) => (m.id === 'usage_usd' ? { ...m, value: 0 } : m)) } };
+  assert.doesNotMatch(findingsHtml(free), /finding-usage/);
 });

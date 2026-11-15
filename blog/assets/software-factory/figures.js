@@ -30,7 +30,7 @@ function segment(x, y, w, h, round, down) {
  *   points: [{ day, up: [n, ...], down: [n, ...], tip }] in day order; a point
  *     whose `up` is null has no value (a short mark, never a zero column).
  *   series: { up: [{ key, label }], down: [{ key, label }] }
- *   unit: 'ratio' for shares (ticks as %), else a count; title names the chart.
+ *   unit: 'ratio' for shares (ticks as %), 'usd' for dollars, else a count; title names the chart.
  * Returns the wide and the compact <svg>; a table is the text equivalent, and
  * `table` says where it is when it isn't under the chart.
  */
@@ -49,7 +49,7 @@ function columnsShape(points, { id, title, series, unit, desc, shape, slim, tabl
   const measured = points.filter((p) => p.up !== null);
   const maxUp = Math.max(0, ...measured.map((p) => sum(p.up)));
   const maxDown = Math.max(0, ...measured.map((p) => sum(p.down)));
-  const ticksUp = unit === 'ratio' ? shareTicks(maxUp) : niceTicks(maxUp, 'count');
+  const ticksUp = unit === 'ratio' ? shareTicks(maxUp) : niceTicks(maxUp, unit === 'usd' ? 'usd' : 'count');
   const top = ticksUp.at(-1);
   // The stack below the baseline shares the scale: its depth is its share of the height.
   const step = ticksUp[1] - ticksUp[0];
@@ -63,7 +63,7 @@ function columnsShape(points, { id, title, series, unit, desc, shape, slim, tabl
   const band = plotW / Math.max(points.length, 1);
   const barW = Math.max(2, Math.min(24, band - 2));
   const every = Math.ceil(points.length / labels);
-  const tick = (v) => (unit === 'ratio' ? `${Number((v * 100).toFixed(2))}%` : formatTick(v, 'count'));
+  const tick = (v) => (unit === 'ratio' ? `${Number((v * 100).toFixed(2))}%` : formatTick(v, unit === 'usd' ? 'usd' : 'count'));
 
   const grid = [...ticksUp.map((t) => [t, base - t * scale]), ...ticksDown.map((t) => [t, base + t * scale])]
     .map(

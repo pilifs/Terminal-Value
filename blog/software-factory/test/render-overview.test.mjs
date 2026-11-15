@@ -63,9 +63,9 @@ test('the static pages carry the all-time numbers without script', () => {
     assert.ok(html.includes(text), `missing ${text}`);
   assert.match(html, /<svg class="sf-chart sf-chart-wide"[^>]*role="img"/);
   assert.match(html, /<table class="sf-table">/);
-  // The overview names what the usage page opens with.
-  assert.match(overview(), /<dd data-sf-value="usage_usd">\$101\.07<\/dd>/);
-  assert.match(overview(), /<dd data-sf-value="model_calls">590<\/dd>/);
+  // The overview's last finding claims what the usage page opens with.
+  assert.match(overview(), /<h2 id="finding-usage-title"><a href="\/software-factory\/usage\/">Every session on record, for an estimated \$101\.07 of model usage<\/a><\/h2>/);
+  assert.match(overview(), /That is 590 model calls, /);
 });
 
 test('freshness comes from the snapshot dates and nothing is called live', () => {
@@ -77,12 +77,12 @@ test('freshness comes from the snapshot dates and nothing is called live', () =>
   }
 });
 
-test('the overview is short: the headline, four findings, and where to go next', () => {
+test('the overview is short: the headline, five findings, and where to go next', () => {
   const html = body('index.html', { snapshot: committed });
-  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'class="sf-more"']);
-  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 4);
+  inOrder(html, ['class="sf-nav"', 'class="sf-intro"', 'data-sf-freshness', 'id="finding-loops"', 'id="finding-output"', 'id="finding-tools"', 'id="finding-code"', 'id="finding-usage"', 'class="sf-more"']);
+  assert.equal((html.match(/<article class="sf-panel sf-finding[ "]/g) ?? []).length, 5);
   const figures = [/<div class="sf-floor"/g, /<div class="sf-catalog"/g, /<div class="sf-rates"/g, /<svg class="sf-chart sf-chart-wide"/g].map((re) => (html.match(re) ?? []).length);
-  assert.deepEqual(figures, [1, 1, 1, 1], 'one figure to a finding');
+  assert.deepEqual(figures, [1, 1, 1, 2], 'one figure to a finding');
   // Everything under a finding is on its own page, not folded away on this one.
   assert.doesNotMatch(html, /<table|<details|<form|sf-breakdown|sf-campaign|data-sf-detail|sf-live/);
   for (const sub of ['loops', 'tools', 'code', 'usage', 'methodology']) assert.ok(html.includes(`<a href="/software-factory/${sub}/">`), sub);

@@ -281,7 +281,7 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
             h1: document.querySelectorAll('h1').length,
             overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           }));
-          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 4 : 0, h1: 1, overflow: 0 }, pathname);
+          assert.deepEqual(shown, { page: name, snapshot: ID, url: pathname, findings: name === 'overview' ? 5 : 0, h1: 1, overflow: 0 }, pathname);
           // Every run on one clock, on the overview and on the loops page: a run under the pointer says what it was.
           if (name === 'overview' || name === 'loops') {
             const run = page.locator('.sf-floor .sf-run').first();
@@ -310,12 +310,13 @@ test('the pages of numbers in headless Chromium: first visit with filters, again
         const all = Object.fromEntries(overviewOf(EXAMPLE).measures.map((m) => [m.id, formatValue(m.value, m.unit)]));
         const shown = await page.evaluate(() => ({
           snapshot: document.querySelector('[data-sf-page]').dataset.snapshot,
-          values: Object.fromEntries([...document.querySelectorAll('[data-sf-value]')].map((el) => [el.dataset.sfValue, el.textContent])),
+          // What it took is that snapshot's too, in the claim of the last finding.
+          values: { usage_usd: document.querySelector('#finding-usage h2')?.textContent.match(/\$[\d,.]+/)?.[0] ?? null },
           // The example has no loops, tools or code: no finding of theirs is claimed from the bundled data.
           findings: [...document.querySelectorAll('.sf-finding')].map((el) => el.id),
           headline: document.querySelector('.sf-headline')?.textContent ?? null,
         }));
-        assert.deepEqual(shown, { snapshot: EXAMPLE_ID, values: { usage_usd: all.usage_usd, model_calls: all.model_calls }, findings: ['finding-output'], headline: null });
+        assert.deepEqual(shown, { snapshot: EXAMPLE_ID, values: { usage_usd: all.usage_usd }, findings: ['finding-output', 'finding-usage'], headline: null });
         // Its catalog is that snapshot's too: counted at once, and named when its own records arrive.
         const catalog = json(EXAMPLE, `${snapDir(EXAMPLE)}details/examples.json`).records;
         await until(() => page.evaluate(() => document.querySelectorAll('.sf-catalog .sf-cell[data-tip*=" · "]').length > 0), 'the catalog, named');

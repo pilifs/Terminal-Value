@@ -870,6 +870,12 @@ Settled by the author on 2026-11-14:
   calls, never more than 4 failures in a row" and shows the share that failed by time into a run and by context
   size, in place of the share that succeeded over a chart of days. From `overview.tools`; no change to the
   contract or the snapshot.
+- **What it took** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, "What it took:
+  the usage finding" and "What the section ships". A fifth finding on the overview: every session on record for an
+  estimated $2,174.98 of model usage, with usage per day by model; it replaces the "What the factory used" card.
+  It took the first load over the 150 KB budget, so the build now ships the section's scripts and stylesheet
+  without their full-line comments: 135.7 KB. Open for the author: the manifest's list of source files is 34 KB of
+  the first load and grows with every session.
 - Status: done
 
 ## Loop settings

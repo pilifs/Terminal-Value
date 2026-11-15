@@ -197,11 +197,6 @@ async function start(shell) {
     const insights = $('[data-sf-insights]');
     if (insights) insights.innerHTML = insightItems(ov.insights);
     drawFactory(snap);
-    // The overview's all-time values, by metric.
-    for (const el of $$('[data-sf-value]')) {
-      const m = ov.measures.find((x) => x.id === el.dataset.sfValue);
-      if (m) el.textContent = formatValue(m.value, m.unit);
-    }
     const texts = stockTexts(ov.stocks);
     for (const tile of $$('[data-stock]')) {
       const t = texts[tile.dataset.stock];

@@ -1222,6 +1222,89 @@ function codeFinding(overview) {
   });
 }
 
+// --- What it took ----------------------------------------------------------------
+
+// The models with the most usage get a hue each, largest first; the rest are drawn together.
+const MODEL_HUES = 3;
+const tokens = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(2)} billion` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} million` : count(n));
+
+/**
+ * Estimated usage per day, by model: the series (a model each for the largest,
+ * then the others together) and a point for each day of the snapshot.
+ */
+export function usageDays(overview) {
+  const { usage, days, models } = overview;
+  const col = (name) => usage.columns.indexOf(name);
+  const [iDay, iModel, iUsd] = [col('day'), col('model'), col('usd')];
+  const totals = new Map();
+  for (const r of usage.rows) totals.set(r[iModel], (totals.get(r[iModel]) ?? 0) + r[iUsd]);
+  const ranked = [...totals].filter(([, usd]) => usd > 0).sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([m]) => m);
+  const named = ranked.slice(0, MODEL_HUES);
+  const rest = ranked.slice(MODEL_HUES);
+  const of = (m) => models[m] ?? { id: null, label: 'A model the snapshot doesn’t name' };
+  const series = [
+    ...named.map((m, i) => ({ key: `model-${i}`, label: of(m).label, id: of(m).id, usd: totals.get(m) })),
+    ...(rest.length
+      ? [{ key: 'model-rest', label: rest.length === 1 ? of(rest[0]).label : `${word(rest.length)} other models`, id: rest.length === 1 ? of(rest[0]).id : null, usd: rest.reduce((t, m) => t + totals.get(m), 0) }]
+      : []),
+  ];
+  const slot = (m) => (named.includes(m) ? named.indexOf(m) : named.length);
+  const cells = new Map();
+  for (const r of usage.rows) {
+    if (!(r[iUsd] > 0)) continue;
+    const c = cells.get(r[iDay]) ?? cells.set(r[iDay], series.map(() => 0)).get(r[iDay]);
+    c[slot(r[iModel])] += r[iUsd];
+  }
+  const points = days.map((day, i) => {
+    const c = cells.get(i);
+    if (!c) return { day, up: null, tip: `${formatDay(day)}: no model usage` };
+    const parts = c.map((usd, k) => (usd > 0 ? `${series[k].label} ${formatValue(usd, 'usd')}` : null)).filter(Boolean);
+    return { day, up: c, tip: `${formatDay(day)}: ${formatValue(c.reduce((t, v) => t + v, 0), 'usd')} of estimated usage${parts.length > 1 ? ` (${parts.join(', ')})` : ` (${series[c.findIndex((v) => v > 0)].label})`}` };
+  });
+  return { series, points };
+}
+
+function usageFinding(overview) {
+  const { usage, loops, days } = overview;
+  const measure = (id) => overview.measures?.find((m) => m.id === id) ?? null;
+  const usd = measure('usage_usd');
+  if (!usage?.rows?.length || !usd || !(usd.value > 0)) return '';
+  const calls = measure('model_calls');
+  const cache = measure('cache_reuse');
+  const { series, points } = usageDays(overview);
+  const top = series[0];
+  const spent = points.filter((p) => p.up !== null).length;
+  const inLoops = loops?.totals.usd > 0 ? loops.totals.usd : null;
+  const legend = `<ul class="sf-legend">${series
+    .map((s) => `<li><span class="sf-swatch sf-series-${s.key}" aria-hidden="true"></span>${e(s.label)}${s.id ? ` <code>${e(s.id)}</code>` : ''}</li>`)
+    .join('')}</ul>`;
+  return finding({
+    id: 'usage',
+    eyebrow: 'Usage',
+    claim: `Every session on record, for an estimated ${formatValue(usd.value, 'usd')} of model usage`,
+    lede: `That is ${calls ? `${plural(calls.value, 'model call')}, ` : ''}${e(formatDay(days[0], { year: false }))} to ${e(formatDay(days.at(-1)))}, priced from ${
+      cache?.denominator ? `the ${tokens(cache.denominator)} input tokens they read and the output they wrote` : 'their token counts'
+    }, at list prices. It is an estimate, not a bill, and it counts no person’s time and no machine that ran a proof. <a href="${ROUTE}methodology/#def-usage_usd">Definition</a>`,
+    facts: [
+      cache && cache.value !== null ? [pct(cache.value), 'of input tokens were read from cache'] : null,
+      top && usd.value ? [pct(top.usd / usd.value), `of it was ${top.label}${top.id ? ` (${top.id})` : ''}`] : null,
+      inLoops ? [formatValue(inLoops, 'usd'), 'of it was inside feature loop runs'] : calls ? [count(calls.value), 'model calls'] : null,
+    ],
+    href: `${ROUTE}usage/`,
+    more: 'Usage by day, model and effort, and every record',
+    legend,
+    chart: columnsSvg(points, {
+      id: 'sf-chart-usage',
+      title: 'Estimated model usage per day in US dollars, by model',
+      series: { up: series },
+      unit: 'usd',
+      desc: `${spent} of ${points.length} days with model usage.`,
+      table: 'The usage page lists every day.',
+    }),
+    caption: 'Estimated model usage per day, by model. Where usage went says nothing about which model is better: the models did different work.',
+  });
+}
+
 // The catalog's verdicts, in the order the legend lists them. An example with
 // no single verdict has several in its label, or none yet.
 const VERDICTS = [
@@ -1649,10 +1732,10 @@ export function examplesHtml(snapshot, examples = null) {
 
 /**
  * The overview under its headline: one finding each for the loops, what they
- * made, the tools and the code. `examples` names the catalog's squares when
- * the examples collection is at hand.
+ * made, the tools, the code and what it all took. `examples` names the
+ * catalog's squares when the examples collection is at hand.
  */
 export function findingsHtml(snapshot, { examples = null } = {}) {
   const { overview } = snapshot;
-  return [loopsFinding(overview), outputFinding(snapshot, examples), toolsFinding(overview), codeFinding(overview)].filter(Boolean).join('\n        ');
+  return [loopsFinding(overview), outputFinding(snapshot, examples), toolsFinding(overview), codeFinding(overview), usageFinding(overview)].filter(Boolean).join('\n        ');
 }
