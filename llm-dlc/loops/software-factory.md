@@ -746,14 +746,64 @@ Settled by the author on 2026-11-14:
     - The production build is byte for byte Phase 0's (85 files).
     - The drafts build has 3 posts, and its methodology page has the new line.
     - `software-factory:validate`: valid.
-- Next: M2.6, the runbook in docs/software-factory.md. It covers:
-  - what runs locally: the tests and the browser test, `wrangler pages dev`, `software-factory:publish` against a
-    fake;
-  - what is configured: `wrangler.toml`, the function's gate, and the workflow;
-  - the importer's rules a publish can meet, including this one;
-  - what the author must create and run.
-  It must claim nothing as running remotely. Then set the status.
-- Status: working
+- **M2.6 runbook: done** (cycle 13). docs/software-factory.md gets a Runbook section. It keeps apart what works
+  locally, what is configured but has never run remotely, and what the author must create and run. It says plainly
+  that nothing of Milestone 2 has run remotely.
+  - **Works locally**:
+    - the tests, and the browser test with `NODE_PATH`;
+    - `software-factory:refresh`, which writes and prunes the committed `data/`, and `validate`;
+    - Wrangler Pages local development, as a command block that runs from a `/tmp` copy and loads local R2 from the
+      committed snapshot;
+    - the publisher, against fakes only: the CLI always talks to real R2, and the two end-to-end runs used a
+      throwaway preload that isn't in the repo.
+  - **Configured**: `wrangler.toml`'s two environments, the function's gate and failures, the workflow, and the
+    destinations. It lists what rests on documentation rather than a run.
+  - **Reading a publish result**: the JSON fields, the exit codes, each outcome and what it does to the pointer, the
+    steps, and the failure codes.
+  - **The importer**: each refusal code (`missing`, `schema`, `malformed`, `reconcile`, `network`, `invalid`,
+    `conflict`), keyed to `cases.json`. What it accepts: missing optional inputs, cycle 12's null summary, and
+    housekeeping changes. Also how an importer fix gets a new snapshot of the same commit.
+  - **The author's steps, in order**: buckets, token, secrets, the checks before any deploy (`/verify-bytecode/`
+    included), push, the first manual preview run, the schedule, then launch.
+  - The old author list in the Milestone 2 section moved into the runbook. Source layout: `cli.mjs` now says
+    "refresh, validate and publish". It adds `publish.mjs`, `ops/`, the function, `wrangler.toml` and the workflow.
+  - **Fixed, found while writing it**: an account id that isn't 32 hex digits made the CLI crash with a stack trace,
+    because `s3Store` ran outside the CLI's `try`. It now gives the same `ERROR` line as missing variables, exit 1,
+    with no value printed. A new assertion in `site-publish`'s CLI test fails on the old `cli.mjs`.
+  - **Checks**:
+    - The runbook's Wrangler block was run as written, from a `/tmp` copy with wrangler 4.65.0 and no account, on
+      port 8791. Both bindings were listed as local.
+    - `latest.json` returned the committed bytes, with `no-cache`, an ETag, `nosniff` and noindex, and a 304 on
+      `If-None-Match`. A snapshot file was `immutable`. Another path and an encoded slash were 404, and POST was 405.
+    - Headless Chromium loaded the overview's data from `/software-factory/data/` with no script error. Then the
+      server was stopped by its port.
+    - 258 of 259 tests pass, with the browser test skipped. With `NODE_PATH` set, its 19 cases pass.
+    - The production build is byte for byte Phase 0's (85 files).
+    - The drafts build has 3 posts.
+    - `software-factory:validate`: valid.
+- **M2 is done**: the function, publisher and workflow exist with passing credential-free tests for caching, ETags,
+  path limits, fallback, failure and ordering, and the runbook says what the author must create. Every Done-when row
+  holds.
+- **For the author** (docs/software-factory.md, Runbook, "What the author must create and run"):
+  1. Run `setup-r2.sh`.
+  2. Create the bucket-scoped R2 token.
+  3. Add the three `SOFTWARE_FACTORY_R2_*` secrets.
+  4. Before any deploy:
+     - bring in `/verify-bytecode/`'s source;
+     - compare `wrangler.toml` with the project's settings;
+     - confirm that the production branch is `production`.
+  5. Push, optionally pinning the actions to SHAs first.
+  6. Run the workflow once by hand, to preview.
+  7. Set `SOFTWARE_FACTORY_SCHEDULE=on`.
+  8. At launch:
+     - set `published: true`;
+     - add `related: software-factory` to `reading-the-trace`;
+     - deploy.
+
+  Also the author's: the Fable 5.1 vs. 5.2 draft's content, evidence and cover, and the template's cover.
+- **Left as findings**: older snapshots stay in R2, since nothing deletes them. The fixture's breakdown order comes
+  from Phase 0's generator. A tab opened before the first publish doesn't see it until reload.
+- Status: done
 
 ## Loop settings
 

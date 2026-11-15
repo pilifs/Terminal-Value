@@ -34,16 +34,17 @@ if (command === 'validate') {
   console.log(JSON.stringify(result));
   process.exit(result.outcome === 'failed' ? 1 : 0);
 } else if (command === 'publish' && Object.hasOwn(DESTINATIONS, opt('--destination') ?? '')) {
-  let credentials;
+  // Missing variables or a malformed account id stop it here, named, never a value.
+  let store;
   try {
-    credentials = credentialsFromEnv();
+    store = s3Store({ ...credentialsFromEnv(), bucket: DESTINATIONS[opt('--destination')] });
   } catch (e) {
     console.error(`ERROR ${e.message}`);
     process.exit(1);
   }
   const checkout = opt('--checkout');
   const result = await publish({
-    store: s3Store({ ...credentials, bucket: DESTINATIONS[opt('--destination')] }),
+    store,
     order: sourceOrder({ checkout, token: process.env.GITHUB_TOKEN }),
     ref: opt('--ref'),
     sha: opt('--sha'),

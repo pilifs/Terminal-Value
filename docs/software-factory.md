@@ -46,7 +46,9 @@ Source layout:
 blog/posts.mjs                    parsePost, loadPosts (drafts left out before rendering)
 blog/software-factory/
   index.mjs                       buildSection: the build seam (coordinator)
-  cli.mjs                         refresh and validate commands (coordinator)
+  cli.mjs                         refresh, validate and publish commands (coordinator)
+  publish.mjs                     the publisher to R2 (coordinator)
+  ops/                            setup-r2.sh and the saved Pages settings (coordinator)
   site.mjs  site.css              the section's entry in the site header and home page (coordinator)
   schema.json  validate.mjs       the frozen contract and its validator
   identity.mjs                    canonical JSON, config hash, snapshot id
@@ -56,6 +58,9 @@ blog/software-factory/
   editorial.mjs                   stream C (+ the draft post and its template)
   data/                           the committed snapshot (written by refresh only)
   test/                           *.test.mjs per workstream; fixtures/
+functions/software-factory/data/[[path]].js   the Pages Function serving R2 (coordinator)
+wrangler.toml                     the Pages project's bindings and variables (coordinator)
+.github/workflows/software-factory-refresh.yml   the publisher on GitHub Actions (coordinator)
 ```
 
 Nothing under `test/`, `config/` or the modules is public. `blog/assets/` is copied whole into the site, so only
@@ -184,15 +189,170 @@ publisher job runs the same importer, uploads a new snapshot's files, checks the
   orders its commits with git.
 - Nothing is installed (the publisher needs no npm package), and the token has `contents: read` only.
 
-The merge loop writes the function, its config and the workflow, with tests that run without credentials. The
-author's part happens on a machine where wrangler is logged in:
+The steps that need an account, and everything else needed to run this, are in the [runbook](#runbook) below.
 
-1. `blog/software-factory/ops/setup-r2.sh` (`--dry-run` first, if you like). It creates both buckets in `enam` if
-   missing, and checks each by writing, reading back and deleting an object. It saves the Pages project's current
-   settings as `terminal-value.pages-config.toml`: copy that into `blog/software-factory/ops/`, so the repo's
-   `wrangler.toml` keeps them.
-2. In the dashboard, create an R2 API token with Object Read & Write on these two buckets only.
-3. Store its values as the GitHub secrets `SOFTWARE_FACTORY_R2_ACCOUNT_ID`, `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and
-   `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY` (`setup-r2.sh --github` asks for them with hidden input and sets them
-   with `gh`).
-4. Turn the schedule on with the repository variable `SOFTWARE_FACTORY_SCHEDULE=on` once a manual run has worked.
+## Runbook
+
+What follows keeps three things apart, as the plan asks: what works locally, what is configured but has never run
+remotely, and what the author must create and run. **Nothing of Milestone 2 has run remotely.** No bucket, token or
+secret was created from this repo, nothing was deployed, and the workflow has never run on GitHub.
+
+### What works locally
+
+Everything here runs without an account, credentials or network, apart from the npm install for the browser test.
+
+- **The tests**: `npm run test:software-factory`. They cover the function (fake R2 binding), `wrangler.toml` (read
+  with wrangler's own config reader), the publisher (a fake store, and a local fake of R2's S3 API that checks every
+  signature), the workflow (its YAML, and its script run in bash with a stand-in npm), the importer, the pages and
+  the client. The browser test (Commands, above) is the one that skips without Playwright.
+- **A snapshot from in-the-loop**: `npm run software-factory:refresh -- --sha <sha>`, from GitHub, or add
+  `--checkout ../in-the-loop` to read a local clone. It writes into `blog/software-factory/data/`, the committed
+  snapshot, and prunes the snapshots there that neither the pointer nor a post's evidence names. Commit the result
+  only as a change of its own. `npm run software-factory:validate` checks what is there.
+- **The function, with Wrangler Pages local development.** It needs no account. Run it from a copy, so wrangler's
+  `.wrangler/` state stays out of the repo. `wrangler.toml` supplies the binding and the variable, and local R2
+  starts empty, so load the committed snapshot into it first:
+
+  ```sh
+  npm run build:drafts
+  R=$PWD W=$PWD/node_modules/.bin/wrangler D=$(mktemp -d)
+  mkdir -p "$D/blog/software-factory"
+  cp -r dist functions wrangler.toml "$D/"
+  cp -r blog/software-factory/config "$D/blog/software-factory/"   # the function bundles section.json
+  for k in $(cd blog/software-factory/data && find . -name '*.json' | sed 's|^\./||'); do
+    (cd "$D" && "$W" r2 object put "software-factory-data-preview/$k" \
+      --file "$R/blog/software-factory/data/$k" --content-type 'application/json; charset=utf-8' \
+      --local --persist-to .state)
+  done
+  (cd "$D" && "$W" pages dev --persist-to .state --port 8792)
+  ```
+
+  On 2026-11-15, with wrangler 4.65.0, it listed `env.SOFTWARE_FACTORY_DATA (software-factory-data-preview)` and
+  `SOFTWARE_FACTORY_ENVIRONMENT ("preview")`, both local. Then:
+  - `/software-factory/data/latest.json` was the committed bytes, with `Cache-Control: no-cache`, an ETag, `nosniff`
+    and `X-Robots-Tag: noindex`, and 304 for `If-None-Match` with that ETag;
+  - a snapshot file was `public, max-age=31536000, immutable`;
+  - any other path was 404, an encoded slash included, and POST was 405;
+  - the overview at `/software-factory/` loaded its data from `/software-factory/data/` in headless Chromium, with
+    no script error.
+
+  Stop it with Ctrl-C, or by the pid that `ss -ltnp 'sport = :8792'` shows.
+- **The publisher.** Locally it runs only against fakes, in the tests. `software-factory:publish` itself always
+  talks to real R2 (`https://<account>.r2.cloudflarestorage.com`), so without the three credentials it stops before
+  doing anything and names the missing variables. Twice during development it ran end to end, through
+  `s3Store`, on the local in-the-loop clone, against a local signed fake of R2. That needed a throwaway preload to
+  send R2's host to the fake, which is not in the repo. The runs gave `new-snapshot`, then `unchanged`, then
+  `refused` for an older commit (Progress in `llm-dlc/loops/software-factory.md`, M2.3 and M2.4).
+
+### What is configured, and has never run remotely
+
+- **`wrangler.toml`** (repo root). The top level is preview: every branch but production, `npm run deploy:dev`'s
+  `dev` included, and local `wrangler pages dev`. It binds `SOFTWARE_FACTORY_DATA` to `software-factory-data-preview`
+  and sets `SOFTWARE_FACTORY_ENVIRONMENT = "preview"`. `[env.production]`, which `npm run deploy`'s
+  `--branch=production` selects, binds `software-factory-data` and sets `production`. The name and compatibility date
+  come from the project's settings, saved on 2026-11-14 in `ops/terminal-value.pages-config.toml`. From now on,
+  every deploy of either kind carries these bindings.
+- **The function's gate.** While `config/section.json` says `published: false`, the function answers only where
+  `SOFTWARE_FACTORY_ENVIRONMENT` is `preview`. Anywhere else, a missing variable included, it answers 404, as a site
+  without the section would. That matters because `wrangler pages deploy` uploads `functions/` with any deploy. Once
+  the section is published, it serves in both environments.
+- **The function's failures**: a missing object is 404, and a missing binding or a failing bucket is 503. Errors are
+  `no-store`. The client falls back to the bundled snapshot on any of them.
+- **The workflow**, `.github/workflows/software-factory-refresh.yml`, as described above. GitHub schedules only the
+  default branch's copy, so it does nothing until it is pushed to `main`.
+- **The publisher's destinations**: `preview` is `software-factory-data-preview` and `production` is
+  `software-factory-data`, the buckets in `wrangler.toml`. A test keeps them equal.
+
+These rest on documentation, not on a run: R2's S3 API honouring `If-Match` and `If-None-Match: *` on PutObject (the
+concurrency group is the first guard either way), a deploy failing while a bound bucket is missing,
+`actions/checkout@v5` and `actions/setup-node@v5`, and the `vars` context in a job's `if`.
+
+### Reading a publish result
+
+`software-factory:publish` prints one JSON line, never a credential: `destination`, `outcome`, `snapshotId`, `sha`,
+`previous`, `uploaded` (the keys it wrote), and on a refusal or failure `step`, `code` and `error`. It exits 0 for
+`new-snapshot` and `unchanged`, 1 for `refused`, `failed` or a credential problem, and 2 for a usage error.
+
+| Outcome | Meaning | The pointer |
+| --- | --- | --- |
+| `new-snapshot` | A new snapshot was uploaded, read back and pointed to | Replaced; `publishedAt` is now |
+| `unchanged` | The destination already points at this snapshot | Only `lastSourceCheck` moves |
+| `refused` | Code `behind` or `diverged`: the destination's snapshot comes from a newer or unrelated source commit. Code `older-check`: the destination was checked later than this run's clock | Untouched |
+| `failed` | `step` says where: `refresh`, `validate`, `remote`, `order`, `upload`, `verify` or `pointer` | Untouched, so `lastSourceCheck` stays the last successful check |
+
+Failure codes:
+
+- `store`: R2 answered with an error. A missing bucket is an error here, never an empty destination.
+- `remote`: the destination's pointer or the manifest it names is missing or invalid.
+- `verify`: a file read back differently.
+- `conflict`: another run changed `latest.json` meanwhile, and its pointer stands.
+- `order`: the source commits couldn't be compared.
+- An importer code, below.
+
+Missing variables, or an account id that isn't 32 hex digits, stop it before anything runs, with an `ERROR` line
+that names the variable, never its value.
+
+A run after a failure uploads only what is still missing. Older snapshots stay in the bucket. Nothing deletes them
+yet.
+
+### What the importer refuses, and what it accepts
+
+A publish builds its snapshot with the same importer as `software-factory:refresh`. When in-the-loop changes in a
+way the importer doesn't trust, every publish of that commit fails at `refresh` and the published data stops
+advancing. The pointer stays as it was. The codes:
+
+| Code | When | Example |
+| --- | --- | --- |
+| `missing` | A required input is missing at the commit: the rollup `llm-dlc/traces/metrics.json`, `llm-dlc/index.json`, `verification/results/index.json`, `examples/index.json` or `examples/tags.json`. Or the ref or sha doesn't exist | `missing-rollup` |
+| `schema` | An input's `schema` isn't one `config/source.json` lists, a required field is missing, or a record lacks what it needs | `unsupported-schema`, `missing-required-field` |
+| `malformed` | An input isn't a JSON object | `malformed-json` |
+| `reconcile` | The rollup's totals don't add up to its sessions, or a session's metrics file disagrees with the rollup | `rollup-disagrees` |
+| `network` | GitHub couldn't be read, or a listing came back truncated | `network-error` |
+| `invalid` | The snapshot built fails `validate.mjs` | |
+| `conflict` | A snapshot with the same id already in `data/` has other files (refresh into `data/` only) | |
+
+The examples are cases in `test/fixtures/cases.json`. What it accepts, and how it counts:
+
+- A session's own metrics file, or a job record, may be missing. That session's calls are then left out and counted
+  in coverage, and that job's `expected` and submitting session are null.
+- A rollup change whose `summary` is null, in-the-loop's working copy before its first commit message, is left out
+  of the recorded changes until it has one. Its sessions' calls still count in usage. Any other kind of summary that
+  isn't a string is refused (`schema`).
+- Changes whose summary is "Record session traces" are housekeeping. They are counted and kept identifiable, never
+  mixed with feature work.
+
+A fix to the importer is a new `GENERATOR` version in `metrics.mjs`, which makes a new snapshot of the same commit.
+The publisher replaces the pointer with it without asking the order. Changing the contract or the metric definitions
+changes every snapshot id (above).
+
+### What the author must create and run
+
+In this order. Each step is the author's, on a machine logged in to Cloudflare or GitHub. None of it is done.
+
+1. **R2 buckets**: `blog/software-factory/ops/setup-r2.sh` (`--dry-run` first, if you like). It creates
+   `software-factory-data` and `software-factory-data-preview` in `enam` if missing, and checks each by writing,
+   reading back and deleting an object. It also saves the project's settings as
+   `terminal-value.pages-config.toml`. The copy saved on 2026-11-14 is already in `ops/`, and `wrangler.toml`
+   builds on it. If the new copy differs, bring the difference into `wrangler.toml`.
+2. **Token**: in the dashboard, an R2 API token with Object Read & Write on those two buckets only.
+3. **Secrets**: store its values as the repository secrets `SOFTWARE_FACTORY_R2_ACCOUNT_ID`,
+   `SOFTWARE_FACTORY_R2_ACCESS_KEY_ID` and `SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY`. `setup-r2.sh --github` asks for
+   them with hidden input and sets them with `gh`.
+4. **Before any deploy**, of either kind:
+   - bring in `/verify-bytecode/`'s source (State at Phase 0);
+   - compare `wrangler.toml` with the project's settings;
+   - confirm that the project's production branch is `production`;
+   - make sure both buckets exist.
+5. **Push**, so the workflow reaches `main`. Optionally, pin `actions/checkout` and `actions/setup-node` to commit
+   SHAs first.
+6. **First run, by hand, to preview**: Actions, Software Factory refresh, Run workflow, destination `preview`. A
+   successful run's log ends with the JSON result, `new-snapshot` the first time. Then a preview deploy
+   (`npm run deploy:dev`) serves it at `/software-factory/data/latest.json` on the dev site.
+7. **Schedule**: set the repository variable `SOFTWARE_FACTORY_SCHEDULE` to `on`. Each run then publishes preview,
+   then production.
+8. **Launch**: set `published: true` in `config/section.json`, add `related: software-factory` to
+   `blog/posts/reading-the-trace/index.md`, and deploy (`npm run deploy`). The production function serves only once
+   the section is published.
+
+The author also writes the Fable 5.1 vs. 5.2 draft's content, evidence and cover, and the template's cover, if one
+is wanted.

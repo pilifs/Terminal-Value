@@ -388,6 +388,12 @@ test('the CLI asks for a destination and refuses to start without the credential
   assert.equal(missing.status, 1);
   assert.match(missing.stderr, /missing SOFTWARE_FACTORY_R2_ACCOUNT_ID, SOFTWARE_FACTORY_R2_ACCESS_KEY_ID, SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY/);
   assert.equal(missing.stdout, '');
+  // A malformed account id is named the same way, before any request, and its value is never printed.
+  const bad = { ...env, SOFTWARE_FACTORY_R2_ACCOUNT_ID: 'not-an-account-zz', SOFTWARE_FACTORY_R2_ACCESS_KEY_ID: 'x', SOFTWARE_FACTORY_R2_SECRET_ACCESS_KEY: 'y' };
+  const malformed = spawnSync(process.execPath, [cli, 'publish', '--destination', 'preview'], { env: bad, encoding: 'utf8' });
+  assert.equal(malformed.status, 1);
+  assert.equal(malformed.stderr, 'ERROR SOFTWARE_FACTORY_R2_ACCOUNT_ID is not a Cloudflare account id (32 hex digits)\n');
+  assert.equal(malformed.stdout, '');
 });
 
 // --- SigV4 and R2's S3 API ---------------------------------------------------
