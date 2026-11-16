@@ -295,6 +295,21 @@
           "additionalProperties": false,
           "properties": {
             "totals": { "$ref": "#/$defs/loopStat" },
+            "cycles": {
+              "description": "What a cycle took, over every cycle the index measured: seconds a model or a tool was at work and the list price of its model calls. The middle cycle and one in ten under and over, by nearest rank; the cycles in each band of config/loops.json's cycleMinutes and cycleUsd; and the cycles that queued a proof. Null when the index measured none. Since generator 16.",
+              "type": ["object", "null"],
+              "required": ["measured", "seconds", "usd", "bySeconds", "byUsd", "withJobs", "jobs"],
+              "additionalProperties": false,
+              "properties": {
+                "measured": { "type": "integer", "minimum": 1 },
+                "seconds": { "type": "object", "required": ["p10", "median", "p90"], "additionalProperties": false, "properties": { "p10": { "type": "integer", "minimum": 0 }, "median": { "type": "integer", "minimum": 0 }, "p90": { "type": "integer", "minimum": 0 } } },
+                "usd": { "type": "object", "required": ["p10", "median", "p90"], "additionalProperties": false, "properties": { "p10": { "type": "number", "minimum": 0 }, "median": { "type": "number", "minimum": 0 }, "p90": { "type": "number", "minimum": 0 } } },
+                "bySeconds": { "type": "array", "items": { "type": "object", "required": ["from", "to", "cycles"], "additionalProperties": false, "properties": { "from": { "type": "number", "minimum": 0 }, "to": { "type": ["number", "null"] }, "cycles": { "type": "integer", "minimum": 0 } } } },
+                "byUsd": { "type": "array", "items": { "type": "object", "required": ["from", "to", "cycles"], "additionalProperties": false, "properties": { "from": { "type": "number", "minimum": 0 }, "to": { "type": ["number", "null"] }, "cycles": { "type": "integer", "minimum": 0 } } } },
+                "withJobs": { "type": "integer", "minimum": 0 },
+                "jobs": { "type": "integer", "minimum": 0 }
+              }
+            },
             "interjections": { "type": "integer", "minimum": 0, "description": "Prompts in any run that are not the loop's own, added over the runs." },
             "byHand": {
               "type": "object",
@@ -1363,7 +1378,22 @@
                     "change": { "type": ["string", "null"], "description": "The change the cycle committed, the first when it committed several; null for a cycle that ended without a commit." },
                     "commits": { "type": "integer", "minimum": 0, "description": "The commits the cycle made, on a cycle read from the index of loops." },
                     "summary": { "type": "string" },
-                    "decision": { "enum": ["continue", "stop", null] }
+                    "decision": { "enum": ["continue", "stop", null] },
+                    "took": {
+                      "type": "object",
+                      "description": "What the source's index of loops says the cycle took: seconds a model or a tool was at work, the list price of its model calls, and the proofs it queued. Since generator 16.",
+                      "required": ["seconds", "usd", "calls", "toolCalls"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "seconds": { "type": "integer", "minimum": 0 },
+                        "usd": { "type": "number", "minimum": 0 },
+                        "calls": { "type": ["integer", "null"], "minimum": 0 },
+                        "toolCalls": { "type": ["integer", "null"], "minimum": 0 },
+                        "jobs": { "type": "integer", "minimum": 1 },
+                        "jobsPassed": { "type": "integer", "minimum": 0 },
+                        "jobsFailed": { "type": "integer", "minimum": 0 }
+                      }
+                    }
                   }
                 }
               },

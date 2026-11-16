@@ -647,6 +647,12 @@ test('a run that left no run record gets a record from the index of loops, and s
     categories: [{ category: 'moonshot', loops: 1, ...group({ runs: 3, commits: 6 }) }, { category: 'verification', loops: 1, ...group({ cycles: 0 }) }],
     loops: [{ loop: 'by-hand', category: 'moonshot', kind: 'moonshot by hand', streamOf: null, ...group({ runs: 3, commits: 6 }) }, { loop: 'verification', category: 'verification', kind: 'verification loop', streamOf: null, ...group({ cycles: 0 }) }],
     runs,
+    // What the index measured of three cycles: the first of run a, and two of runs that have no record here.
+    cycleFacts: [
+      { run: 'a', n: 1, seconds: 600, usd: 1.23456789, calls: 7, toolCalls: 9, jobs: 2, jobsPassed: 1, jobsFailed: 1 },
+      { run: 'x', n: 1, seconds: 90, usd: 0.5, calls: 2, toolCalls: 3, jobs: 0, jobsPassed: 0, jobsFailed: 0 },
+      { run: 'x', n: 2, seconds: 4000, usd: 12, calls: null, toolCalls: null, jobs: 0, jobsPassed: 0, jobsFailed: 0 },
+    ],
   };
   // The session of the first run is one the snapshot knows, so its summary can be linked.
   const out = run(norm({ calls: [call('2026-11-01T10:05:00Z', { session: 's-a' })], sessions: [session('s-a')], loopAccount: account }));
@@ -660,9 +666,22 @@ test('a run that left no run record gets a record from the index of loops, and s
     started: '2026-11-01T10:00:00.000Z', ended: '2026-11-01T10:30:00.400Z', seconds: 1800, agentSeconds: 60, outcome: 'unrecorded', limit: null,
     commits: 2, calls: 5, toolCalls: 10, toolErrors: 1, outputTokens: 100, usd: 1.234568, prompts: null, interjections: 0, codeAdded: null,
     // A cycle is named by the first change it committed; one that committed nothing has none, and no summary.
-    cycles: [{ n: 1, at: '2026-11-01T10:10:00.000Z', change: 'abcd', commits: 2, summary: 'First', decision: 'continue' }, { n: 2, at: '2026-11-01T10:30:00.000Z', change: null, commits: 0, summary: '', decision: null }],
+    // The first cycle has what the index says it took; the second was not measured and has nothing made up.
+    cycles: [
+      { n: 1, at: '2026-11-01T10:10:00.000Z', change: 'abcd', commits: 2, summary: 'First', decision: 'continue', took: { seconds: 600, usd: 1.234568, calls: 7, toolCalls: 9, jobs: 2, jobsPassed: 1, jobsFailed: 1 } },
+      { n: 2, at: '2026-11-01T10:30:00.000Z', change: null, commits: 0, summary: '', decision: null },
+    ],
     recordUrl: null,
   });
+  // What a cycle took, over the three measured: the middle one and the ends by nearest rank, each band's count
+  // (five minutes and one dollar wide, the last open-ended), and the cycles with a job tied to them.
+  const c = out.overview.loopAccount.cycles;
+  assert.deepEqual([c.measured, c.seconds, c.usd, c.withJobs, c.jobs], [3, { p10: 90, median: 600, p90: 4000 }, { p10: 0.5, median: 1.234568, p90: 12 }, 1, 2]);
+  assert.deepEqual(c.bySeconds.filter((b) => b.cycles).map((b) => [b.from, b.to, b.cycles]), [[0, 300, 1], [600, 900, 1], [2700, null, 1]]);
+  assert.deepEqual(c.byUsd.filter((b) => b.cycles).map((b) => [b.from, b.to, b.cycles]), [[0, 1, 1], [1, 2, 1], [10, null, 1]]);
+  assert.equal(c.bySeconds.reduce((n, b) => n + b.cycles, 0), 3);
+  // An account that measured no cycle has no spread.
+  assert.equal(run(norm({ loopAccount: { ...account, cycleFacts: [] } })).overview.loopAccount.cycles, null);
   assert.match(summaryUrl, /^https:\/\/github\.com\/[^/]+\/[^/]+\/blob\/[0-9a-f]{40}\/.*s-a/);
   // A session the snapshot doesn't know gets no link; an empty reason is none.
   assert.deepEqual([records[1].source, records[1].summaryUrl, records[1].reason, records[1].seconds, records[1].cycles], ['session', null, null, null, []]);

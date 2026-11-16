@@ -677,11 +677,31 @@ export function normalizeSources(raw, config = loadConfig()) {
     // Every cycle of a run as the index has it, in order: when it ended, the
     // changes it committed and its commit's summary line. A run that left no
     // run record is read from these.
+    // What each cycle took, where the index measured it: the time a model or a
+    // tool was at work, the price of its calls, and the proofs it queued.
+    const tookOf = (c) =>
+      c.measured === true && isCount(c.busy_ms) && typeof c.usd === 'number' && Number.isFinite(c.usd) && c.usd >= 0
+        ? {
+            seconds: seconds(c.busy_ms),
+            usd: c.usd,
+            calls: isCount(c.api_calls) ? c.api_calls : null,
+            toolCalls: isCount(c.tool_calls) ? c.tool_calls : null,
+            jobs: isCount(c.jobs) ? c.jobs : 0,
+            jobsPassed: isCount(c.jobs_passed) ? c.jobs_passed : 0,
+            jobsFailed: isCount(c.jobs_failed) ? c.jobs_failed : 0,
+          }
+        : null;
+    const cycleFacts = [];
+    for (const c of Array.isArray(loopsDoc.cycles) ? loopsDoc.cycles : []) {
+      const took = isObject(c) && typeof c.run === 'string' && isCount(c.cycle) ? tookOf(c) : null;
+      if (took) cycleFacts.push({ run: c.run, n: c.cycle, ...took });
+    }
     const cyclesOf = new Map();
     for (const c of Array.isArray(loopsDoc.cycles) ? loopsDoc.cycles : []) {
       if (!isObject(c) || typeof c.run !== 'string' || !isCount(c.cycle) || !isInstant(c.ended)) continue;
       (cyclesOf.get(c.run) ?? cyclesOf.set(c.run, []).get(c.run)).push({
         n: c.cycle,
+        took: tookOf(c),
         at: new Date(c.ended).toISOString(),
         changes: Array.isArray(c.changes) ? c.changes.filter((x) => typeof x === 'string' && x) : [],
         commits: isCount(c.commits) ? c.commits : 0,
@@ -735,6 +755,7 @@ export function normalizeSources(raw, config = loadConfig()) {
       categories,
       loops,
       runs: loopRuns,
+      cycleFacts,
     };
   }
 

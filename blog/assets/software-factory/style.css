@@ -1483,6 +1483,11 @@ body.software-factory .sf-ledger-full li + li {
 body.software-factory .sf-ledger-stop {
   color: var(--sf-term-dim);
 }
+/* What a cycle took, on a line of its own under its summary. */
+body.software-factory .sf-ledger-took {
+  display: block;
+  color: var(--sf-term-dim);
+}
 body.software-factory .sf-ledger li.sf-ledger-plain {
   display: block;
 }
@@ -2425,6 +2430,16 @@ body.software-factory .sf-rate-label {
   }
   body.software-factory .sf-rate-column {
     height: 8.5rem;
+  }
+}
+
+/* The cycles in bands: ten or so columns to a chart, so on a phone the labels are smaller. */
+body.software-factory .sf-cycle-rates {
+  margin-bottom: 0.9rem;
+}
+@media (max-width: 36rem) {
+  body.software-factory .sf-cycle-rates .sf-rate-label {
+    font-size: 0.5625rem;
   }
 }
 

@@ -954,6 +954,11 @@ Settled by the author on 2026-11-14:
 - **The overview says what was built** (2026-11-15, moonshot loop `software-factory-impact`):
   docs/software-factory.md, same title. The headline's sentence and a card at the end link
   `/prove-java-change/`, in that page's own words. No data changed.
+- **What a cycle took** (2026-11-15, moonshot loop `software-factory-impact`): docs/software-factory.md, same
+  title. The loops page says what the middle of the 350 cycles took (16 min of work, $3.70) with the spread in
+  two charts, each run's record says it under every cycle with how its verification jobs came out, and the
+  overview's finding gives the middle cycle as a figure. Generator 16, metric definitions 15, snapshot
+  `sf1-6452266b8e72453a`. First load 136.4 KB of 300 KB.
 - Status: done
 
 ## Loop settings

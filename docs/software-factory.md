@@ -452,6 +452,34 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### What a cycle took (generator 16)
+
+A cycle is the unit of a loop: one pass of the instruction, ending in a commit. The source's index of its loops
+measures every one of the 350: the time a model or a tool was at work in it, the list price of its model calls,
+and the verification jobs it queued. The snapshot carried only the two medians, and no page showed them.
+
+- **The loops page** has a part "What a cycle took" (`/software-factory/loops/#cycles`), between the table by
+  kind of loop and the clock. The middle cycle took 16 min of work and an estimated $3.70. One in ten took under
+  4 min or $1.37, and one in ten over 34 min or $10.52. 114 of the 350 have a verification job tied to them, 241
+  jobs in all. Two charts count the cycles in bands of five minutes and of one dollar, the last band of each
+  open-ended (`cycleMinutes` and `cycleUsd` in `config/loops.json`).
+- **A run's record** says under each cycle what it took: "14 min of work · $4.18 · 1 job failed". This is on
+  every run opened from the clock, 349 cycles in all. A job that failed is a result, not a failed cycle.
+- **The overview's finding** gives "$3.70, estimated usage of the middle cycle, for 16 min of work" as its third
+  figure, in place of the average per commit ($2.98), which the loops page still has per committed cycle.
+- **How the middle is taken.** Nearest rank, the upper of the two middle values, which is how the source takes
+  its own medians: the snapshot's 960 s and $3.698015 equal the index's `median_cycle_busy_ms` and
+  `median_cycle_usd`. Time and usage are ranked apart, so the two middles are not one cycle.
+- **What it can't say.** A cycle's time includes a tool left running: 17 cycles took 45 minutes or more. The
+  longest is recorded as 11.1 hours, and the source has one tool call recorded as 10.6 hours. Jobs submitted
+  before 2026-11-15 name their session only when the agent passed it, so older cycles list fewer jobs than they
+  queued. The definition says both.
+
+In the snapshot: `overview.loopAccount.cycles` (measured, the three ranks of seconds and of usd, the bands, the
+cycles with jobs) and `took` on a cycle of a record in the loops collection (seconds, usd, calls, toolCalls, and
+the jobs when it queued any). Metric definitions are version 15 (`cycle_took` is new). Snapshot
+`sf1-6452266b8e72453a`, the same revision; the share image was rendered again from it. First load 136.4 KB of 300 KB.
+
 ### The overview says what was built
 
 The overview said the loops worked "in in-the-loop, a project that formally verifies Java code" and linked only

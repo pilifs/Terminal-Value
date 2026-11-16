@@ -636,6 +636,55 @@ test('the model performance page says what the calls were before how they failed
   assert.match(finding, /800 of them were Bash, a shell command, and none went to an MCP server\. Of the 12 that failed/);
 });
 
+test('what a cycle took: the loops page’s part, a line under each cycle of a run, and the overview’s figure', () => {
+  const snap = snapshotOf(run());
+  const cycles = {
+    measured: 350,
+    seconds: { p10: 246, median: 960, p90: 2052 },
+    usd: { p10: 1.366492, median: 3.698015, p90: 10.516432 },
+    bySeconds: [{ from: 0, to: 300, cycles: 42 }, { from: 300, to: 600, cycles: 62 }, { from: 600, to: null, cycles: 246 }],
+    byUsd: [{ from: 0, to: 1, cycles: 20 }, { from: 1, to: 2, cycles: 51 }, { from: 2, to: null, cycles: 279 }],
+    withJobs: 114,
+    jobs: 241,
+  };
+  const withAccount = { ...snap, overview: { ...snap.overview, loopAccount: accountOf({ runs: accountRuns(), cycles }) } };
+  const html = loopsHtml(withAccount);
+  const words = html.replace(/<[^>]+>/g, '');
+  assert.ok(html.indexOf('id="cycles"') > html.indexOf('id="every-loop"') && html.indexOf('id="cycles"') < html.indexOf('id="clock"'));
+  assert.match(words, /Work in the middle cycle\s*16 min\s*a model or a tool at work; one in ten under 4 min, one in ten over 34 min/);
+  assert.match(words, /Estimated usage of the middle cycle\s*\$3\.70\s*one in ten under \$1\.37, one in ten over \$10\.52/);
+  assert.match(words, /Cycles with a verification job\s*114 of 350\s*241 jobs tied to the cycle that queued it/);
+  assert.match(html, /methodology\/#def-cycle_took/);
+  // A column for each band, its count over it, and the open-ended band said so to a screen reader.
+  assert.equal((html.slice(html.indexOf('class="sf-cycle-rates"'), html.indexOf('id="clock"')).match(/<div class="sf-rate"/g) ?? []).length, 6);
+  assert.match(html, /aria-label="Cycles by minutes of work: under 5, 42; 5–10, 62; 10 and over, 246\. Cycles by estimated usage, in dollars: under 1, 20; 1–2, 51; 2 and over, 279\."/);
+  assert.match(html, /data-tip="62 cycles: 5 min to 10 min of work"/);
+  assert.match(html, /data-tip="279 cycles: \$2 and over of estimated usage"/);
+  // Without the spread the page has no such part.
+  assert.doesNotMatch(loopsHtml({ ...snap, overview: { ...snap.overview, loopAccount: accountOf({ runs: accountRuns() }) } }), /id="cycles"/);
+  // The overview's finding gives the middle cycle in place of the average per commit.
+  const finding = findingsHtml(withAccount).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  assert.match(finding, /estimated usage of the middle cycle, for 16 min of work \$3\.70/);
+  // A run's record: under each measured cycle what it took, with how its jobs came out.
+  const record = {
+    id: 'r', loop: 'core', campaign: 'core', session: 's', model: 'claude-opus-5-5', effort: 'high', started: '2026-11-07T04:00:00Z', ended: '2026-11-07T06:00:00Z', seconds: 7200, agentSeconds: 7000,
+    outcome: 'done', limit: null, commits: 4, calls: 10, toolCalls: 20, toolErrors: 0, outputTokens: 100, usd: 20, prompts: null, interjections: 0, codeAdded: null, recordUrl: null, summaryUrl: null,
+    cycles: [
+      { n: 1, at: '2026-11-07T04:15:00Z', change: 'aaaa', summary: 'One', decision: 'continue', took: { seconds: 860, usd: 4.177118, calls: 60, toolCalls: 60, jobs: 1, jobsPassed: 0, jobsFailed: 1 } },
+      { n: 2, at: '2026-11-07T04:50:00Z', change: 'bbbb', summary: 'Two', decision: 'continue', took: { seconds: 1912, usd: 9.320279, calls: 110, toolCalls: 116, jobs: 3, jobsPassed: 2, jobsFailed: 1 } },
+      { n: 3, at: '2026-11-07T05:20:00Z', change: 'cccc', summary: 'Three', decision: 'continue', took: { seconds: 300, usd: 1, calls: 5, toolCalls: 5, jobs: 6, jobsPassed: 6, jobsFailed: 0 } },
+      { n: 4, at: '2026-11-07T05:50:00Z', change: 'dddd', summary: 'Four', decision: 'stop', took: { seconds: 1440, usd: 5.76, calls: 9, toolCalls: 9 } },
+    ],
+  };
+  const panel = runRecordHtml(record);
+  const lines = [...panel.matchAll(/<span class="sf-ledger-took">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(lines, ['14 min of work · $4.18 · 1 job failed', '32 min of work · $9.32 · 3 jobs: 2 passed, 1 failed', '5 min of work · $1.00 · 6 jobs passed', '24 min of work · $5.76']);
+  assert.match(panel, /Under each is what the index says it took/);
+  // A record from before the index measured cycles has no such line and no such note.
+  const bare = runRecordHtml({ ...record, cycles: record.cycles.map(({ took, ...c }) => c) });
+  assert.doesNotMatch(bare, /sf-ledger-took|Under each is what the index says/);
+});
+
 // --- The floor: every run on one clock ---------------------------------------
 
 const H = 3600e3;

@@ -25,6 +25,8 @@
     "paths": ["llm-dlc/tools/feature-loop.sh", "llm-dlc/tools/run-streams.sh", "llm-dlc/tools/loop-common.sh"]
   },
   "runHours": [0, 1, 2, 4],
+  "cycleMinutes": [0, 5, 10, 15, 20, 25, 30, 35, 40, 45],
+  "cycleUsd": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   "campaign": "A loop belongs to the campaign of the shortest brief name that equals its own or that it extends with '-': foundations-heap runs in the campaign foundations when a brief named foundations exists. Brief names are the files of llm-dlc/loops/ at the source revision, and the names of the runs themselves.",
   "outcomes": {
     "note": "How a run ended, from its record's Ended or Stopped line. The first matching pattern wins; no such line is 'open': the record doesn't say the run ended.",

@@ -672,6 +672,36 @@ function floorSection(loops, { cap = FLOOR_HOURS, partial = false } = {}) {
 }
 
 /** The feature loops section. */
+const bandLabel = (b, per = 1) => (b.to === null ? `${b.from / per}+` : b.from === 0 ? `<${b.to / per}` : `${b.from / per}–${b.to / per}`);
+const bandWords = (b, unit, per = 1) => {
+  const v = (n) => unit(n / per);
+  return b.to === null ? `${v(b.from)} and over` : b.from === 0 ? `under ${v(b.to)}` : `${v(b.from)} to ${v(b.to)}`;
+};
+
+/** What a cycle took: the middle one, the spread, and the cycles in each band. */
+function cyclesSection(overview) {
+  const c = overview.loopAccount?.cycles;
+  if (!c) return '';
+  const usd = (v) => formatValue(v, 'usd');
+  const minutes = (n) => `${count(n)} min`;
+  const dollars = (n) => formatValue(n, 'usd').replace(/\.00$/, '');
+  const bars = (rows, label, words) => rows.map((b) => ({ rate: b.cycles, parts: [b.cycles], value: count(b.cycles), label: label(b), tip: `${plural(b.cycles, 'cycle')}: ${words(b)}` }));
+  const groups = [
+    { title: 'Cycles by minutes of work', bars: bars(c.bySeconds, (b) => bandLabel(b, 60), (b) => `${bandWords(b, minutes, 60)} of work`) },
+    { title: 'Cycles by estimated usage, in dollars', bars: bars(c.byUsd, (b) => bandLabel(b), (b) => `${bandWords(b, dollars)} of estimated usage`) },
+  ].filter((g) => g.bars.length > 1);
+  const label = groups.map((g) => `${g.title}: ${g.bars.map((b) => `${b.label.replace('<', 'under ').replace('+', ' and over')}, ${b.value}`).join('; ')}`).join('. ');
+  return `<div class="sf-subhead" id="cycles"><h2>What a cycle took</h2></div>
+        <p class="sf-caption">A cycle is one pass of the instruction: do the next piece, verify it, commit it. The source’s index of its loops measures each one: the time a model or a tool was at work in it, and the list price of its model calls. <a href="${ROUTE}methodology/#def-cycle_took">Definition</a></p>
+        <dl class="sf-figures sf-figures-three">${[
+          tile('Work in the middle cycle', span(c.seconds.median), `a model or a tool at work; one in ten under ${e(span(c.seconds.p10))}, one in ten over ${e(span(c.seconds.p90))}`),
+          tile('Estimated usage of the middle cycle', usd(c.usd.median), `one in ten under ${e(usd(c.usd.p10))}, one in ten over ${e(usd(c.usd.p90))}`),
+          tile('Cycles with a verification job', `${count(c.withJobs)} of ${count(c.measured)}`, `${plural(c.jobs, 'job')} tied to the cycle that queued it`),
+        ].join('')}</dl>
+        ${groups.length ? `<div class="sf-cycle-rates">${ratesHtml(groups, { series: [{ key: 'count' }], label: `${label}.` })}</div>` : ''}
+        <p class="sf-caption">Each of the ${plural(c.measured, 'cycle')} is counted once in each chart, and the last column of each is open-ended. Pick a run on the clock below to read what each of its cycles took.</p>`;
+}
+
 export function loopsHtml(snapshot) {
   const { loops } = snapshot.overview;
   if (!loops || !loops.totals.runs)
@@ -708,6 +738,7 @@ export function loopsHtml(snapshot) {
         }${e(f.typed)}${f.hand ? ` ${e(f.hand)}` : ''}</p>
         <dl class="sf-figures">${tiles}</dl>
         ${loopAccountTables(snapshot.overview)}
+        ${cyclesSection(snapshot.overview)}
         ${clock ? floorSection(clock, { cap: Infinity }) : ''}
         <div class="sf-subhead"><h2>The runs that left a record</h2></div>
         <p class="sf-caption">Since Nov 6 the loop’s script writes a record of each run, cycle by cycle. ${plural(t.runs, 'run')} of ${plural(t.loops, 'loop')} left one, in ${plural(campaigns.length, 'campaign')}: a campaign runs several loops side by side on separate branches, then one more to merge them. The ${clock ? '' : 'clock, the '}prompts and the campaigns below are read from those records${
@@ -795,12 +826,17 @@ export function runRecordHtml(r, { models = [] } = {}) {
   const session = r.source === 'session';
   const byHand = r.kind === BY_HAND;
   const typed = r.prompts ? r.prompts.person + r.prompts.interrupt : null;
+  // What the index says a cycle took: work, estimated usage, and how the jobs it queued came out.
+  const jobsWords = (t) =>
+    t.jobsPassed === t.jobs ? `${plural(t.jobs, 'job')} passed` : t.jobsFailed === t.jobs ? `${plural(t.jobs, 'job')} failed` : `${plural(t.jobs, 'job')}: ${count(t.jobsPassed)} passed, ${count(t.jobsFailed)} failed`;
+  const tookLine = (t) => (t ? `<span class="sf-ledger-took">${[`${e(span(t.seconds))} of work`, e(formatValue(t.usd, 'usd')), t.jobs ? jobsWords(t) : null].filter(Boolean).join(' · ')}</span>` : '');
+  const measured = r.cycles.some((c) => c.took);
   const lines = r.cycles
     .map(
       (c) =>
         `<li><span class="sf-ledger-time">${into((Date.parse(c.at) - started) / 1000)}</span><span class="sf-ledger-cycle">cycle ${e(c.n)}</span><span class="sf-ledger-text">${
           c.change === null && !c.summary ? '<span class="sf-ledger-stop">ended without a commit</span>' : e(c.summary)
-        }${c.commits > 1 ? ` <span class="sf-ledger-stop">${count(c.commits)} commits</span>` : ''}${c.decision === 'stop' ? ' <span class="sf-ledger-stop">decided to stop</span>' : ''}</span></li>`
+        }${c.commits > 1 ? ` <span class="sf-ledger-stop">${count(c.commits)} commits</span>` : ''}${c.decision === 'stop' ? ' <span class="sf-ledger-stop">decided to stop</span>' : ''}${tookLine(c.took)}</span></li>`
     )
     .join('\n              ');
   const none = session ? 'A session of the verification loop has no cycles: it runs the queued proofs and commits the results.' : 'No cycle committed.';
@@ -834,6 +870,7 @@ export function runRecordHtml(r, { models = [] } = {}) {
       : `Each line is a cycle, by the summary line of its own commit.${
           lagging ? ' The run record was still being written at this revision: the cycles it does not list yet are from the source’s index of its loops.' : ''
         }`;
+  const tookNote = measured ? ' Under each is what the index says it took: the time a model or a tool was at work, the estimated usage, and the verification jobs it queued.' : '';
   return `<div class="sf-ledger sf-ledger-full">
             <div class="sf-ledger-bar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><code>${name}</code></div>
             <div class="sf-ledger-body">
@@ -843,7 +880,7 @@ export function runRecordHtml(r, { models = [] } = {}) {
               </ol>
               <p class="sf-ledger-total">${took.join(' · ')}<br>${ended.join(' · ')}</p>
             </div>
-            <p class="sf-ledger-note">${note}${links ? ` ${links}` : ''}</p>
+            <p class="sf-ledger-note">${note}${tookNote}${links ? ` ${links}` : ''}</p>
           </div>`;
 }
 
@@ -1480,8 +1517,10 @@ function loopsFinding(overview) {
       : loops.longest
         ? [span(loops.longest.seconds), 'the longest run nobody typed into']
         : null,
-    f?.totals.commits
-      ? [formatValue(f.totals.usd / f.totals.commits, 'usd'), 'estimated usage for each commit made in a loop run']
+    f?.account.cycles
+      ? [formatValue(f.account.cycles.usd.median, 'usd'), `estimated usage of the middle cycle, for ${span(f.account.cycles.seconds.median)} of work`]
+      : f?.totals.commits
+        ? [formatValue(f.totals.usd / f.totals.commits, 'usd'), 'estimated usage for each commit made in a loop run']
       : t.commits
         ? [formatValue(t.usd / t.commits, 'usd'), 'estimated usage for each commit']
         : null,

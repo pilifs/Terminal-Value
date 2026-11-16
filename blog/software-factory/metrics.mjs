@@ -78,7 +78,7 @@ import {
 } from './identity.mjs';
 import { aggregateFactory } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '15' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '16' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 
@@ -310,9 +310,39 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const tidyLoop = ({ usd, medianCycleUsd, ...rest }) => ({ ...rest, usd: round6(usd), medianCycleUsd: medianCycleUsd == null ? null : round6(medianCycleUsd) });
   const sumRuns = (rows, k) => rows.reduce((n, x) => n + x[k], 0);
   const byHand = la ? la.runs.filter((x) => x.kind === BY_HAND) : [];
+  // What a cycle took, over every cycle the index measured: the middle one,
+  // one in ten under and over (nearest rank, the upper middle as the source
+  // takes its median), and how many fell in each band of config/loops.json.
+  // Since generator 16.
+  const cycleFacts = la?.cycleFacts ?? [];
+  const rank = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
+  const bands = (values, edges) => edges.map((from, i) => ({ from, to: edges[i + 1] ?? null, cycles: values.filter((v) => v >= from && (edges[i + 1] === undefined || v < edges[i + 1])).length }));
+  const cycleSpread = () => {
+    const secs = cycleFacts.map((c) => c.seconds).sort((a, b) => a - b);
+    const usds = cycleFacts.map((c) => c.usd).sort((a, b) => a - b);
+    const queued = cycleFacts.filter((c) => c.jobs > 0);
+    return {
+      measured: cycleFacts.length,
+      seconds: { p10: rank(secs, 0.1), median: rank(secs, 0.5), p90: rank(secs, 0.9) },
+      usd: { p10: round6(rank(usds, 0.1)), median: round6(rank(usds, 0.5)), p90: round6(rank(usds, 0.9)) },
+      bySeconds: bands(secs, (config.loops.cycleMinutes ?? [0]).map((m) => m * 60)),
+      byUsd: bands(usds, config.loops.cycleUsd ?? [0]),
+      withJobs: queued.length,
+      jobs: queued.reduce((n, c) => n + c.jobs, 0),
+    };
+  };
+  const tookByRun = new Map();
+  for (const c of cycleFacts) (tookByRun.get(c.run) ?? tookByRun.set(c.run, new Map()).get(c.run)).set(c.n, c);
+  // A cycle of a record, with what the index says it took.
+  const withTook = (run, cycles) =>
+    cycles.map((c) => {
+      const t = tookByRun.get(run)?.get(c.n);
+      return t ? { ...c, took: { seconds: t.seconds, usd: round6(t.usd), calls: t.calls, toolCalls: t.toolCalls, ...(t.jobs ? { jobs: t.jobs, jobsPassed: t.jobsPassed, jobsFailed: t.jobsFailed } : {}) } } : c;
+    });
   const loopAccount = la
     ? {
         totals: tidyLoop(la.totals),
+        cycles: cycleFacts.length ? cycleSpread() : null,
         interjections: sumRuns(la.runs, 'interjections'),
         byHand: { loops: la.loops.filter((l) => l.kind === BY_HAND).length, runs: byHand.length, cycles: sumRuns(byHand, 'cycles'), commits: sumRuns(byHand, 'commits'), toolCalls: sumRuns(byHand, 'toolCalls') },
         categories: la.categories.map(tidyLoop),
@@ -464,7 +494,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
       prompts: null,
       interjections: x.interjections,
       codeAdded: null,
-      cycles: (x.cycleList ?? []).map((c) => ({ n: c.n, at: c.at, change: c.changes[0] ?? null, commits: c.commits, summary: c.summary ?? '', decision: c.decision })),
+      cycles: withTook(x.run, (x.cycleList ?? []).map((c) => ({ n: c.n, at: c.at, change: c.changes[0] ?? null, commits: c.commits, summary: c.summary ?? '', decision: c.decision }))),
       recordUrl: null,
       summaryUrl: knownSessions.has(x.session) ? source.summaryUrl.replace('{sha}', normalized.source.sha).replace('{session}', x.session) : null,
     }))
@@ -618,7 +648,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
     verification: { schema: 'software-factory-verification/v1', snapshotId: id, records: verificationRecords },
     examples: { schema: 'software-factory-examples/v1', snapshotId: id, records: exampleRecords },
     // Every run, oldest first: the ones with a run record and the ones read from the index.
-    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: [...factory.runRecords, ...accountRecords].sort((a, b) => byValue(a.started, b.started) || byValue(a.id, b.id)) },
+    loops: { schema: 'software-factory-loops/v1', snapshotId: id, records: [...factory.runRecords.map((r) => ({ ...r, cycles: withTook(r.id, r.cycles) })), ...accountRecords].sort((a, b) => byValue(a.started, b.started) || byValue(a.id, b.id)) },
     // Every source file read, with its SHA-256: out of the manifest, which every page loads first.
     inputs: { schema: 'software-factory-inputs/v1', snapshotId: id, records: normalized.source.inputs },
   });
