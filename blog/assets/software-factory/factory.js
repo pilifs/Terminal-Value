@@ -12,6 +12,9 @@ import { escapeHtml as e, formatCoverage, formatDay, formatValue, VERDICTS } fro
 import { clockWords, torontoClock, torontoDay } from './measures-local.js';
 
 const REPO = 'https://github.com/pilifs/in-the-loop';
+/** What the project made, on this site: the page the Software Factory pages follow where both state a fact. */
+export const PRODUCT = { href: '/prove-java-change/', name: '/prove-java-change', what: 'a Claude Code plugin that formally proves a change to Java code' };
+const behind = `the project behind <a href="${PRODUCT.href}">${PRODUCT.name}</a>, ${PRODUCT.what}`;
 // Where the section is served: its pages link each other from here.
 const ROUTE = '/software-factory/';
 const count = (n) => Math.round(n).toLocaleString('en-US');
@@ -182,18 +185,14 @@ export function heroHtml(snapshot, { title, lede }) {
           <h1><span class="sf-eyebrow">${e(title)}</span> <span class="sf-headline">${
             f.recorded ? `${count(f.totals.commits)} of ${count(f.recorded)} commits were made inside a loop run` : `${plural(f.totals.commits, 'commit')} made inside a loop run`
           }</span></h1>
-          <p class="sf-lede">That is ${e(f.counts)} in <a href="${REPO}">in-the-loop</a>, a project that formally verifies Java code, ${e(
-            range(f.first ?? first, f.last ?? last)
-          )}. A loop gives an agent an instruction and lets it work: do the next piece, verify it, commit it, decide whether to go on. ${e(f.typed)}${f.hand ? ` ${e(f.hand)}` : ''}</p>
+          <p class="sf-lede">That is ${e(f.counts)}, ${e(range(f.first ?? first, f.last ?? last))}, in <a href="${REPO}">in-the-loop</a>: ${behind}. A loop gives an agent an instruction and lets it work: do the next piece, verify it, commit it, decide whether to go on. ${e(f.typed)}${f.hand ? ` ${e(f.hand)}` : ''}</p>
         </div>
         ${ledgerHtml(snapshot)}
       </div>`;
   return `<div class="sf-hero">
         <div class="sf-hero-text">
           <h1><span class="sf-eyebrow">${e(title)}</span> <span class="sf-headline">${e(headline)}</span></h1>
-          <p class="sf-lede">That is what the feature loops did in <a href="${REPO}">in-the-loop</a>, a project that formally verifies Java code, in ${plural(t.runs, 'recorded run')}, ${e(
-            range(first, last)
-          )}. Each loop gives an agent a written brief and lets it work: do the next piece, verify it, commit it, decide whether to go on.</p>
+          <p class="sf-lede">That is what the feature loops did in ${plural(t.runs, 'recorded run')}, ${e(range(first, last))}, in <a href="${REPO}">in-the-loop</a>: ${behind}. Each loop gives an agent a written brief and lets it work: do the next piece, verify it, commit it, decide whether to go on.</p>
         </div>
         ${ledgerHtml(snapshot)}
       </div>`;

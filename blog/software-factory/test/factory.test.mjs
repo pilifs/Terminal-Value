@@ -1322,7 +1322,10 @@ test('with the source’s account, the headline is the commits made inside a loo
   const withAccount = (account, changes = 50) => ({ ...snap, overview: { ...snap.overview, loopAccount: account, measures: snap.overview.measures.map((m) => (m === recorded ? { ...m, value: changes } : m)) } });
   const hero = heroHtml(withAccount(accountOf()), { title: 'Software Factory', lede: 'x' });
   assert.match(hero, /<span class="sf-headline">40 of 50 commits were made inside a loop run<\/span>/);
-  assert.match(hero, /That is 3 loops, 12 runs and 30 cycles in <a href="[^"]+">in-the-loop<\/a>, a project that formally verifies Java code, Nov 1 to Nov 2, 2026\./);
+  assert.match(
+    hero,
+    /That is 3 loops, 12 runs and 30 cycles, Nov 1 to Nov 2, 2026, in <a href="[^"]+">in-the-loop<\/a>: the project behind <a href="\/prove-java-change\/">\/prove-java-change<\/a>, a Claude Code plugin that formally proves a change to Java code\./
+  );
   assert.match(hero, /No run has a prompt that is not the loop’s own\. One early loop of 3 cycles was typed by hand, before the script existed\.<\/p>/);
   assert.match(hero, /class="sf-ledger"/, 'the longest run’s own record stays beside it');
   // Prompts typed into a run are said, and no loop by hand means no sentence about one.

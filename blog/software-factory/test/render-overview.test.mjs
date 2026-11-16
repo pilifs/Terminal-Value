@@ -3,10 +3,11 @@
 // each state. Run: npm run test:software-factory
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { verdictOf } from '../../assets/software-factory/factory.js';
+import { PRODUCT, verdictOf } from '../../assets/software-factory/factory.js';
 import { escapeHtml, formatDay } from '../../assets/software-factory/format.js';
 import { loadSnapshot } from '../index.mjs';
 import { filterScope, renderPages } from '../render.mjs';
@@ -90,6 +91,20 @@ test('the overview is short: the headline, six findings, and where to go next', 
   assert.equal((html.match(/<h1/g) ?? []).length, 1);
 });
 
+test('the overview says what was built, and links its page from the headline and from the end', () => {
+  const html = body('index.html', { snapshot: committed });
+  const intro = html.slice(html.indexOf('class="sf-intro"'), html.indexOf('data-sf-freshness'));
+  assert.match(intro, /in <a href="https:\/\/github\.com\/pilifs\/in-the-loop">in-the-loop<\/a>: the project behind <a href="\/prove-java-change\/">\/prove-java-change<\/a>, a Claude Code plugin that formally proves a change to Java code\./);
+  const end = html.slice(html.indexOf('class="sf-more"'));
+  assert.match(end, /<article class="sf-more-card" id="built">\s*<h2><a href="\/prove-java-change\/">What was built<\/a><\/h2>/);
+  assert.match(end, /<a href="\/prove-java-change\/">The plugin, and how to run it<\/a>/);
+  // The page it names is one this site ships, and it describes itself in the same words.
+  const page = fs.readFileSync(path.join(HERE, '..', '..', 'assets', PRODUCT.href, 'index.html'), 'utf8');
+  assert.match(page, /plugin that formally proves a change to Java code from its compiled bytecode/);
+  // The card is there whatever the snapshot has.
+  assert.match(body('index.html'), /<article class="sf-more-card" id="built">/);
+});
+
 test('each page under the overview leads with its own statement, and the usage page keeps the plan’s order', () => {
   const pages = render({ snapshot: committed });
   const of = (file) => pages.find((p) => p.path === file).body;
@@ -130,6 +145,11 @@ test('every link between the section’s pages lands on a page and an id that ex
         const [target, id] = href.startsWith('#') ? [url, href.slice(1)] : href.split('#');
         assert.ok(target.startsWith('/'), `${url}: a relative link, ${href}`);
         if (target.startsWith('/software-factory/static-data/')) continue;
+        // The one page outside the section: a hand-written one this site ships from blog/assets/.
+        if (target === PRODUCT.href) {
+          assert.ok(fs.existsSync(path.join(HERE, '..', '..', 'assets', target, 'index.html')), `${url}: no page at ${href}`);
+          continue;
+        }
         assert.ok(bodies.has(target), `${url}: no page at ${href}`);
         if (id) assert.ok(bodies.get(target).includes(`id="${id}"`), `${url}: no id for ${href}`);
       }

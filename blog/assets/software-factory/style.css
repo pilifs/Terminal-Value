@@ -1121,6 +1121,10 @@ body.software-factory .sf-shell .sf-finding-chart figcaption {
   body.software-factory .sf-finding-facts {
     gap: 0.75rem;
   }
+  /* Three narrow columns: a long word breaks at a syllable, not mid-letter. */
+  body.software-factory .sf-finding-facts dt {
+    hyphens: auto;
+  }
 }
 
 /* A wide finding: its sentence beside its numbers, the figure under both. */

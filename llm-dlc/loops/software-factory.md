@@ -951,6 +951,9 @@ Settled by the author on 2026-11-14:
   as the landing page says, none to an MCP server, and the Bash calls by the program each command opened with
   (all 148 the source names, where the snapshot kept 12). Generator 15, metric definitions 14, snapshot
   `sf1-5c0c077e51c6fe9a`. First load 134.8 KB of 300 KB.
+- **The overview says what was built** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, same title. The headline's sentence and a card at the end link
+  `/prove-java-change/`, in that page's own words. No data changed.
 - Status: done
 
 ## Loop settings

@@ -32,7 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chartSvg, chartTable } from '../assets/software-factory/chart.js';
-import { codeHtml, enduranceFacts, enduranceHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts, usageHtml } from '../assets/software-factory/factory.js';
+import { PRODUCT, codeHtml, enduranceFacts, enduranceHtml, examplesHtml, findingsHtml, heroHtml, loopsHtml, runningHtml, toolsHtml, usageFacts, usageHtml } from '../assets/software-factory/factory.js';
 import { formatCoverage, formatDay, formatValue, UNIT_WORDS } from '../assets/software-factory/format.js';
 import { datasetDays, METRICS, torontoDay, trend } from '../assets/software-factory/measures-local.js';
 import { series } from './measures.mjs';
@@ -356,6 +356,11 @@ function more(snapshot, posts, { e, route }) {
       : `<article class="sf-more-card" id="analysis">
           <h2 id="sf-analysis-title">Analysis &amp; notes by Filip</h2>
           <p class="sf-empty">No analysis published yet. Filip's notes on what the numbers mean will appear here, beside the data they use.</p>
+        </article>`,
+    `<article class="sf-more-card" id="built">
+          <h2><a href="${e(PRODUCT.href)}">What was built</a></h2>
+          <p><code>${e(PRODUCT.name)}</code> is ${e(PRODUCT.what)}, from its compiled bytecode. Its page shows a proof, the examples above with their inputs and traces, and the steps to run it on a change of your own.</p>
+          <p class="sf-finding-more"><a href="${e(PRODUCT.href)}">The plugin, and how to run it</a></p>
         </article>`,
     `<article class="sf-more-card">
           <h2><a href="${e(route)}methodology/">How it is measured</a></h2>

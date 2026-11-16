@@ -452,6 +452,26 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### The overview says what was built
+
+The overview said the loops worked "in in-the-loop, a project that formally verifies Java code" and linked only
+the repository. A visitor had no way from these pages to the thing the work produced, which this site has a
+page for.
+
+- **The headline's sentence** now reads "That is 34 loops, 109 runs and 350 cycles, Oct 31 to Nov 15, 2026, in
+  in-the-loop: the project behind /prove-java-change, a Claude Code plugin that formally proves a change to
+  Java code." The words follow the landing page's own description of itself.
+- **A card at the end**, "What was built", beside the analysis and "How it is measured", links the same page.
+- `PRODUCT` in `factory.js` holds the link and the words. A test fails if the page is no longer in
+  `blog/assets/` or stops describing itself that way. The link test lets this one page outside the section
+  through. The page's meta description is unchanged.
+- **Also:** on a phone the three figures under a finding are narrow, and a long word in a label broke
+  mid-letter ("counterexampl / e"). The labels now hyphenate.
+
+No data changed: generator 15 and snapshot `sf1-5c0c077e51c6fe9a` as before. `/prove-java-change/` was read and
+not changed; it does not link back yet ("A more detailed stats page is coming soon"), which is the author's to
+add when the section is published.
+
 ### What the calls were (generator 15)
 
 `/prove-java-change/` says "all 25,842 recorded tool calls went to built-in tools. 22,655 of them were Bash."
