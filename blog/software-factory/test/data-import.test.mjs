@@ -55,6 +55,28 @@ test('a missing session metrics file leaves its calls out and is never zero-fill
   assert.equal(n.calls.length, 590 - 108);
 });
 
+test('a session that holds nothing and that the rollup leaves out is counted apart, never as a session', async () => {
+  const { dir } = materialize('stale-source');
+  const before = await load(dir);
+  assert.equal(before.emptySessions, 0);
+  const index = json(dir, 'llm-dlc/index.json');
+  const EMPTY = '11111111-2222-4333-8444-555555555555';
+  index.sessions.push({ session_id: EMPTY, title: null, status: 'ended', started: null, ended: null, models: [], turns: 0, commits: [] });
+  write(dir, 'llm-dlc/index.json', index);
+  write(dir, `llm-dlc/traces/${EMPTY}/metrics.json`, { schema: 'llm-trace-metrics/v1', session_id: EMPTY, calls: [], prompts: [], tools: [], commits: [] });
+  const n = await load(dir);
+  assert.equal(n.emptySessions, 1);
+  assert.deepEqual(n.sessions.map((s) => s.id), before.sessions.map((s) => s.id));
+  assert.equal(n.calls.length, before.calls.length);
+  // Its metrics file was read, so it is still listed among the inputs.
+  assert.ok(n.source.inputs.some((i) => i.path === `llm-dlc/traces/${EMPTY}/metrics.json`));
+  // One with a prompt in it is a session, whatever the rollup says.
+  write(dir, `llm-dlc/traces/${EMPTY}/metrics.json`, { schema: 'llm-trace-metrics/v1', session_id: EMPTY, calls: [], prompts: [{ kind: 'human', ts: '2026-11-08T10:00:00Z', end: '2026-11-08T10:00:01Z', text: 'hello' }], tools: [], commits: [] });
+  const kept = await load(dir);
+  assert.equal(kept.emptySessions, 0);
+  assert.ok(kept.sessions.some((s) => s.id === EMPTY));
+});
+
 test('a missing job record gives null expected and submitting session', async () => {
   const { dir } = materialize('missing-job-record');
   const id = '20261108-195703-application-core-phase-5-step-3-lib-test';

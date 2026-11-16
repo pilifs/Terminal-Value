@@ -428,6 +428,10 @@ export function normalizeSources(raw, config = loadConfig()) {
   // Sessions and their calls, prompts, tool calls and commits.
   const calls = [];
   const sessions = [];
+  // Sessions the index lists and that hold nothing: no prompt, no model call,
+  // no tool call. The source's rollup leaves them out and its own index page
+  // counts them apart ("113, plus 1 empty"), so they are counted apart here.
+  const emptySessions = [];
   const prompts = [];
   const tools = [];
   const sessionCommits = [];
@@ -508,6 +512,11 @@ export function normalizeSources(raw, config = loadConfig()) {
       }
       for (const c of Array.isArray(metrics.commits) ? metrics.commits : [])
         if (isObject(c) && isInstant(c.ts) && typeof c.change_id === 'string') sessionCommits.push({ session: s.session_id, at: new Date(c.ts).toISOString(), changeId: c.change_id });
+    }
+    const nothing = (k) => !Array.isArray(metrics?.[k]) || metrics[k].length === 0;
+    if (rollupSessions.size && !rollupSessions.has(s.session_id) && metrics && nothing('calls') && nothing('prompts') && nothing('tools') && nothing('commits')) {
+      emptySessions.push(s.session_id);
+      continue;
     }
     sessions.push({
       id: s.session_id,
@@ -913,6 +922,7 @@ export function normalizeSources(raw, config = loadConfig()) {
     source: { repository: raw.source.repository, sha: raw.source.sha, inputs: [...inputs.values()].sort((a, b) => a.path.localeCompare(b.path)) },
     pricingAsOf: strOrNull(rollup.pricing_as_of),
     rollup: { calls: totals.api_calls, usd: totals.usd, sessions: rollupSessions.size },
+    emptySessions: emptySessions.length,
     reported,
     sessionStats,
     loopAccount,

@@ -1,5 +1,5 @@
 {
-  "version": "15",
+  "version": "16",
   "note": "Frozen in Phase 0 with schema.json; version 2 adds the figures of the feature loops, tools and code, version 4 the example catalog's own answers about each example, version 6 the values of the figures kept separate, and version 7 the source's own account of its loops. The data stream implements these definitions; the dashboard and the methodology page show them. A change here is a contract change, and bumps version.",
   "periods": {
     "timezone": "America/Toronto",
@@ -26,7 +26,7 @@
       "kind": "period",
       "filters": ["period", "model", "effort"],
       "definition": "Number of model API calls in the cohort, subagent calls included once.",
-      "coverage": "Sessions with a metrics file of all sessions in the index.",
+      "coverage": "Sessions with a metrics file of all sessions in the index. A session that holds nothing (no prompt, no model call, no tool call) and that the source's rollup leaves out is counted apart as empty, as the source's own index page does.",
       "notes": "Activity, not productivity."
     },
     {

@@ -246,6 +246,9 @@ test('partial coverage is counted, never filled in', () => {
   );
   assert.deepEqual(measure(out, 'usage_usd'), { id: 'usage_usd', value: 2, unit: 'usd', scope: 'all-time', coverage: { included: 1, total: 2, missing: 1 } });
   assert.deepEqual(measure(out, 'model_calls').coverage, { included: 1, total: 2, missing: 1, note: 'sessions with a metrics file' });
+  // Sessions the index lists and that hold nothing are said beside the count, and are in neither number.
+  assert.equal(measure(run(norm({ emptySessions: 1 })), 'model_calls').coverage.note, 'sessions with a metrics file; 1 more is empty and left out');
+  assert.equal(measure(run(norm({ emptySessions: 2 })), 'model_calls').coverage.note, 'sessions with a metrics file; 2 more are empty and left out');
   assert.equal(measure(out, 'model_calls').value, 2);
   // A session without a metrics file has unknown calls and usage, not zero.
   const s2 = out.details.sessions.records.find((s) => s.id === S2);

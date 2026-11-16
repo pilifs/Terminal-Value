@@ -452,6 +452,24 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### 113 sessions, as the landing page counts them (generator 17)
+
+`/prove-java-change/` says "24,769 model calls in 113 sessions" and links "The index of all 113 sessions". These
+pages said 113 where they read the source's rollup and 114 where they counted the index: in three coverage
+lines ("114 of 114 sessions with a metrics file", "with a tools table") and in the sessions collection.
+
+The index lists one session that holds nothing: no prompt, no model call, no tool call, no commit. The source's
+rollup leaves it out, and the source's own index page says "113, plus 1 empty". The importer now does the same:
+a session the rollup leaves out whose metrics file is empty is counted apart (`emptySessions`) and is not a
+session of the snapshot. A session with no metrics file is still a session with unknown calls, as before.
+
+- Coverage lines read "113 of 113 sessions with a metrics file; 1 more is empty and left out", and the same for
+  the tools table. The sessions collection has 113 records.
+- No total moved: the empty session had no calls, tokens, tools or usage.
+
+Metric definitions are version 16 (the coverage of model calls says the rule). Snapshot `sf1-9cde826aed242acf`, the same
+revision; the share image was rendered again from it. First load 136.5 KB of 300 KB.
+
 ### What a cycle took (generator 16)
 
 A cycle is the unit of a loop: one pass of the instruction, ending in a commit. The source's index of its loops

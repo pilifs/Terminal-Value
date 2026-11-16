@@ -76,9 +76,9 @@ import {
   sha256,
   snapshotId,
 } from './identity.mjs';
-import { aggregateFactory } from './factory.mjs';
+import { aggregateFactory, emptyNote } from './factory.mjs';
 
-export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '16' };
+export const GENERATOR = { name: 'blog/software-factory/metrics.mjs', version: '17' };
 // The outcomes the source's index of loops gives a run it read from a session.
 const INDEX_OUTCOMES = ['ended', 'unrecorded', 'stopped', 'interrupted'];
 
@@ -385,7 +385,7 @@ export function aggregate(normalized, { config, configSha256 = hashConfig(), met
   const exampleVerdicts = examples.filter((x) => verdictKey(x) !== 'none').length;
   const coverage = {
     usage: { included: priced.length, total: calls.length, missing: calls.length - priced.length },
-    calls: { included: withMetrics, total: sessions.length, missing: sessions.length - withMetrics, note: 'sessions with a metrics file' },
+    calls: { included: withMetrics, total: sessions.length, missing: sessions.length - withMetrics, note: `sessions with a metrics file${emptyNote(normalized.emptySessions)}` },
     cache: { included: calls.length, total: calls.length },
     completed: { included: completed.length, total: results.length, missing: results.length - completed.length },
     durations: { included: durations.length, total: completed.length, missing: completed.length - durations.length },

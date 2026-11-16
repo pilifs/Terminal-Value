@@ -45,6 +45,9 @@ function peak(runs) {
   return best;
 }
 
+/** What a coverage line adds when the source's index lists sessions that hold nothing. Since generator 17. */
+export const emptyNote = (n) => (n ? `; ${n} more ${n === 1 ? 'is' : 'are'} empty and left out` : '');
+
 export function aggregateFactory(normalized, { config, days, day, modelIds, label, area, areaLabel, changeRecords, changeTook = new Map() }) {
   const { sessions, prompts, tools, sessionCommits, runs, code: git } = normalized;
   const dayIndex = new Map(days.map((d, i) => [d, i]));
@@ -377,7 +380,7 @@ export function aggregateFactory(normalized, { config, days, day, modelIds, labe
     const row = (key, v) => ({ ...key, calls: v.calls, errors: v.errors, exit: v.exit, rejected: v.rejected, denied: v.denied, other: v.other });
     const ranked = (map, name) => [...map].map(([k, v]) => row({ [name]: k }, v)).sort((a, b) => b.calls - a.calls || (a[name] < b[name] ? -1 : 1));
     toolsOut = {
-      coverage: { included: withTools, total: sessions.length, missing: sessions.length - withTools, note: 'sessions with a tools table' },
+      coverage: { included: withTools, total: sessions.length, missing: sessions.length - withTools, note: `sessions with a tools table${emptyNote(normalized.emptySessions)}` },
       totals: { ...row({}, all), ok: all.calls - all.errors - all.noResult, noResult: all.noResult },
       daily: {
         columns: ['day', 'model', 'calls', 'errors', 'exit', 'rejected', 'denied', 'other'],

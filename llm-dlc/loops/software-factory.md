@@ -959,6 +959,10 @@ Settled by the author on 2026-11-14:
   two charts, each run's record says it under every cycle with how its verification jobs came out, and the
   overview's finding gives the middle cycle as a figure. Generator 16, metric definitions 15, snapshot
   `sf1-6452266b8e72453a`. First load 136.4 KB of 300 KB.
+- **113 sessions, as the landing page counts them** (2026-11-15, moonshot loop `software-factory-impact`):
+  docs/software-factory.md, same title. The one empty session in the source's index is counted apart, as the
+  source's own index page does, so every count of sessions is 113. Generator 17, metric definitions 16,
+  snapshot `sf1-9cde826aed242acf`.
 - Status: done
 
 ## Loop settings
