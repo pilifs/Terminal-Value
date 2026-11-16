@@ -68,8 +68,10 @@ test('the area mapping has unique areas, campaigns and an Unassigned bucket', ()
   assert.equal(new Set(campaigns).size, campaigns.length);
 });
 
-test('no raw model id is mapped to Fable 5.2', () => {
-  for (const [raw, alias] of Object.entries(models.aliases)) assert.doesNotMatch(alias, /5\.2/, raw);
+test('only claude-fable-5-2 is shown as Fable 5.2, and the config says by whose decision', () => {
+  for (const [raw, alias] of Object.entries(models.aliases)) if (/5\.2/.test(alias)) assert.equal(raw, 'claude-fable-5-2');
+  assert.equal(models.aliases['claude-fable-5-2'], 'Fable 5.2');
+  assert.match(models.note, /by the author's decision of 2026-11-16/);
 });
 
 test('the upstream fixture is pinned and internally consistent', () => {

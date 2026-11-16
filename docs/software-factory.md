@@ -452,6 +452,28 @@ script left records, read from their sessions' prompts. It is the answer to requ
 Metric definitions are version 7, with `loop_account` among the loops' figures. Snapshot `sf1-9860c93fb02006c6`,
 the same revision.
 
+### The author's decisions of 2026-11-16
+
+The moonshot loop stopped with four things only the author could settle. Their answers:
+
+- **"2 weeks".** The code headline reads "From empty to 167,128 lines of code in 2 weeks", in place of "23
+  days". The landing page says "14 working days" on each commit's own clock; these pages count 13 Toronto days
+  with a commit. Weeks hold for both. The number is the days with a commit divided by seven, rounded
+  (`repositoryFacts` in `factory.js`), and the sentence under the headline says so: "The 2 weeks are the days
+  with a commit, between Oct 24 and Nov 15, 2026." Under half a week of commits the headline counts calendar
+  days as before. The charts by day stay on Toronto days.
+- **Fable 5.2.** `claude-fable-5-2` is shown as "Fable 5.2", with its raw id beside it, as the landing page
+  names it. `config/models.json` records the decision and its date. It is a display label only: the draft
+  article `blog/posts/fable-5-1-vs-5-2/` still says no id is mapped for its comparison, and that note is the
+  author's to change.
+- **Publishing.** The section stays `published: false`.
+- **Free for the next loop:** the landing page's share of all tokens by model on the usage page; the time each
+  tool and program ran, with its outliers called out; and a seventh finding on the overview for the
+  verification jobs themselves.
+
+Snapshot `sf1-e579c92508374a6f` (the model labels are part of its config hash), generator 17, the same
+revision; the share image was rendered again from it.
+
 ### 113 sessions, as the landing page counts them (generator 17)
 
 `/prove-java-change/` says "24,769 model calls in 113 sessions" and links "The index of all 113 sessions". These

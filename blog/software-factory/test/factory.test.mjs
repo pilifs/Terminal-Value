@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { detailTable } from '../../assets/software-factory/details.js';
-import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, stumbles, toolChartHtml, toolDays, toolMix, toolsHtml, verdictOf, verdictsOf, accountClock, enduranceFacts, enduranceHtml } from '../../assets/software-factory/factory.js';
+import { campaignRunsHtml, changePlotHtml, codeHtml, catalogFacets, exampleRecordHtml, examplesHtml, findingsHtml, usageDays, usageFacts, usageHtml, heroHtml, loopsHtml, matchWords, runRecordHtml, runningHtml, span, stretches, repositoryFacts, stumbles, toolChartHtml, toolDays, toolMix, toolsHtml, verdictOf, verdictsOf, accountClock, enduranceFacts, enduranceHtml } from '../../assets/software-factory/factory.js';
 import { floorHtml } from '../../assets/software-factory/figures.js';
 import { formatValue } from '../../assets/software-factory/format.js';
 import { scatterSvg, shareTicks } from '../../assets/software-factory/figures.js';
@@ -573,6 +573,27 @@ test('the failed-calls chart: one model’s days, clean share ticks, and duratio
   assert.deepEqual(shareTicks(0.009), [0, 0.002, 0.004, 0.006, 0.008, 0.01]);
   assert.deepEqual([span(50), span(2700), span(29997), span(7200), span(null)], ['50 s', '45 min', '8 h 20 min', '2 h', 'No data']);
   assert.deepEqual(stumbles({ byTool: [{ name: 'Monitor', calls: 107, errors: 26 }, { name: 'Bash', calls: 9, errors: 9 }, { name: 'Read', calls: 1000, errors: 4 }], byFamily: [{ family: 'sleep', calls: 117, errors: 42 }] }).map((s) => s.label), ['sleep', 'Monitor']);
+});
+
+test('the code headline says weeks, counted over the days with a commit', () => {
+  const days = Array.from({ length: 23 }, (_, i) => new Date(Date.UTC(2026, 9, 24 + i)).toISOString().slice(0, 10));
+  const code = (worked) => ({
+    repository: { lines: 167128, languages: ['rust'] },
+    languages: [{ id: 'rust', label: 'Rust' }],
+    days,
+    daily: { columns: ['day', 'added', 'removed', 'commits', 'surviving'], rows: Array.from({ length: worked }, (_, i) => [i, 10, 0, 1, 10]) },
+  });
+  // 13 days with a commit over 23 calendar days: two weeks, and the sentence under it says what the weeks are.
+  const two = repositoryFacts(code(13));
+  assert.equal(two.claim, 'From empty to 167,128 lines of code in 2 weeks');
+  assert.equal(two.span, ' The 2 weeks are the days with a commit, between Oct 24 and Nov 15, 2026.');
+  const one = repositoryFacts(code(7));
+  assert.equal(one.claim, 'From empty to 167,128 lines of code in 1 week');
+  assert.equal(one.span, ' The 1 week is the days with a commit, between Oct 24 and Nov 15, 2026.');
+  // Under half a week of commits there are no weeks to speak of: the days of the calendar, as before.
+  const few = repositoryFacts(code(3));
+  assert.equal(few.claim, 'From empty to 167,128 lines of code in 23 days');
+  assert.equal(few.span, '');
 });
 
 const mixRow = (o) => ({ errors: 0, exit: 0, rejected: 0, denied: 0, other: 0, ...o });

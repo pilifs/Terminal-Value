@@ -1331,14 +1331,21 @@ export function repositoryFacts(code) {
   if (!r || r.lines <= 0 || !code.days.length) return null;
   const names = r.languages.map((id) => code.languages.find((l) => l.id === id)?.label ?? id);
   const said = (list) => (list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : (list[0] ?? ''));
+  const worked = (code.daily?.rows ?? []).filter((row) => row[3] > 0).length;
+  const weeks = Math.round(worked / 7);
+  const range = code.days.length > 1 ? `${formatDay(code.days[0], { year: false })} to ${formatDay(code.days.at(-1))}` : formatDay(code.days[0]);
   return {
     lines: r.lines,
     languages: r.languages,
     names: said(names),
     // The languages counted as code and left out of this count.
     others: said(code.languages.filter((l) => !r.languages.includes(l.id)).map((l) => l.label)),
-    claim: `From empty to ${count(r.lines)} lines of code in ${plural(code.days.length, 'day')}`,
-    range: code.days.length > 1 ? `${formatDay(code.days[0], { year: false })} to ${formatDay(code.days.at(-1))}` : formatDay(code.days[0]),
+    // The author's words for the span: weeks, counted over the days with a commit. Under a week, the days.
+    weeks,
+    claim: `From empty to ${count(r.lines)} lines of code in ${weeks ? plural(weeks, 'week') : plural(code.days.length, 'day')}`,
+    range,
+    // What the weeks are, said once under the claim: the days with a commit, not the calendar between them.
+    span: weeks ? ` The ${plural(weeks, 'week')} ${weeks === 1 ? 'is' : 'are'} the days with a commit, between ${e(range.replace(' to ', ' and '))}.` : '',
   };
 }
 
@@ -1379,7 +1386,7 @@ export function codeHtml(snapshot) {
         <h1 id="sf-code-title">${repo ? e(repo.claim) : `${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each`}</h1>
         <p class="sf-section-lede">${
           repo
-            ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files, ${e(repo.range)}, counted from git and not from what the agents report. In all, ${count(
+            ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files${repo.weeks ? '' : `, ${e(repo.range)}`}, counted from git and not from what the agents report.${repo.span} In all, ${count(
                 code.totals.added
               )} lines of code were added in ${plural(code.languages.length, 'language')} across ${plural(code.commits, 'commit')}, about ${count(code.tokensPerLine)} output tokens for each, and ${e(
                 pct(code.retained)
@@ -1643,7 +1650,7 @@ function codeFinding(overview) {
     eyebrow: 'Code',
     claim: repo ? repo.claim : `${count(code.totals.added)} lines of code, about ${count(code.tokensPerLine)} output tokens each`,
     lede: repo
-      ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files, counted from git and not from what the agents report. In all, ${count(
+      ? `That is the code in the repository at this revision: lines added less lines removed in ${e(repo.names)} files, counted from git and not from what the agents report.${repo.span} In all, ${count(
           code.totals.added
         )} lines of code were added, about ${count(code.tokensPerLine)} output tokens for each${byLoop ? `: ${byLoop[0]} inside a loop run and ${byLoop[1]} outside one` : ''}.`
       : `Counted from git, not from what the agents report.${byLoop ? ` A line took ${byLoop[0]} output tokens inside a loop run and ${byLoop[1]} outside one.` : ''}`,

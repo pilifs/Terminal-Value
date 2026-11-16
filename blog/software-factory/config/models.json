@@ -3,7 +3,8 @@
     "claude-opus-5-5": "Opus 5.5",
     "claude-sonnet-5-5": "Sonnet 5.5",
     "claude-haiku-5-5": "Haiku 5.5",
-    "claude-fable-5-1": "Fable 5.1"
+    "claude-fable-5-1": "Fable 5.1",
+    "claude-fable-5-2": "Fable 5.2"
   },
-  "note": "Display labels only; data keeps raw model ids. A raw id with no alias shows as itself. No id maps to Fable 5.2 until the author supplies a documented cohort mapping."
+  "note": "Display labels only; data keeps raw model ids. A raw id with no alias shows as itself. claude-fable-5-2 is shown as Fable 5.2 by the author's decision of 2026-11-16, as /prove-java-change/ names it. It is a display label, not the cohort mapping the Fable 5.1 against 5.2 article waits on."
 }

@@ -963,6 +963,9 @@ Settled by the author on 2026-11-14:
   docs/software-factory.md, same title. The one empty session in the source's index is counted apart, as the
   source's own index page does, so every count of sessions is 113. Generator 17, metric definitions 16,
   snapshot `sf1-9cde826aed242acf`.
+- **The author's decisions of 2026-11-16**: docs/software-factory.md, same title. The code headline says
+  "2 weeks", `claude-fable-5-2` is shown as Fable 5.2, the section stays unpublished, and three items are free
+  for the next loop. Snapshot `sf1-e579c92508374a6f`.
 - Status: done
 
 ## Loop settings
